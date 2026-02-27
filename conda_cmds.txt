@@ -9,3 +9,25 @@ conda install -c conda-forge shap tensorboard
 conda env create -f environment.yml
 
 conda env update -n TFM -f /Users/marcalbesa/Desktop/TFM/git_exp/environment_mac.yml --prune
+
+
+Hi all, please try to use the new local pip and conda cache.
+This is ONLY for your  environment in the OSIRIS cluster
+
+Pip configuration guide
+
+pip index URL: http://repo.radiomics.vhio.net:9999/simple/
+Use from clients: pip install --index-url http://repo.radiomics.vhio.net:9999/simple/ PACKAGE
+
+Set default index and trusted host using pip config:
+pip config set global.index-url http://repo.radiomics.vhio.net:9999/simple/
+pip config set global.trusted-host repo.radiomics.vhio.net
+
+Conda configuration guide
+
+Use this proxy channel (example with conda-forge):
+conda install -c http://repo.radiomics.vhio.net:9999/conda/conda-forge PACKAGE
+
+Set as default channel:
+conda config --add channels http://repo.radiomics.vhio.net:9999/conda/conda-forge
+conda config --set channel_priority strict
