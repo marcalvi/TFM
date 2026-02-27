@@ -1,7 +1,7 @@
 name: TFM
 channels:
+  - http://repo.radiomics.vhio.net:9999/conda/conda-forge
   - pytorch
-  - conda-forge
   - defaults
 dependencies:
   - python=3.9
