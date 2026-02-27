@@ -78,7 +78,11 @@ def _transform_modalities_with_fitted_scalers(dfs_raw, scalers):
         feats = [c for c in df_scaled.columns if c != "patient"]
         if len(df_scaled) > 0 and feats:
             values = df_scaled[feats].to_numpy(dtype=np.float32, copy=True)
-            df_scaled.loc[:, feats] = scalers[name].transform(values).astype(np.float32)
+            transformed = scalers[name].transform(values).astype(np.float32)
+            # Ensure feature columns are float-compatible before assignment
+            # to avoid pandas dtype warnings when original columns are int64.
+            df_scaled = df_scaled.astype({c: np.float32 for c in feats}, copy=False)
+            df_scaled[feats] = transformed
 
         dfs_scaled[name] = df_scaled
 
@@ -305,7 +309,6 @@ def nested_cv(
             # Iterate over each HP config, train a model, and evaluate on inner-val fold
             for hp_cfg in hp_configs:
                 hp_name = hp_cfg["name"]
-                print(f"  Inner fold {inner_fold_idx} - tuning hp: {hp_name}")
 
                 # Get train and val loaders according to missing scope, simulator and batch size
                 train_loader, val_loader = _build_loaders(
@@ -382,6 +385,10 @@ def nested_cv(
                 raise RuntimeError(
                     f"No model selected for outer fold {outer_fold_idx}, inner fold {inner_fold_idx}."
                 )
+            print(
+                f"  Inner fold {inner_fold_idx} best hp: {best_inner_hp['name']} "
+                f"(AUC={best_inner_metrics['AUC']:.4f}, LOGLOSS={best_inner_metrics['LOGLOSS']:.4f})"
+            )
 
             # After iterating over all HP configs, save the best model and its scalers for this inner fold, along with its metrics and history.
             selected_inner_members.append(
