@@ -234,6 +234,13 @@ def nested_cv(
     # Input dims for each modality (removing patient column) and select device
     input_dims = [df.shape[1] - 1 for df in dfs.values()]
     device = select_device()
+    if device.type == "cuda":
+        gpu_name = torch.cuda.get_device_name(device)
+        print(f"Using device: cuda ({gpu_name})")
+    elif device.type == "mps":
+        print("Using device: mps (Apple Metal)")
+    else:
+        print("Using device: cpu")
 
     inner_eval_rows = []
     history_rows = []
