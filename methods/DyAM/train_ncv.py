@@ -17,19 +17,10 @@ from sklearn.metrics import roc_auc_score
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-# Add HealNet repo to sys.path and import
-repo_path = "/Users/marcalbesa/Desktop/TFM/models/HealNet/healnet-main/healnet"
-# repo_path = "/nfs/rnas/projects/M3BENCH/models/HealNet/healnet-main/healnet"
-if repo_path not in sys.path:
-    sys.path.append(repo_path)
-from healnet.models.healnet import HealNet
-
 # Function to filter dataframes by patient IDs
 def filter_by_patients(df, patient_ids):
     return df[df["patient"].isin(patient_ids)].copy()
 
-# Define the label column name (adjust)
-y_label = "PFS_6_label" 
 
 # Training function for the inner loop of nested CV
 def train_function_inner(train_loader, val_loader, device, input_dims, epochs, lr, outer_idx, inner_idx):

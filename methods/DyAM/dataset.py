@@ -2,23 +2,6 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-class MultiModalDataset(Dataset):
-    def __init__(self, modality_data_list, labels):
-        """
-        modality_data_list: List of DataFrames (one per selected modality)
-        labels: Labels DataFrame
-        """
-        self.modalities = [torch.tensor(modality.values, dtype=torch.float32) for modality in modality_data_list]
-        self.labels = torch.tensor(labels.values, dtype=torch.float32).squeeze()
-
-    def __len__(self):
-        return len(self.labels)
-
-    def __getitem__(self, idx):
-        modality_tensors = [modality[idx] for modality in self.modalities]
-        label = self.labels[idx]
-        return modality_tensors, label
-
 class DyAMDataset(torch.utils.data.Dataset):
     def __init__(self, dfs, label_df, label_col, id_col="patient"):
         self.dfs = dfs
@@ -47,7 +30,7 @@ class DyAMDataset(torch.utils.data.Dataset):
                 x = None   
             Xs.append(x)
 
-        y = torch.tensor(self.label_df.loc[pid, self.label_col], dtype=torch.float32)
+        y = torch.tensor(self.label_df.loc[p_id, self.label_col], dtype=torch.float32)
 
         # Return the patient ID as the third element
         return Xs, y, p_id
@@ -86,36 +69,3 @@ def dyam_collate(batch):
     # Return the patient IDs as a list
     return Xs_out, y, list(pids)
 
-
-def healnet_collate(batch):
-    Xs_batch, ys, pids = zip(*batch)
-    n_modalities = len(Xs_batch[0])
-    B = len(batch)
-
-    Xs_out = []
-    masks_out = [] # New: Explicitly track missingness for HEALNet
-
-    for m in range(n_modalities):
-        modality_samples = [Xs_batch[i][m] for i in range(B)]
-        first_valid = next((x for x in modality_samples if x is not None), None)
-
-        if first_valid is None:
-            # If a whole modality is missing in a batch (rare but possible)
-            Xs_out.append(None)
-            masks_out.append(torch.zeros(B, dtype=torch.bool))
-        else:
-            dims = first_valid.shape[-1]
-            tensor = torch.zeros(B, dims)
-            mask = torch.zeros(B, dtype=torch.bool) # 0 = missing, 1 = present
-            
-            for i, x in enumerate(modality_samples):
-                if x is not None:
-                    if x.ndim > 1:
-                        x = x.mean(dim=0) if x.shape[0] > 0 else torch.zeros(dims)
-                    tensor[i] = x.view(-1)
-                    mask[i] = True 
-            
-            Xs_out.append(tensor)
-            masks_out.append(mask)
-
-    return Xs_out, masks_out, torch.stack(ys), list(pids)

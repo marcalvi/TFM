@@ -1,0 +1,23 @@
+name: TFM
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - pandas>=1.5.0
+  - numpy>=1.24,<2.0
+  - scikit-learn>=1.2.0
+  - scipy>=1.10.0
+  - matplotlib>=3.7.0
+  - tqdm>=4.65.0
+  # Apple Silicon / MacBook M3: use PyTorch builds from pytorch channel (MPS support)
+  - pytorch::pytorch>=2.2,<3.0
+  - pytorch::torchvision
+  - pytorch::torchaudio
+  - shap>=0.42.0
+  - tensorboard>=2.13.0
+  - pip
+  - pip:
+    - torch-summary>=1.4.5
+    - wandb>=0.21.1

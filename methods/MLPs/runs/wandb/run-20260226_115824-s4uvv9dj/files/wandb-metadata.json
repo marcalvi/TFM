@@ -1,0 +1,43 @@
+{
+  "os": "macOS-26.2-arm64-arm-64bit",
+  "python": "CPython 3.9.23",
+  "startedAt": "2026-02-26T10:58:24.080862Z",
+  "args": [
+    "--odir",
+    "/Users/marcalbesa/Desktop/TFM/git_exp/methods/MLPs/ZI_MLP/results",
+    "--inst_data",
+    "/Users/marcalbesa/Desktop/TFM/data/MIMM/patients_mimm.csv",
+    "--dataset",
+    "MIMM",
+    "--endpoint",
+    "OS_6",
+    "--patho_data",
+    "/Users/marcalbesa/Desktop/TFM/data/MIMM/pathology_mimm.csv",
+    "--radio_data",
+    "/Users/marcalbesa/Desktop/TFM/data/MIMM/radiology_mimm.csv",
+    "--clin_data",
+    "/Users/marcalbesa/Desktop/TFM/data/MIMM/clinical_mimm.csv",
+    "--radio_report_data",
+    "/Users/marcalbesa/Desktop/TFM/data/MIMM/radioreports_mimm.csv",
+    "--blood_data",
+    "/Users/marcalbesa/Desktop/TFM/data/MIMM/blood_mimm.csv",
+    "--seeds",
+    "22",
+    "--wandb",
+    "--wandb_project",
+    "ZI_MLPs",
+    "--wandb_mode",
+    "online"
+  ],
+  "program": "/Users/marcalbesa/Desktop/TFM/git_exp/methods/MLPs/ZI_MLP/main.py",
+  "codePath": "methods/MLPs/ZI_MLP/main.py",
+  "git": {
+    "remote": "https://github.com/marcalvi/TFM.git",
+    "commit": "f2a9d963b2a16467001c78abcf82393a5268c2ee"
+  },
+  "email": "albesa.marc@gmail.com",
+  "root": "/Users/marcalbesa/Desktop/TFM/git_exp/methods/MLPs/ZI_MLP/runs",
+  "host": "MacBook-Pro-de-Marc-4.local",
+  "executable": "/opt/miniconda3/envs/TFM/bin/python",
+  "writerId": "0mpx2mizsocg1at9ejz64zvue6tecm1t"
+}

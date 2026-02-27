@@ -1,0 +1,619 @@
+
+Outer fold 1
+
+Inner fold 1
+E1 | T-Loss: 0.6974 | V-Loss: 0.6960 | T-AUC: 0.545 | V-AUC: 0.525
+E2 | T-Loss: 0.6803 | V-Loss: 0.7033 | T-AUC: 0.568 | V-AUC: 0.542
+E3 | T-Loss: 0.6727 | V-Loss: 0.7052 | T-AUC: 0.593 | V-AUC: 0.550
+E4 | T-Loss: 0.6149 | V-Loss: 0.7109 | T-AUC: 0.737 | V-AUC: 0.521
+E5 | T-Loss: 0.6674 | V-Loss: 0.7169 | T-AUC: 0.618 | V-AUC: 0.504
+E6 | T-Loss: 0.6345 | V-Loss: 0.7175 | T-AUC: 0.747 | V-AUC: 0.527
+E7 | T-Loss: 0.6294 | V-Loss: 0.7136 | T-AUC: 0.699 | V-AUC: 0.506
+E8 | T-Loss: 0.6256 | V-Loss: 0.7079 | T-AUC: 0.718 | V-AUC: 0.494
+E9 | T-Loss: 0.6098 | V-Loss: 0.7120 | T-AUC: 0.778 | V-AUC: 0.515
+E10 | T-Loss: 0.6172 | V-Loss: 0.7070 | T-AUC: 0.735 | V-AUC: 0.550
+E11 | T-Loss: 0.6032 | V-Loss: 0.7091 | T-AUC: 0.768 | V-AUC: 0.525
+Early stopping triggered at epoch 11.
+
+Inner fold 2
+E1 | T-Loss: 0.7034 | V-Loss: 0.6945 | T-AUC: 0.487 | V-AUC: 0.416
+E2 | T-Loss: 0.6769 | V-Loss: 0.6947 | T-AUC: 0.582 | V-AUC: 0.458
+E3 | T-Loss: 0.6579 | V-Loss: 0.6990 | T-AUC: 0.611 | V-AUC: 0.477
+E4 | T-Loss: 0.6466 | V-Loss: 0.6841 | T-AUC: 0.652 | V-AUC: 0.532
+E5 | T-Loss: 0.6532 | V-Loss: 0.6891 | T-AUC: 0.639 | V-AUC: 0.519
+E6 | T-Loss: 0.6208 | V-Loss: 0.6900 | T-AUC: 0.696 | V-AUC: 0.525
+E7 | T-Loss: 0.6296 | V-Loss: 0.6825 | T-AUC: 0.707 | V-AUC: 0.542
+E8 | T-Loss: 0.6017 | V-Loss: 0.6824 | T-AUC: 0.751 | V-AUC: 0.527
+E9 | T-Loss: 0.5982 | V-Loss: 0.6736 | T-AUC: 0.763 | V-AUC: 0.525
+E10 | T-Loss: 0.5922 | V-Loss: 0.6745 | T-AUC: 0.798 | V-AUC: 0.540
+E11 | T-Loss: 0.5981 | V-Loss: 0.6746 | T-AUC: 0.725 | V-AUC: 0.538
+E12 | T-Loss: 0.5722 | V-Loss: 0.6685 | T-AUC: 0.805 | V-AUC: 0.597
+E13 | T-Loss: 0.5983 | V-Loss: 0.6761 | T-AUC: 0.790 | V-AUC: 0.565
+E14 | T-Loss: 0.6117 | V-Loss: 0.6730 | T-AUC: 0.744 | V-AUC: 0.555
+E15 | T-Loss: 0.5746 | V-Loss: 0.6802 | T-AUC: 0.778 | V-AUC: 0.542
+E16 | T-Loss: 0.5620 | V-Loss: 0.6708 | T-AUC: 0.863 | V-AUC: 0.574
+E17 | T-Loss: 0.5703 | V-Loss: 0.6683 | T-AUC: 0.802 | V-AUC: 0.584
+E18 | T-Loss: 0.5411 | V-Loss: 0.6687 | T-AUC: 0.876 | V-AUC: 0.584
+E19 | T-Loss: 0.5467 | V-Loss: 0.6791 | T-AUC: 0.871 | V-AUC: 0.561
+E20 | T-Loss: 0.5361 | V-Loss: 0.6660 | T-AUC: 0.856 | V-AUC: 0.586
+E21 | T-Loss: 0.5378 | V-Loss: 0.6657 | T-AUC: 0.836 | V-AUC: 0.582
+E22 | T-Loss: 0.5469 | V-Loss: 0.6686 | T-AUC: 0.865 | V-AUC: 0.576
+E23 | T-Loss: 0.5291 | V-Loss: 0.6630 | T-AUC: 0.851 | V-AUC: 0.586
+E24 | T-Loss: 0.5106 | V-Loss: 0.6678 | T-AUC: 0.907 | V-AUC: 0.563
+E25 | T-Loss: 0.5033 | V-Loss: 0.6641 | T-AUC: 0.890 | V-AUC: 0.584
+E26 | T-Loss: 0.5052 | V-Loss: 0.6663 | T-AUC: 0.909 | V-AUC: 0.557
+E27 | T-Loss: 0.5169 | V-Loss: 0.6653 | T-AUC: 0.904 | V-AUC: 0.574
+E28 | T-Loss: 0.5146 | V-Loss: 0.6681 | T-AUC: 0.881 | V-AUC: 0.569
+E29 | T-Loss: 0.4962 | V-Loss: 0.6640 | T-AUC: 0.910 | V-AUC: 0.567
+E30 | T-Loss: 0.4959 | V-Loss: 0.6703 | T-AUC: 0.917 | V-AUC: 0.559
+E31 | T-Loss: 0.4988 | V-Loss: 0.6644 | T-AUC: 0.915 | V-AUC: 0.571
+E32 | T-Loss: 0.5118 | V-Loss: 0.6636 | T-AUC: 0.892 | V-AUC: 0.580
+E33 | T-Loss: 0.4813 | V-Loss: 0.6645 | T-AUC: 0.931 | V-AUC: 0.561
+Early stopping triggered at epoch 33.
+
+Inner fold 3
+E1 | T-Loss: 0.7322 | V-Loss: 0.7137 | T-AUC: 0.485 | V-AUC: 0.323
+E2 | T-Loss: 0.7003 | V-Loss: 0.7270 | T-AUC: 0.572 | V-AUC: 0.345
+E3 | T-Loss: 0.6914 | V-Loss: 0.7345 | T-AUC: 0.586 | V-AUC: 0.349
+E4 | T-Loss: 0.6758 | V-Loss: 0.7281 | T-AUC: 0.679 | V-AUC: 0.394
+E5 | T-Loss: 0.6759 | V-Loss: 0.7347 | T-AUC: 0.630 | V-AUC: 0.384
+E6 | T-Loss: 0.6492 | V-Loss: 0.7252 | T-AUC: 0.719 | V-AUC: 0.407
+E7 | T-Loss: 0.6887 | V-Loss: 0.7219 | T-AUC: 0.613 | V-AUC: 0.416
+E8 | T-Loss: 0.6479 | V-Loss: 0.7166 | T-AUC: 0.729 | V-AUC: 0.407
+E9 | T-Loss: 0.6423 | V-Loss: 0.7203 | T-AUC: 0.757 | V-AUC: 0.412
+E10 | T-Loss: 0.6769 | V-Loss: 0.7263 | T-AUC: 0.639 | V-AUC: 0.403
+E11 | T-Loss: 0.6429 | V-Loss: 0.7189 | T-AUC: 0.744 | V-AUC: 0.399
+Early stopping triggered at epoch 11.
+
+Inner fold 4
+E1 | T-Loss: 0.7437 | V-Loss: 0.7187 | T-AUC: 0.474 | V-AUC: 0.343
+E2 | T-Loss: 0.7086 | V-Loss: 0.7374 | T-AUC: 0.575 | V-AUC: 0.394
+E3 | T-Loss: 0.6803 | V-Loss: 0.7466 | T-AUC: 0.637 | V-AUC: 0.388
+E4 | T-Loss: 0.6709 | V-Loss: 0.7641 | T-AUC: 0.658 | V-AUC: 0.323
+E5 | T-Loss: 0.6813 | V-Loss: 0.7691 | T-AUC: 0.654 | V-AUC: 0.349
+E6 | T-Loss: 0.6796 | V-Loss: 0.7589 | T-AUC: 0.643 | V-AUC: 0.366
+E7 | T-Loss: 0.6520 | V-Loss: 0.7549 | T-AUC: 0.722 | V-AUC: 0.405
+E8 | T-Loss: 0.6537 | V-Loss: 0.7660 | T-AUC: 0.725 | V-AUC: 0.377
+E9 | T-Loss: 0.6517 | V-Loss: 0.7579 | T-AUC: 0.770 | V-AUC: 0.369
+E10 | T-Loss: 0.6102 | V-Loss: 0.7479 | T-AUC: 0.788 | V-AUC: 0.407
+E11 | T-Loss: 0.6447 | V-Loss: 0.7584 | T-AUC: 0.734 | V-AUC: 0.394
+Early stopping triggered at epoch 11.
+
+Inner fold 5
+E1 | T-Loss: 0.7083 | V-Loss: 0.6634 | T-AUC: 0.510 | V-AUC: 0.647
+E2 | T-Loss: 0.6967 | V-Loss: 0.6571 | T-AUC: 0.549 | V-AUC: 0.651
+E3 | T-Loss: 0.6821 | V-Loss: 0.6513 | T-AUC: 0.567 | V-AUC: 0.642
+E4 | T-Loss: 0.6724 | V-Loss: 0.6509 | T-AUC: 0.645 | V-AUC: 0.649
+E5 | T-Loss: 0.6494 | V-Loss: 0.6458 | T-AUC: 0.668 | V-AUC: 0.659
+E6 | T-Loss: 0.6188 | V-Loss: 0.6428 | T-AUC: 0.759 | V-AUC: 0.692
+E7 | T-Loss: 0.6226 | V-Loss: 0.6461 | T-AUC: 0.752 | V-AUC: 0.664
+E8 | T-Loss: 0.6417 | V-Loss: 0.6435 | T-AUC: 0.715 | V-AUC: 0.653
+E9 | T-Loss: 0.6292 | V-Loss: 0.6554 | T-AUC: 0.755 | V-AUC: 0.614
+E10 | T-Loss: 0.6284 | V-Loss: 0.6549 | T-AUC: 0.733 | V-AUC: 0.606
+E11 | T-Loss: 0.6182 | V-Loss: 0.6535 | T-AUC: 0.799 | V-AUC: 0.612
+E12 | T-Loss: 0.5649 | V-Loss: 0.6492 | T-AUC: 0.849 | V-AUC: 0.647
+E13 | T-Loss: 0.5750 | V-Loss: 0.6474 | T-AUC: 0.869 | V-AUC: 0.653
+E14 | T-Loss: 0.5635 | V-Loss: 0.6432 | T-AUC: 0.872 | V-AUC: 0.640
+E15 | T-Loss: 0.5706 | V-Loss: 0.6514 | T-AUC: 0.840 | V-AUC: 0.640
+E16 | T-Loss: 0.5659 | V-Loss: 0.6624 | T-AUC: 0.883 | V-AUC: 0.623
+Early stopping triggered at epoch 16.
+
+Outer fold 2
+
+Inner fold 1
+E1 | T-Loss: 0.7296 | V-Loss: 0.7186 | T-AUC: 0.521 | V-AUC: 0.443
+E2 | T-Loss: 0.7146 | V-Loss: 0.7215 | T-AUC: 0.562 | V-AUC: 0.471
+E3 | T-Loss: 0.6897 | V-Loss: 0.7208 | T-AUC: 0.629 | V-AUC: 0.475
+E4 | T-Loss: 0.6791 | V-Loss: 0.7119 | T-AUC: 0.640 | V-AUC: 0.450
+E5 | T-Loss: 0.6802 | V-Loss: 0.7232 | T-AUC: 0.652 | V-AUC: 0.439
+E6 | T-Loss: 0.6659 | V-Loss: 0.7212 | T-AUC: 0.701 | V-AUC: 0.462
+E7 | T-Loss: 0.6412 | V-Loss: 0.7176 | T-AUC: 0.750 | V-AUC: 0.468
+E8 | T-Loss: 0.6700 | V-Loss: 0.7126 | T-AUC: 0.676 | V-AUC: 0.454
+E9 | T-Loss: 0.6241 | V-Loss: 0.7088 | T-AUC: 0.794 | V-AUC: 0.464
+E10 | T-Loss: 0.6087 | V-Loss: 0.7073 | T-AUC: 0.790 | V-AUC: 0.471
+E11 | T-Loss: 0.6329 | V-Loss: 0.6972 | T-AUC: 0.757 | V-AUC: 0.502
+E12 | T-Loss: 0.6205 | V-Loss: 0.7008 | T-AUC: 0.787 | V-AUC: 0.498
+E13 | T-Loss: 0.5989 | V-Loss: 0.7027 | T-AUC: 0.816 | V-AUC: 0.492
+E14 | T-Loss: 0.6096 | V-Loss: 0.6949 | T-AUC: 0.839 | V-AUC: 0.500
+E15 | T-Loss: 0.5806 | V-Loss: 0.7091 | T-AUC: 0.852 | V-AUC: 0.462
+E16 | T-Loss: 0.6069 | V-Loss: 0.7111 | T-AUC: 0.829 | V-AUC: 0.489
+E17 | T-Loss: 0.6007 | V-Loss: 0.7050 | T-AUC: 0.804 | V-AUC: 0.479
+E18 | T-Loss: 0.6005 | V-Loss: 0.6962 | T-AUC: 0.840 | V-AUC: 0.498
+E19 | T-Loss: 0.5755 | V-Loss: 0.6934 | T-AUC: 0.843 | V-AUC: 0.504
+E20 | T-Loss: 0.5957 | V-Loss: 0.6976 | T-AUC: 0.826 | V-AUC: 0.513
+E21 | T-Loss: 0.5982 | V-Loss: 0.7012 | T-AUC: 0.836 | V-AUC: 0.498
+E22 | T-Loss: 0.6185 | V-Loss: 0.7103 | T-AUC: 0.795 | V-AUC: 0.489
+E23 | T-Loss: 0.5649 | V-Loss: 0.7070 | T-AUC: 0.871 | V-AUC: 0.492
+E24 | T-Loss: 0.5561 | V-Loss: 0.7064 | T-AUC: 0.883 | V-AUC: 0.496
+E25 | T-Loss: 0.5992 | V-Loss: 0.7067 | T-AUC: 0.835 | V-AUC: 0.513
+E26 | T-Loss: 0.5702 | V-Loss: 0.7054 | T-AUC: 0.891 | V-AUC: 0.511
+E27 | T-Loss: 0.5639 | V-Loss: 0.7002 | T-AUC: 0.876 | V-AUC: 0.521
+E28 | T-Loss: 0.5784 | V-Loss: 0.6971 | T-AUC: 0.841 | V-AUC: 0.527
+E29 | T-Loss: 0.5669 | V-Loss: 0.6891 | T-AUC: 0.862 | V-AUC: 0.525
+E30 | T-Loss: 0.5834 | V-Loss: 0.6955 | T-AUC: 0.842 | V-AUC: 0.525
+E31 | T-Loss: 0.5536 | V-Loss: 0.6931 | T-AUC: 0.906 | V-AUC: 0.519
+E32 | T-Loss: 0.5531 | V-Loss: 0.6976 | T-AUC: 0.884 | V-AUC: 0.521
+E33 | T-Loss: 0.5511 | V-Loss: 0.6880 | T-AUC: 0.898 | V-AUC: 0.534
+E34 | T-Loss: 0.5638 | V-Loss: 0.6937 | T-AUC: 0.898 | V-AUC: 0.519
+E35 | T-Loss: 0.5486 | V-Loss: 0.6935 | T-AUC: 0.900 | V-AUC: 0.523
+E36 | T-Loss: 0.5678 | V-Loss: 0.6847 | T-AUC: 0.870 | V-AUC: 0.534
+E37 | T-Loss: 0.5455 | V-Loss: 0.6937 | T-AUC: 0.887 | V-AUC: 0.527
+E38 | T-Loss: 0.5034 | V-Loss: 0.6823 | T-AUC: 0.944 | V-AUC: 0.529
+E39 | T-Loss: 0.5245 | V-Loss: 0.6921 | T-AUC: 0.929 | V-AUC: 0.513
+E40 | T-Loss: 0.5357 | V-Loss: 0.6908 | T-AUC: 0.907 | V-AUC: 0.513
+E41 | T-Loss: 0.5517 | V-Loss: 0.6896 | T-AUC: 0.885 | V-AUC: 0.504
+E42 | T-Loss: 0.5314 | V-Loss: 0.6841 | T-AUC: 0.919 | V-AUC: 0.521
+E43 | T-Loss: 0.5209 | V-Loss: 0.6856 | T-AUC: 0.917 | V-AUC: 0.538
+E44 | T-Loss: 0.5423 | V-Loss: 0.6938 | T-AUC: 0.892 | V-AUC: 0.527
+E45 | T-Loss: 0.5427 | V-Loss: 0.6923 | T-AUC: 0.911 | V-AUC: 0.540
+E46 | T-Loss: 0.5157 | V-Loss: 0.6902 | T-AUC: 0.927 | V-AUC: 0.523
+E47 | T-Loss: 0.5280 | V-Loss: 0.6934 | T-AUC: 0.923 | V-AUC: 0.542
+E48 | T-Loss: 0.5436 | V-Loss: 0.7005 | T-AUC: 0.898 | V-AUC: 0.540
+Early stopping triggered at epoch 48.
+
+Inner fold 2
+E1 | T-Loss: 0.8054 | V-Loss: 0.7120 | T-AUC: 0.478 | V-AUC: 0.571
+E2 | T-Loss: 0.7956 | V-Loss: 0.7355 | T-AUC: 0.536 | V-AUC: 0.567
+E3 | T-Loss: 0.7732 | V-Loss: 0.7555 | T-AUC: 0.573 | V-AUC: 0.511
+E4 | T-Loss: 0.7625 | V-Loss: 0.7692 | T-AUC: 0.602 | V-AUC: 0.532
+E5 | T-Loss: 0.7506 | V-Loss: 0.7617 | T-AUC: 0.647 | V-AUC: 0.540
+E6 | T-Loss: 0.7235 | V-Loss: 0.7564 | T-AUC: 0.719 | V-AUC: 0.502
+E7 | T-Loss: 0.7556 | V-Loss: 0.7712 | T-AUC: 0.659 | V-AUC: 0.485
+E8 | T-Loss: 0.7170 | V-Loss: 0.7635 | T-AUC: 0.711 | V-AUC: 0.502
+E9 | T-Loss: 0.7078 | V-Loss: 0.7519 | T-AUC: 0.692 | V-AUC: 0.523
+E10 | T-Loss: 0.7084 | V-Loss: 0.7608 | T-AUC: 0.764 | V-AUC: 0.502
+E11 | T-Loss: 0.7104 | V-Loss: 0.7562 | T-AUC: 0.741 | V-AUC: 0.521
+Early stopping triggered at epoch 11.
+
+Inner fold 3
+E1 | T-Loss: 0.7573 | V-Loss: 0.6940 | T-AUC: 0.377 | V-AUC: 0.438
+E2 | T-Loss: 0.7030 | V-Loss: 0.7112 | T-AUC: 0.509 | V-AUC: 0.448
+E3 | T-Loss: 0.6431 | V-Loss: 0.7198 | T-AUC: 0.651 | V-AUC: 0.468
+E4 | T-Loss: 0.6404 | V-Loss: 0.7240 | T-AUC: 0.648 | V-AUC: 0.450
+E5 | T-Loss: 0.6339 | V-Loss: 0.7260 | T-AUC: 0.683 | V-AUC: 0.444
+E6 | T-Loss: 0.6403 | V-Loss: 0.7320 | T-AUC: 0.678 | V-AUC: 0.435
+E7 | T-Loss: 0.6244 | V-Loss: 0.7408 | T-AUC: 0.690 | V-AUC: 0.422
+E8 | T-Loss: 0.6171 | V-Loss: 0.7329 | T-AUC: 0.713 | V-AUC: 0.431
+E9 | T-Loss: 0.6108 | V-Loss: 0.7326 | T-AUC: 0.761 | V-AUC: 0.427
+E10 | T-Loss: 0.6056 | V-Loss: 0.7313 | T-AUC: 0.732 | V-AUC: 0.425
+E11 | T-Loss: 0.6007 | V-Loss: 0.7313 | T-AUC: 0.745 | V-AUC: 0.425
+Early stopping triggered at epoch 11.
+
+Inner fold 4
+E1 | T-Loss: 0.6361 | V-Loss: 0.6499 | T-AUC: 0.612 | V-AUC: 0.623
+E2 | T-Loss: 0.6544 | V-Loss: 0.6393 | T-AUC: 0.586 | V-AUC: 0.636
+E3 | T-Loss: 0.6373 | V-Loss: 0.6224 | T-AUC: 0.598 | V-AUC: 0.698
+E4 | T-Loss: 0.6417 | V-Loss: 0.6280 | T-AUC: 0.644 | V-AUC: 0.655
+E5 | T-Loss: 0.6002 | V-Loss: 0.6331 | T-AUC: 0.735 | V-AUC: 0.640
+E6 | T-Loss: 0.6084 | V-Loss: 0.6301 | T-AUC: 0.722 | V-AUC: 0.651
+E7 | T-Loss: 0.6263 | V-Loss: 0.6301 | T-AUC: 0.675 | V-AUC: 0.640
+E8 | T-Loss: 0.6022 | V-Loss: 0.6311 | T-AUC: 0.740 | V-AUC: 0.642
+E9 | T-Loss: 0.5984 | V-Loss: 0.6334 | T-AUC: 0.761 | V-AUC: 0.634
+E10 | T-Loss: 0.5877 | V-Loss: 0.6302 | T-AUC: 0.810 | V-AUC: 0.647
+E11 | T-Loss: 0.6001 | V-Loss: 0.6295 | T-AUC: 0.782 | V-AUC: 0.651
+E12 | T-Loss: 0.5624 | V-Loss: 0.6239 | T-AUC: 0.829 | V-AUC: 0.690
+E13 | T-Loss: 0.5735 | V-Loss: 0.6210 | T-AUC: 0.821 | V-AUC: 0.690
+E14 | T-Loss: 0.5855 | V-Loss: 0.6153 | T-AUC: 0.812 | V-AUC: 0.705
+E15 | T-Loss: 0.5943 | V-Loss: 0.6225 | T-AUC: 0.811 | V-AUC: 0.675
+E16 | T-Loss: 0.5754 | V-Loss: 0.6216 | T-AUC: 0.851 | V-AUC: 0.677
+E17 | T-Loss: 0.5814 | V-Loss: 0.6197 | T-AUC: 0.846 | V-AUC: 0.679
+E18 | T-Loss: 0.5800 | V-Loss: 0.6233 | T-AUC: 0.811 | V-AUC: 0.677
+E19 | T-Loss: 0.5615 | V-Loss: 0.6186 | T-AUC: 0.858 | V-AUC: 0.696
+E20 | T-Loss: 0.5806 | V-Loss: 0.6107 | T-AUC: 0.830 | V-AUC: 0.703
+E21 | T-Loss: 0.5656 | V-Loss: 0.6208 | T-AUC: 0.836 | V-AUC: 0.683
+E22 | T-Loss: 0.5478 | V-Loss: 0.6271 | T-AUC: 0.864 | V-AUC: 0.668
+E23 | T-Loss: 0.5632 | V-Loss: 0.6217 | T-AUC: 0.824 | V-AUC: 0.679
+E24 | T-Loss: 0.5583 | V-Loss: 0.6217 | T-AUC: 0.838 | V-AUC: 0.685
+E25 | T-Loss: 0.5467 | V-Loss: 0.6232 | T-AUC: 0.857 | V-AUC: 0.677
+E26 | T-Loss: 0.5845 | V-Loss: 0.6192 | T-AUC: 0.804 | V-AUC: 0.694
+E27 | T-Loss: 0.5357 | V-Loss: 0.6239 | T-AUC: 0.890 | V-AUC: 0.683
+E28 | T-Loss: 0.5498 | V-Loss: 0.6268 | T-AUC: 0.892 | V-AUC: 0.679
+E29 | T-Loss: 0.5268 | V-Loss: 0.6197 | T-AUC: 0.923 | V-AUC: 0.698
+E30 | T-Loss: 0.5538 | V-Loss: 0.6192 | T-AUC: 0.867 | V-AUC: 0.685
+Early stopping triggered at epoch 30.
+
+Inner fold 5
+E1 | T-Loss: 0.7301 | V-Loss: 0.7304 | T-AUC: 0.521 | V-AUC: 0.394
+E2 | T-Loss: 0.7346 | V-Loss: 0.7500 | T-AUC: 0.560 | V-AUC: 0.422
+E3 | T-Loss: 0.6945 | V-Loss: 0.7582 | T-AUC: 0.627 | V-AUC: 0.405
+E4 | T-Loss: 0.6539 | V-Loss: 0.7675 | T-AUC: 0.702 | V-AUC: 0.403
+E5 | T-Loss: 0.6468 | V-Loss: 0.7632 | T-AUC: 0.744 | V-AUC: 0.427
+E6 | T-Loss: 0.6866 | V-Loss: 0.7678 | T-AUC: 0.639 | V-AUC: 0.418
+E7 | T-Loss: 0.6426 | V-Loss: 0.7544 | T-AUC: 0.713 | V-AUC: 0.405
+E8 | T-Loss: 0.6714 | V-Loss: 0.7631 | T-AUC: 0.637 | V-AUC: 0.427
+E9 | T-Loss: 0.6390 | V-Loss: 0.7526 | T-AUC: 0.771 | V-AUC: 0.446
+E10 | T-Loss: 0.6365 | V-Loss: 0.7559 | T-AUC: 0.754 | V-AUC: 0.427
+E11 | T-Loss: 0.6245 | V-Loss: 0.7582 | T-AUC: 0.829 | V-AUC: 0.433
+Early stopping triggered at epoch 11.
+
+Outer fold 3
+
+Inner fold 1
+E1 | T-Loss: 0.7249 | V-Loss: 0.6823 | T-AUC: 0.523 | V-AUC: 0.696
+E2 | T-Loss: 0.7222 | V-Loss: 0.6773 | T-AUC: 0.556 | V-AUC: 0.702
+E3 | T-Loss: 0.7282 | V-Loss: 0.6757 | T-AUC: 0.554 | V-AUC: 0.718
+E4 | T-Loss: 0.6834 | V-Loss: 0.6773 | T-AUC: 0.605 | V-AUC: 0.710
+E5 | T-Loss: 0.6882 | V-Loss: 0.6693 | T-AUC: 0.651 | V-AUC: 0.751
+E6 | T-Loss: 0.6870 | V-Loss: 0.6651 | T-AUC: 0.650 | V-AUC: 0.759
+E7 | T-Loss: 0.6644 | V-Loss: 0.6648 | T-AUC: 0.709 | V-AUC: 0.738
+E8 | T-Loss: 0.6674 | V-Loss: 0.6676 | T-AUC: 0.676 | V-AUC: 0.732
+E9 | T-Loss: 0.6507 | V-Loss: 0.6532 | T-AUC: 0.711 | V-AUC: 0.753
+E10 | T-Loss: 0.6517 | V-Loss: 0.6590 | T-AUC: 0.734 | V-AUC: 0.740
+E11 | T-Loss: 0.6611 | V-Loss: 0.6566 | T-AUC: 0.710 | V-AUC: 0.759
+E12 | T-Loss: 0.6475 | V-Loss: 0.6586 | T-AUC: 0.771 | V-AUC: 0.740
+E13 | T-Loss: 0.6387 | V-Loss: 0.6594 | T-AUC: 0.763 | V-AUC: 0.744
+E14 | T-Loss: 0.6250 | V-Loss: 0.6617 | T-AUC: 0.802 | V-AUC: 0.734
+E15 | T-Loss: 0.6267 | V-Loss: 0.6524 | T-AUC: 0.813 | V-AUC: 0.744
+E16 | T-Loss: 0.6360 | V-Loss: 0.6491 | T-AUC: 0.780 | V-AUC: 0.753
+E17 | T-Loss: 0.6100 | V-Loss: 0.6501 | T-AUC: 0.832 | V-AUC: 0.730
+E18 | T-Loss: 0.6229 | V-Loss: 0.6497 | T-AUC: 0.795 | V-AUC: 0.722
+E19 | T-Loss: 0.6057 | V-Loss: 0.6591 | T-AUC: 0.849 | V-AUC: 0.740
+E20 | T-Loss: 0.6034 | V-Loss: 0.6525 | T-AUC: 0.839 | V-AUC: 0.738
+E21 | T-Loss: 0.6015 | V-Loss: 0.6491 | T-AUC: 0.821 | V-AUC: 0.738
+E22 | T-Loss: 0.6157 | V-Loss: 0.6396 | T-AUC: 0.808 | V-AUC: 0.744
+E23 | T-Loss: 0.5836 | V-Loss: 0.6466 | T-AUC: 0.873 | V-AUC: 0.748
+E24 | T-Loss: 0.5961 | V-Loss: 0.6437 | T-AUC: 0.843 | V-AUC: 0.755
+E25 | T-Loss: 0.5627 | V-Loss: 0.6517 | T-AUC: 0.913 | V-AUC: 0.730
+E26 | T-Loss: 0.5636 | V-Loss: 0.6547 | T-AUC: 0.905 | V-AUC: 0.714
+E27 | T-Loss: 0.5864 | V-Loss: 0.6579 | T-AUC: 0.873 | V-AUC: 0.700
+E28 | T-Loss: 0.5690 | V-Loss: 0.6486 | T-AUC: 0.888 | V-AUC: 0.728
+E29 | T-Loss: 0.5495 | V-Loss: 0.6528 | T-AUC: 0.908 | V-AUC: 0.742
+E30 | T-Loss: 0.5522 | V-Loss: 0.6586 | T-AUC: 0.935 | V-AUC: 0.728
+E31 | T-Loss: 0.5601 | V-Loss: 0.6559 | T-AUC: 0.886 | V-AUC: 0.722
+E32 | T-Loss: 0.5377 | V-Loss: 0.6522 | T-AUC: 0.924 | V-AUC: 0.728
+Early stopping triggered at epoch 32.
+
+Inner fold 2
+E1 | T-Loss: 0.6857 | V-Loss: 0.6576 | T-AUC: 0.449 | V-AUC: 0.672
+E2 | T-Loss: 0.6478 | V-Loss: 0.6452 | T-AUC: 0.563 | V-AUC: 0.676
+E3 | T-Loss: 0.6190 | V-Loss: 0.6411 | T-AUC: 0.646 | V-AUC: 0.674
+E4 | T-Loss: 0.6164 | V-Loss: 0.6379 | T-AUC: 0.662 | V-AUC: 0.679
+E5 | T-Loss: 0.6057 | V-Loss: 0.6364 | T-AUC: 0.719 | V-AUC: 0.672
+E6 | T-Loss: 0.6197 | V-Loss: 0.6350 | T-AUC: 0.687 | V-AUC: 0.683
+E7 | T-Loss: 0.5731 | V-Loss: 0.6268 | T-AUC: 0.777 | V-AUC: 0.706
+E8 | T-Loss: 0.5862 | V-Loss: 0.6260 | T-AUC: 0.771 | V-AUC: 0.693
+E9 | T-Loss: 0.5894 | V-Loss: 0.6260 | T-AUC: 0.750 | V-AUC: 0.708
+E10 | T-Loss: 0.5820 | V-Loss: 0.6228 | T-AUC: 0.799 | V-AUC: 0.729
+E11 | T-Loss: 0.5761 | V-Loss: 0.6248 | T-AUC: 0.781 | V-AUC: 0.712
+E12 | T-Loss: 0.5938 | V-Loss: 0.6287 | T-AUC: 0.775 | V-AUC: 0.655
+E13 | T-Loss: 0.5696 | V-Loss: 0.6279 | T-AUC: 0.821 | V-AUC: 0.670
+E14 | T-Loss: 0.5820 | V-Loss: 0.6200 | T-AUC: 0.790 | V-AUC: 0.693
+E15 | T-Loss: 0.5556 | V-Loss: 0.6235 | T-AUC: 0.843 | V-AUC: 0.695
+E16 | T-Loss: 0.5444 | V-Loss: 0.6218 | T-AUC: 0.855 | V-AUC: 0.683
+E17 | T-Loss: 0.5462 | V-Loss: 0.6250 | T-AUC: 0.861 | V-AUC: 0.672
+E18 | T-Loss: 0.5462 | V-Loss: 0.6229 | T-AUC: 0.878 | V-AUC: 0.668
+E19 | T-Loss: 0.5489 | V-Loss: 0.6201 | T-AUC: 0.875 | V-AUC: 0.685
+E20 | T-Loss: 0.5170 | V-Loss: 0.6218 | T-AUC: 0.908 | V-AUC: 0.670
+E21 | T-Loss: 0.5166 | V-Loss: 0.6198 | T-AUC: 0.923 | V-AUC: 0.672
+E22 | T-Loss: 0.5306 | V-Loss: 0.6195 | T-AUC: 0.877 | V-AUC: 0.683
+E23 | T-Loss: 0.5320 | V-Loss: 0.6177 | T-AUC: 0.875 | V-AUC: 0.679
+E24 | T-Loss: 0.5139 | V-Loss: 0.6216 | T-AUC: 0.918 | V-AUC: 0.670
+E25 | T-Loss: 0.5080 | V-Loss: 0.6174 | T-AUC: 0.922 | V-AUC: 0.676
+E26 | T-Loss: 0.5378 | V-Loss: 0.6168 | T-AUC: 0.867 | V-AUC: 0.672
+E27 | T-Loss: 0.5075 | V-Loss: 0.6202 | T-AUC: 0.928 | V-AUC: 0.643
+E28 | T-Loss: 0.5213 | V-Loss: 0.6186 | T-AUC: 0.908 | V-AUC: 0.653
+E29 | T-Loss: 0.5285 | V-Loss: 0.6192 | T-AUC: 0.913 | V-AUC: 0.634
+E30 | T-Loss: 0.5102 | V-Loss: 0.6131 | T-AUC: 0.923 | V-AUC: 0.689
+E31 | T-Loss: 0.5185 | V-Loss: 0.6054 | T-AUC: 0.900 | V-AUC: 0.716
+E32 | T-Loss: 0.5387 | V-Loss: 0.6064 | T-AUC: 0.862 | V-AUC: 0.704
+E33 | T-Loss: 0.4983 | V-Loss: 0.6131 | T-AUC: 0.925 | V-AUC: 0.670
+E34 | T-Loss: 0.5001 | V-Loss: 0.6144 | T-AUC: 0.935 | V-AUC: 0.647
+E35 | T-Loss: 0.5112 | V-Loss: 0.6080 | T-AUC: 0.896 | V-AUC: 0.681
+E36 | T-Loss: 0.5020 | V-Loss: 0.6185 | T-AUC: 0.938 | V-AUC: 0.624
+E37 | T-Loss: 0.4913 | V-Loss: 0.6202 | T-AUC: 0.947 | V-AUC: 0.626
+E38 | T-Loss: 0.5228 | V-Loss: 0.6160 | T-AUC: 0.892 | V-AUC: 0.655
+E39 | T-Loss: 0.4844 | V-Loss: 0.6212 | T-AUC: 0.919 | V-AUC: 0.637
+E40 | T-Loss: 0.5116 | V-Loss: 0.6270 | T-AUC: 0.925 | V-AUC: 0.601
+E41 | T-Loss: 0.5173 | V-Loss: 0.6177 | T-AUC: 0.901 | V-AUC: 0.641
+Early stopping triggered at epoch 41.
+
+Inner fold 3
+E1 | T-Loss: 0.7025 | V-Loss: 0.6828 | T-AUC: 0.509 | V-AUC: 0.487
+E2 | T-Loss: 0.6981 | V-Loss: 0.6916 | T-AUC: 0.494 | V-AUC: 0.457
+E3 | T-Loss: 0.6687 | V-Loss: 0.6901 | T-AUC: 0.564 | V-AUC: 0.506
+E4 | T-Loss: 0.6355 | V-Loss: 0.6882 | T-AUC: 0.686 | V-AUC: 0.511
+E5 | T-Loss: 0.6574 | V-Loss: 0.6871 | T-AUC: 0.620 | V-AUC: 0.489
+E6 | T-Loss: 0.6573 | V-Loss: 0.6926 | T-AUC: 0.633 | V-AUC: 0.491
+E7 | T-Loss: 0.6322 | V-Loss: 0.6839 | T-AUC: 0.699 | V-AUC: 0.532
+E8 | T-Loss: 0.6337 | V-Loss: 0.6724 | T-AUC: 0.711 | V-AUC: 0.554
+E9 | T-Loss: 0.6279 | V-Loss: 0.6744 | T-AUC: 0.690 | V-AUC: 0.571
+E10 | T-Loss: 0.6357 | V-Loss: 0.6738 | T-AUC: 0.695 | V-AUC: 0.582
+E11 | T-Loss: 0.5873 | V-Loss: 0.6817 | T-AUC: 0.801 | V-AUC: 0.556
+E12 | T-Loss: 0.5948 | V-Loss: 0.6812 | T-AUC: 0.806 | V-AUC: 0.543
+E13 | T-Loss: 0.5980 | V-Loss: 0.6774 | T-AUC: 0.773 | V-AUC: 0.567
+E14 | T-Loss: 0.5755 | V-Loss: 0.6777 | T-AUC: 0.824 | V-AUC: 0.575
+E15 | T-Loss: 0.5876 | V-Loss: 0.6734 | T-AUC: 0.846 | V-AUC: 0.597
+E16 | T-Loss: 0.5678 | V-Loss: 0.6759 | T-AUC: 0.850 | V-AUC: 0.588
+E17 | T-Loss: 0.5825 | V-Loss: 0.6732 | T-AUC: 0.798 | V-AUC: 0.597
+E18 | T-Loss: 0.5852 | V-Loss: 0.6786 | T-AUC: 0.813 | V-AUC: 0.586
+Early stopping triggered at epoch 18.
+
+Inner fold 4
+E1 | T-Loss: 0.7332 | V-Loss: 0.7212 | T-AUC: 0.520 | V-AUC: 0.494
+E2 | T-Loss: 0.7003 | V-Loss: 0.7249 | T-AUC: 0.611 | V-AUC: 0.427
+E3 | T-Loss: 0.6870 | V-Loss: 0.7213 | T-AUC: 0.611 | V-AUC: 0.446
+E4 | T-Loss: 0.7138 | V-Loss: 0.7228 | T-AUC: 0.567 | V-AUC: 0.440
+E5 | T-Loss: 0.6798 | V-Loss: 0.7199 | T-AUC: 0.703 | V-AUC: 0.468
+E6 | T-Loss: 0.6838 | V-Loss: 0.7270 | T-AUC: 0.670 | V-AUC: 0.478
+E7 | T-Loss: 0.6767 | V-Loss: 0.7167 | T-AUC: 0.686 | V-AUC: 0.491
+E8 | T-Loss: 0.6497 | V-Loss: 0.7191 | T-AUC: 0.739 | V-AUC: 0.481
+E9 | T-Loss: 0.6489 | V-Loss: 0.7148 | T-AUC: 0.762 | V-AUC: 0.478
+E10 | T-Loss: 0.6347 | V-Loss: 0.7113 | T-AUC: 0.799 | V-AUC: 0.478
+E11 | T-Loss: 0.6584 | V-Loss: 0.7232 | T-AUC: 0.738 | V-AUC: 0.459
+E12 | T-Loss: 0.6313 | V-Loss: 0.7214 | T-AUC: 0.781 | V-AUC: 0.472
+E13 | T-Loss: 0.6161 | V-Loss: 0.7186 | T-AUC: 0.819 | V-AUC: 0.474
+E14 | T-Loss: 0.6004 | V-Loss: 0.7077 | T-AUC: 0.861 | V-AUC: 0.496
+E15 | T-Loss: 0.6083 | V-Loss: 0.7125 | T-AUC: 0.844 | V-AUC: 0.485
+E16 | T-Loss: 0.6007 | V-Loss: 0.7097 | T-AUC: 0.872 | V-AUC: 0.506
+E17 | T-Loss: 0.5882 | V-Loss: 0.7193 | T-AUC: 0.894 | V-AUC: 0.485
+E18 | T-Loss: 0.5943 | V-Loss: 0.7073 | T-AUC: 0.865 | V-AUC: 0.489
+E19 | T-Loss: 0.5707 | V-Loss: 0.7143 | T-AUC: 0.894 | V-AUC: 0.474
+E20 | T-Loss: 0.5856 | V-Loss: 0.7281 | T-AUC: 0.885 | V-AUC: 0.478
+E21 | T-Loss: 0.5893 | V-Loss: 0.7190 | T-AUC: 0.869 | V-AUC: 0.474
+E22 | T-Loss: 0.5893 | V-Loss: 0.7286 | T-AUC: 0.829 | V-AUC: 0.470
+E23 | T-Loss: 0.5519 | V-Loss: 0.7276 | T-AUC: 0.927 | V-AUC: 0.453
+E24 | T-Loss: 0.5634 | V-Loss: 0.7140 | T-AUC: 0.901 | V-AUC: 0.472
+E25 | T-Loss: 0.5678 | V-Loss: 0.7218 | T-AUC: 0.874 | V-AUC: 0.463
+E26 | T-Loss: 0.5493 | V-Loss: 0.7229 | T-AUC: 0.935 | V-AUC: 0.461
+E27 | T-Loss: 0.5384 | V-Loss: 0.7212 | T-AUC: 0.924 | V-AUC: 0.455
+E28 | T-Loss: 0.5538 | V-Loss: 0.7196 | T-AUC: 0.896 | V-AUC: 0.468
+Early stopping triggered at epoch 28.
+
+Inner fold 5
+E1 | T-Loss: 0.7217 | V-Loss: 0.6748 | T-AUC: 0.479 | V-AUC: 0.575
+E2 | T-Loss: 0.6935 | V-Loss: 0.6795 | T-AUC: 0.550 | V-AUC: 0.558
+E3 | T-Loss: 0.6603 | V-Loss: 0.6738 | T-AUC: 0.641 | V-AUC: 0.593
+E4 | T-Loss: 0.6725 | V-Loss: 0.6753 | T-AUC: 0.604 | V-AUC: 0.541
+E5 | T-Loss: 0.6456 | V-Loss: 0.6736 | T-AUC: 0.682 | V-AUC: 0.541
+E6 | T-Loss: 0.6151 | V-Loss: 0.6723 | T-AUC: 0.774 | V-AUC: 0.580
+E7 | T-Loss: 0.6150 | V-Loss: 0.6646 | T-AUC: 0.762 | V-AUC: 0.601
+E8 | T-Loss: 0.6241 | V-Loss: 0.6662 | T-AUC: 0.736 | V-AUC: 0.627
+E9 | T-Loss: 0.6292 | V-Loss: 0.6701 | T-AUC: 0.708 | V-AUC: 0.631
+E10 | T-Loss: 0.5962 | V-Loss: 0.6737 | T-AUC: 0.774 | V-AUC: 0.588
+E11 | T-Loss: 0.6147 | V-Loss: 0.6763 | T-AUC: 0.760 | V-AUC: 0.588
+E12 | T-Loss: 0.5933 | V-Loss: 0.6635 | T-AUC: 0.780 | V-AUC: 0.603
+E13 | T-Loss: 0.5825 | V-Loss: 0.6704 | T-AUC: 0.796 | V-AUC: 0.606
+E14 | T-Loss: 0.5794 | V-Loss: 0.6746 | T-AUC: 0.814 | V-AUC: 0.593
+E15 | T-Loss: 0.5783 | V-Loss: 0.6698 | T-AUC: 0.809 | V-AUC: 0.601
+E16 | T-Loss: 0.5491 | V-Loss: 0.6691 | T-AUC: 0.836 | V-AUC: 0.603
+E17 | T-Loss: 0.5484 | V-Loss: 0.6699 | T-AUC: 0.869 | V-AUC: 0.578
+E18 | T-Loss: 0.5495 | V-Loss: 0.6679 | T-AUC: 0.866 | V-AUC: 0.562
+E19 | T-Loss: 0.5606 | V-Loss: 0.6710 | T-AUC: 0.859 | V-AUC: 0.562
+E20 | T-Loss: 0.5310 | V-Loss: 0.6748 | T-AUC: 0.892 | V-AUC: 0.571
+E21 | T-Loss: 0.5282 | V-Loss: 0.6699 | T-AUC: 0.871 | V-AUC: 0.558
+E22 | T-Loss: 0.5287 | V-Loss: 0.6747 | T-AUC: 0.901 | V-AUC: 0.560
+Early stopping triggered at epoch 22.
+
+Outer fold 4
+
+Inner fold 1
+E1 | T-Loss: 0.7313 | V-Loss: 0.7387 | T-AUC: 0.505 | V-AUC: 0.404
+E2 | T-Loss: 0.7282 | V-Loss: 0.7631 | T-AUC: 0.486 | V-AUC: 0.396
+E3 | T-Loss: 0.6933 | V-Loss: 0.7767 | T-AUC: 0.598 | V-AUC: 0.375
+E4 | T-Loss: 0.7105 | V-Loss: 0.8018 | T-AUC: 0.578 | V-AUC: 0.371
+E5 | T-Loss: 0.6957 | V-Loss: 0.7911 | T-AUC: 0.592 | V-AUC: 0.377
+E6 | T-Loss: 0.7186 | V-Loss: 0.7955 | T-AUC: 0.523 | V-AUC: 0.422
+E7 | T-Loss: 0.6961 | V-Loss: 0.7867 | T-AUC: 0.573 | V-AUC: 0.434
+E8 | T-Loss: 0.6418 | V-Loss: 0.7689 | T-AUC: 0.745 | V-AUC: 0.444
+E9 | T-Loss: 0.6733 | V-Loss: 0.7741 | T-AUC: 0.647 | V-AUC: 0.454
+E10 | T-Loss: 0.6525 | V-Loss: 0.7646 | T-AUC: 0.774 | V-AUC: 0.448
+E11 | T-Loss: 0.6538 | V-Loss: 0.7650 | T-AUC: 0.742 | V-AUC: 0.458
+Early stopping triggered at epoch 11.
+
+Inner fold 2
+E1 | T-Loss: 0.7044 | V-Loss: 0.7097 | T-AUC: 0.472 | V-AUC: 0.466
+E2 | T-Loss: 0.6575 | V-Loss: 0.6976 | T-AUC: 0.566 | V-AUC: 0.479
+E3 | T-Loss: 0.6450 | V-Loss: 0.6988 | T-AUC: 0.634 | V-AUC: 0.483
+E4 | T-Loss: 0.6295 | V-Loss: 0.7001 | T-AUC: 0.625 | V-AUC: 0.471
+E5 | T-Loss: 0.6406 | V-Loss: 0.7046 | T-AUC: 0.636 | V-AUC: 0.454
+E6 | T-Loss: 0.6002 | V-Loss: 0.7056 | T-AUC: 0.691 | V-AUC: 0.473
+E7 | T-Loss: 0.6377 | V-Loss: 0.6984 | T-AUC: 0.659 | V-AUC: 0.498
+E8 | T-Loss: 0.5794 | V-Loss: 0.6986 | T-AUC: 0.777 | V-AUC: 0.506
+E9 | T-Loss: 0.5898 | V-Loss: 0.6946 | T-AUC: 0.770 | V-AUC: 0.527
+E10 | T-Loss: 0.6055 | V-Loss: 0.6938 | T-AUC: 0.732 | V-AUC: 0.525
+E11 | T-Loss: 0.5805 | V-Loss: 0.6956 | T-AUC: 0.765 | V-AUC: 0.527
+E12 | T-Loss: 0.5799 | V-Loss: 0.6986 | T-AUC: 0.766 | V-AUC: 0.529
+E13 | T-Loss: 0.6100 | V-Loss: 0.6948 | T-AUC: 0.711 | V-AUC: 0.527
+E14 | T-Loss: 0.5506 | V-Loss: 0.7048 | T-AUC: 0.807 | V-AUC: 0.508
+E15 | T-Loss: 0.5499 | V-Loss: 0.7007 | T-AUC: 0.844 | V-AUC: 0.521
+E16 | T-Loss: 0.5700 | V-Loss: 0.6950 | T-AUC: 0.799 | V-AUC: 0.523
+E17 | T-Loss: 0.5776 | V-Loss: 0.6940 | T-AUC: 0.779 | V-AUC: 0.548
+E18 | T-Loss: 0.5704 | V-Loss: 0.6951 | T-AUC: 0.776 | V-AUC: 0.534
+E19 | T-Loss: 0.5678 | V-Loss: 0.7014 | T-AUC: 0.797 | V-AUC: 0.523
+E20 | T-Loss: 0.5430 | V-Loss: 0.6951 | T-AUC: 0.823 | V-AUC: 0.532
+Early stopping triggered at epoch 20.
+
+Inner fold 3
+E1 | T-Loss: 0.7863 | V-Loss: 0.7075 | T-AUC: 0.495 | V-AUC: 0.473
+E2 | T-Loss: 0.7913 | V-Loss: 0.7361 | T-AUC: 0.479 | V-AUC: 0.429
+E3 | T-Loss: 0.7501 | V-Loss: 0.7610 | T-AUC: 0.665 | V-AUC: 0.429
+E4 | T-Loss: 0.7550 | V-Loss: 0.7677 | T-AUC: 0.628 | V-AUC: 0.395
+E5 | T-Loss: 0.7589 | V-Loss: 0.7734 | T-AUC: 0.592 | V-AUC: 0.378
+E6 | T-Loss: 0.7186 | V-Loss: 0.7736 | T-AUC: 0.688 | V-AUC: 0.374
+E7 | T-Loss: 0.7383 | V-Loss: 0.7734 | T-AUC: 0.686 | V-AUC: 0.395
+E8 | T-Loss: 0.7056 | V-Loss: 0.7775 | T-AUC: 0.748 | V-AUC: 0.380
+E9 | T-Loss: 0.7035 | V-Loss: 0.7799 | T-AUC: 0.787 | V-AUC: 0.395
+E10 | T-Loss: 0.7093 | V-Loss: 0.7739 | T-AUC: 0.725 | V-AUC: 0.380
+E11 | T-Loss: 0.7131 | V-Loss: 0.7714 | T-AUC: 0.718 | V-AUC: 0.389
+Early stopping triggered at epoch 11.
+
+Inner fold 4
+E1 | T-Loss: 0.6918 | V-Loss: 0.6688 | T-AUC: 0.493 | V-AUC: 0.616
+E2 | T-Loss: 0.6399 | V-Loss: 0.6532 | T-AUC: 0.634 | V-AUC: 0.634
+E3 | T-Loss: 0.6552 | V-Loss: 0.6447 | T-AUC: 0.587 | V-AUC: 0.647
+E4 | T-Loss: 0.6394 | V-Loss: 0.6354 | T-AUC: 0.632 | V-AUC: 0.657
+E5 | T-Loss: 0.6237 | V-Loss: 0.6333 | T-AUC: 0.644 | V-AUC: 0.670
+E6 | T-Loss: 0.6213 | V-Loss: 0.6358 | T-AUC: 0.695 | V-AUC: 0.670
+E7 | T-Loss: 0.6454 | V-Loss: 0.6403 | T-AUC: 0.636 | V-AUC: 0.640
+E8 | T-Loss: 0.6095 | V-Loss: 0.6335 | T-AUC: 0.737 | V-AUC: 0.649
+E9 | T-Loss: 0.6123 | V-Loss: 0.6293 | T-AUC: 0.725 | V-AUC: 0.653
+E10 | T-Loss: 0.6193 | V-Loss: 0.6300 | T-AUC: 0.711 | V-AUC: 0.649
+E11 | T-Loss: 0.6153 | V-Loss: 0.6239 | T-AUC: 0.691 | V-AUC: 0.677
+E12 | T-Loss: 0.5979 | V-Loss: 0.6162 | T-AUC: 0.758 | V-AUC: 0.709
+E13 | T-Loss: 0.5833 | V-Loss: 0.6242 | T-AUC: 0.805 | V-AUC: 0.679
+E14 | T-Loss: 0.6073 | V-Loss: 0.6189 | T-AUC: 0.743 | V-AUC: 0.683
+E15 | T-Loss: 0.5795 | V-Loss: 0.6270 | T-AUC: 0.777 | V-AUC: 0.651
+E16 | T-Loss: 0.5802 | V-Loss: 0.6324 | T-AUC: 0.783 | V-AUC: 0.636
+E17 | T-Loss: 0.5824 | V-Loss: 0.6342 | T-AUC: 0.776 | V-AUC: 0.634
+E18 | T-Loss: 0.5826 | V-Loss: 0.6268 | T-AUC: 0.799 | V-AUC: 0.657
+E19 | T-Loss: 0.5697 | V-Loss: 0.6278 | T-AUC: 0.821 | V-AUC: 0.649
+E20 | T-Loss: 0.5455 | V-Loss: 0.6313 | T-AUC: 0.835 | V-AUC: 0.649
+E21 | T-Loss: 0.5554 | V-Loss: 0.6323 | T-AUC: 0.850 | V-AUC: 0.651
+E22 | T-Loss: 0.5655 | V-Loss: 0.6340 | T-AUC: 0.797 | V-AUC: 0.647
+Early stopping triggered at epoch 22.
+
+Inner fold 5
+E1 | T-Loss: 0.7304 | V-Loss: 0.6806 | T-AUC: 0.444 | V-AUC: 0.597
+E2 | T-Loss: 0.7020 | V-Loss: 0.6726 | T-AUC: 0.563 | V-AUC: 0.631
+E3 | T-Loss: 0.6715 | V-Loss: 0.6745 | T-AUC: 0.631 | V-AUC: 0.597
+E4 | T-Loss: 0.6875 | V-Loss: 0.6632 | T-AUC: 0.627 | V-AUC: 0.606
+E5 | T-Loss: 0.6351 | V-Loss: 0.6568 | T-AUC: 0.708 | V-AUC: 0.634
+E6 | T-Loss: 0.6444 | V-Loss: 0.6559 | T-AUC: 0.700 | V-AUC: 0.653
+E7 | T-Loss: 0.6284 | V-Loss: 0.6517 | T-AUC: 0.749 | V-AUC: 0.644
+E8 | T-Loss: 0.6387 | V-Loss: 0.6559 | T-AUC: 0.740 | V-AUC: 0.649
+E9 | T-Loss: 0.5951 | V-Loss: 0.6480 | T-AUC: 0.814 | V-AUC: 0.670
+E10 | T-Loss: 0.6103 | V-Loss: 0.6571 | T-AUC: 0.785 | V-AUC: 0.700
+E11 | T-Loss: 0.6065 | V-Loss: 0.6541 | T-AUC: 0.793 | V-AUC: 0.681
+E12 | T-Loss: 0.6019 | V-Loss: 0.6455 | T-AUC: 0.812 | V-AUC: 0.672
+E13 | T-Loss: 0.5921 | V-Loss: 0.6447 | T-AUC: 0.847 | V-AUC: 0.651
+E14 | T-Loss: 0.6040 | V-Loss: 0.6426 | T-AUC: 0.800 | V-AUC: 0.677
+E15 | T-Loss: 0.5883 | V-Loss: 0.6453 | T-AUC: 0.832 | V-AUC: 0.670
+E16 | T-Loss: 0.5497 | V-Loss: 0.6486 | T-AUC: 0.914 | V-AUC: 0.670
+E17 | T-Loss: 0.5743 | V-Loss: 0.6455 | T-AUC: 0.859 | V-AUC: 0.642
+E18 | T-Loss: 0.5531 | V-Loss: 0.6526 | T-AUC: 0.887 | V-AUC: 0.659
+E19 | T-Loss: 0.5391 | V-Loss: 0.6534 | T-AUC: 0.902 | V-AUC: 0.651
+E20 | T-Loss: 0.5448 | V-Loss: 0.6477 | T-AUC: 0.896 | V-AUC: 0.664
+E21 | T-Loss: 0.5615 | V-Loss: 0.6480 | T-AUC: 0.887 | V-AUC: 0.657
+E22 | T-Loss: 0.5386 | V-Loss: 0.6436 | T-AUC: 0.885 | V-AUC: 0.666
+E23 | T-Loss: 0.5436 | V-Loss: 0.6480 | T-AUC: 0.906 | V-AUC: 0.651
+E24 | T-Loss: 0.5381 | V-Loss: 0.6459 | T-AUC: 0.929 | V-AUC: 0.668
+Early stopping triggered at epoch 24.
+
+Outer fold 5
+
+Inner fold 1
+E1 | T-Loss: 0.6998 | V-Loss: 0.6955 | T-AUC: 0.585 | V-AUC: 0.505
+E2 | T-Loss: 0.6668 | V-Loss: 0.7024 | T-AUC: 0.651 | V-AUC: 0.505
+E3 | T-Loss: 0.6770 | V-Loss: 0.7080 | T-AUC: 0.670 | V-AUC: 0.481
+E4 | T-Loss: 0.6516 | V-Loss: 0.7106 | T-AUC: 0.693 | V-AUC: 0.477
+E5 | T-Loss: 0.6316 | V-Loss: 0.7176 | T-AUC: 0.795 | V-AUC: 0.467
+E6 | T-Loss: 0.6524 | V-Loss: 0.7137 | T-AUC: 0.712 | V-AUC: 0.458
+E7 | T-Loss: 0.6329 | V-Loss: 0.7149 | T-AUC: 0.776 | V-AUC: 0.465
+E8 | T-Loss: 0.6306 | V-Loss: 0.7156 | T-AUC: 0.789 | V-AUC: 0.467
+E9 | T-Loss: 0.6249 | V-Loss: 0.7185 | T-AUC: 0.792 | V-AUC: 0.454
+E10 | T-Loss: 0.6290 | V-Loss: 0.7237 | T-AUC: 0.778 | V-AUC: 0.434
+E11 | T-Loss: 0.6011 | V-Loss: 0.7223 | T-AUC: 0.853 | V-AUC: 0.440
+Early stopping triggered at epoch 11.
+
+Inner fold 2
+E1 | T-Loss: 0.7162 | V-Loss: 0.6997 | T-AUC: 0.483 | V-AUC: 0.447
+E2 | T-Loss: 0.6800 | V-Loss: 0.7056 | T-AUC: 0.574 | V-AUC: 0.422
+E3 | T-Loss: 0.6556 | V-Loss: 0.7094 | T-AUC: 0.630 | V-AUC: 0.422
+E4 | T-Loss: 0.6453 | V-Loss: 0.7012 | T-AUC: 0.706 | V-AUC: 0.433
+E5 | T-Loss: 0.6479 | V-Loss: 0.7062 | T-AUC: 0.659 | V-AUC: 0.435
+E6 | T-Loss: 0.6416 | V-Loss: 0.7008 | T-AUC: 0.695 | V-AUC: 0.466
+E7 | T-Loss: 0.6248 | V-Loss: 0.6991 | T-AUC: 0.731 | V-AUC: 0.492
+E8 | T-Loss: 0.6121 | V-Loss: 0.6941 | T-AUC: 0.761 | V-AUC: 0.489
+E9 | T-Loss: 0.6320 | V-Loss: 0.6844 | T-AUC: 0.727 | V-AUC: 0.498
+E10 | T-Loss: 0.6133 | V-Loss: 0.6840 | T-AUC: 0.775 | V-AUC: 0.527
+E11 | T-Loss: 0.5979 | V-Loss: 0.6785 | T-AUC: 0.789 | V-AUC: 0.532
+E12 | T-Loss: 0.6244 | V-Loss: 0.6788 | T-AUC: 0.773 | V-AUC: 0.536
+E13 | T-Loss: 0.5811 | V-Loss: 0.6834 | T-AUC: 0.875 | V-AUC: 0.511
+E14 | T-Loss: 0.5672 | V-Loss: 0.6824 | T-AUC: 0.901 | V-AUC: 0.498
+E15 | T-Loss: 0.5864 | V-Loss: 0.6842 | T-AUC: 0.803 | V-AUC: 0.502
+E16 | T-Loss: 0.5615 | V-Loss: 0.6874 | T-AUC: 0.888 | V-AUC: 0.500
+E17 | T-Loss: 0.5425 | V-Loss: 0.6936 | T-AUC: 0.916 | V-AUC: 0.487
+E18 | T-Loss: 0.5662 | V-Loss: 0.6938 | T-AUC: 0.845 | V-AUC: 0.485
+E19 | T-Loss: 0.5539 | V-Loss: 0.6889 | T-AUC: 0.890 | V-AUC: 0.494
+E20 | T-Loss: 0.5547 | V-Loss: 0.6908 | T-AUC: 0.870 | V-AUC: 0.485
+E21 | T-Loss: 0.5530 | V-Loss: 0.6854 | T-AUC: 0.879 | V-AUC: 0.487
+Early stopping triggered at epoch 21.
+
+Inner fold 3
+E1 | T-Loss: 0.6752 | V-Loss: 0.6782 | T-AUC: 0.494 | V-AUC: 0.519
+E2 | T-Loss: 0.6437 | V-Loss: 0.6780 | T-AUC: 0.630 | V-AUC: 0.525
+E3 | T-Loss: 0.6534 | V-Loss: 0.6780 | T-AUC: 0.594 | V-AUC: 0.532
+E4 | T-Loss: 0.6407 | V-Loss: 0.6769 | T-AUC: 0.665 | V-AUC: 0.523
+E5 | T-Loss: 0.6458 | V-Loss: 0.6740 | T-AUC: 0.631 | V-AUC: 0.544
+E6 | T-Loss: 0.6453 | V-Loss: 0.6720 | T-AUC: 0.616 | V-AUC: 0.532
+E7 | T-Loss: 0.6292 | V-Loss: 0.6689 | T-AUC: 0.666 | V-AUC: 0.544
+E8 | T-Loss: 0.6368 | V-Loss: 0.6667 | T-AUC: 0.625 | V-AUC: 0.546
+E9 | T-Loss: 0.6129 | V-Loss: 0.6585 | T-AUC: 0.740 | V-AUC: 0.574
+E10 | T-Loss: 0.6162 | V-Loss: 0.6625 | T-AUC: 0.696 | V-AUC: 0.557
+E11 | T-Loss: 0.6142 | V-Loss: 0.6593 | T-AUC: 0.701 | V-AUC: 0.548
+E12 | T-Loss: 0.6169 | V-Loss: 0.6592 | T-AUC: 0.703 | V-AUC: 0.553
+E13 | T-Loss: 0.6366 | V-Loss: 0.6598 | T-AUC: 0.645 | V-AUC: 0.582
+E14 | T-Loss: 0.6068 | V-Loss: 0.6606 | T-AUC: 0.738 | V-AUC: 0.571
+E15 | T-Loss: 0.6309 | V-Loss: 0.6582 | T-AUC: 0.684 | V-AUC: 0.565
+E16 | T-Loss: 0.5789 | V-Loss: 0.6530 | T-AUC: 0.820 | V-AUC: 0.597
+E17 | T-Loss: 0.6026 | V-Loss: 0.6529 | T-AUC: 0.747 | V-AUC: 0.588
+E18 | T-Loss: 0.5873 | V-Loss: 0.6601 | T-AUC: 0.802 | V-AUC: 0.559
+E19 | T-Loss: 0.5776 | V-Loss: 0.6636 | T-AUC: 0.822 | V-AUC: 0.536
+E20 | T-Loss: 0.5816 | V-Loss: 0.6633 | T-AUC: 0.800 | V-AUC: 0.546
+E21 | T-Loss: 0.5636 | V-Loss: 0.6642 | T-AUC: 0.876 | V-AUC: 0.525
+E22 | T-Loss: 0.5800 | V-Loss: 0.6683 | T-AUC: 0.821 | V-AUC: 0.504
+E23 | T-Loss: 0.5744 | V-Loss: 0.6720 | T-AUC: 0.831 | V-AUC: 0.492
+E24 | T-Loss: 0.5653 | V-Loss: 0.6702 | T-AUC: 0.876 | V-AUC: 0.498
+E25 | T-Loss: 0.5591 | V-Loss: 0.6726 | T-AUC: 0.855 | V-AUC: 0.485
+E26 | T-Loss: 0.5636 | V-Loss: 0.6691 | T-AUC: 0.845 | V-AUC: 0.513
+E27 | T-Loss: 0.5704 | V-Loss: 0.6670 | T-AUC: 0.825 | V-AUC: 0.523
+Early stopping triggered at epoch 27.
+
+Inner fold 4
+E1 | T-Loss: 0.7199 | V-Loss: 0.6822 | T-AUC: 0.475 | V-AUC: 0.543
+E2 | T-Loss: 0.6936 | V-Loss: 0.6892 | T-AUC: 0.567 | V-AUC: 0.517
+E3 | T-Loss: 0.6925 | V-Loss: 0.6885 | T-AUC: 0.586 | V-AUC: 0.537
+E4 | T-Loss: 0.6713 | V-Loss: 0.6852 | T-AUC: 0.680 | V-AUC: 0.554
+E5 | T-Loss: 0.6570 | V-Loss: 0.6880 | T-AUC: 0.669 | V-AUC: 0.578
+E6 | T-Loss: 0.6630 | V-Loss: 0.6876 | T-AUC: 0.678 | V-AUC: 0.543
+E7 | T-Loss: 0.6652 | V-Loss: 0.6828 | T-AUC: 0.675 | V-AUC: 0.550
+E8 | T-Loss: 0.6505 | V-Loss: 0.6888 | T-AUC: 0.722 | V-AUC: 0.526
+E9 | T-Loss: 0.6330 | V-Loss: 0.6907 | T-AUC: 0.761 | V-AUC: 0.532
+E10 | T-Loss: 0.6175 | V-Loss: 0.6876 | T-AUC: 0.790 | V-AUC: 0.545
+E11 | T-Loss: 0.6396 | V-Loss: 0.6971 | T-AUC: 0.754 | V-AUC: 0.545
+Early stopping triggered at epoch 11.
+
+Inner fold 5
+E1 | T-Loss: 0.7428 | V-Loss: 0.7447 | T-AUC: 0.531 | V-AUC: 0.338
+E2 | T-Loss: 0.7605 | V-Loss: 0.7556 | T-AUC: 0.494 | V-AUC: 0.409
+E3 | T-Loss: 0.7298 | V-Loss: 0.7576 | T-AUC: 0.592 | V-AUC: 0.457
+E4 | T-Loss: 0.6966 | V-Loss: 0.7431 | T-AUC: 0.689 | V-AUC: 0.502
+E5 | T-Loss: 0.6864 | V-Loss: 0.7413 | T-AUC: 0.702 | V-AUC: 0.509
+E6 | T-Loss: 0.7018 | V-Loss: 0.7314 | T-AUC: 0.655 | V-AUC: 0.534
+E7 | T-Loss: 0.6780 | V-Loss: 0.7353 | T-AUC: 0.743 | V-AUC: 0.515
+E8 | T-Loss: 0.6563 | V-Loss: 0.7335 | T-AUC: 0.786 | V-AUC: 0.530
+E9 | T-Loss: 0.6605 | V-Loss: 0.7220 | T-AUC: 0.767 | V-AUC: 0.517
+E10 | T-Loss: 0.6421 | V-Loss: 0.7215 | T-AUC: 0.783 | V-AUC: 0.526
+E11 | T-Loss: 0.6303 | V-Loss: 0.7162 | T-AUC: 0.778 | V-AUC: 0.539
+E12 | T-Loss: 0.6459 | V-Loss: 0.7227 | T-AUC: 0.774 | V-AUC: 0.522
+E13 | T-Loss: 0.6327 | V-Loss: 0.7325 | T-AUC: 0.818 | V-AUC: 0.519
+E14 | T-Loss: 0.6178 | V-Loss: 0.7263 | T-AUC: 0.821 | V-AUC: 0.506
+E15 | T-Loss: 0.6186 | V-Loss: 0.7273 | T-AUC: 0.842 | V-AUC: 0.494
+E16 | T-Loss: 0.6094 | V-Loss: 0.7190 | T-AUC: 0.855 | V-AUC: 0.532
+E17 | T-Loss: 0.6023 | V-Loss: 0.7233 | T-AUC: 0.874 | V-AUC: 0.556
+E18 | T-Loss: 0.6203 | V-Loss: 0.7261 | T-AUC: 0.812 | V-AUC: 0.539
+E19 | T-Loss: 0.5919 | V-Loss: 0.7206 | T-AUC: 0.897 | V-AUC: 0.547
+E20 | T-Loss: 0.6014 | V-Loss: 0.7230 | T-AUC: 0.857 | V-AUC: 0.552
+E21 | T-Loss: 0.5809 | V-Loss: 0.7149 | T-AUC: 0.901 | V-AUC: 0.565
+E22 | T-Loss: 0.5817 | V-Loss: 0.7102 | T-AUC: 0.870 | V-AUC: 0.552
+E23 | T-Loss: 0.5665 | V-Loss: 0.7195 | T-AUC: 0.909 | V-AUC: 0.550
+E24 | T-Loss: 0.5771 | V-Loss: 0.7237 | T-AUC: 0.911 | V-AUC: 0.532
+E25 | T-Loss: 0.5747 | V-Loss: 0.7201 | T-AUC: 0.917 | V-AUC: 0.539
+E26 | T-Loss: 0.5307 | V-Loss: 0.7129 | T-AUC: 0.942 | V-AUC: 0.562
+E27 | T-Loss: 0.5759 | V-Loss: 0.7113 | T-AUC: 0.858 | V-AUC: 0.541
+E28 | T-Loss: 0.5582 | V-Loss: 0.7095 | T-AUC: 0.919 | V-AUC: 0.571
+E29 | T-Loss: 0.5744 | V-Loss: 0.7118 | T-AUC: 0.895 | V-AUC: 0.571
+E30 | T-Loss: 0.5452 | V-Loss: 0.7100 | T-AUC: 0.929 | V-AUC: 0.571
+E31 | T-Loss: 0.5421 | V-Loss: 0.7129 | T-AUC: 0.932 | V-AUC: 0.578
+E32 | T-Loss: 0.5546 | V-Loss: 0.7026 | T-AUC: 0.910 | V-AUC: 0.569
+E33 | T-Loss: 0.5373 | V-Loss: 0.7168 | T-AUC: 0.920 | V-AUC: 0.556
+E34 | T-Loss: 0.5419 | V-Loss: 0.7179 | T-AUC: 0.918 | V-AUC: 0.554
+E35 | T-Loss: 0.5473 | V-Loss: 0.7074 | T-AUC: 0.923 | V-AUC: 0.573
+E36 | T-Loss: 0.5366 | V-Loss: 0.7158 | T-AUC: 0.922 | V-AUC: 0.560
+E37 | T-Loss: 0.5549 | V-Loss: 0.7104 | T-AUC: 0.906 | V-AUC: 0.573
+E38 | T-Loss: 0.5459 | V-Loss: 0.7182 | T-AUC: 0.900 | V-AUC: 0.558
+E39 | T-Loss: 0.5213 | V-Loss: 0.7246 | T-AUC: 0.938 | V-AUC: 0.556
+E40 | T-Loss: 0.5682 | V-Loss: 0.7225 | T-AUC: 0.870 | V-AUC: 0.558
+E41 | T-Loss: 0.5262 | V-Loss: 0.7286 | T-AUC: 0.941 | V-AUC: 0.556
+E42 | T-Loss: 0.5697 | V-Loss: 0.7307 | T-AUC: 0.912 | V-AUC: 0.558
+Early stopping triggered at epoch 42.

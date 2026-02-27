@@ -1,0 +1,21 @@
+2026-02-26 12:22:38,350 INFO    MainThread:50150 [wandb_init.py:setup_run_log_directory():717] Logging user logs to /Users/marcalbesa/Desktop/TFM/git_exp/methods/MLPs/ZI_MLP/runs/wandb/run-20260226_122238-zbr9ukll/logs/debug.log
+2026-02-26 12:22:38,356 INFO    MainThread:50150 [wandb_init.py:setup_run_log_directory():718] Logging internal logs to /Users/marcalbesa/Desktop/TFM/git_exp/methods/MLPs/ZI_MLP/runs/wandb/run-20260226_122238-zbr9ukll/logs/debug-internal.log
+2026-02-26 12:22:38,357 INFO    MainThread:50150 [wandb_init.py:init():844] calling init triggers
+2026-02-26 12:22:38,358 INFO    MainThread:50150 [wandb_init.py:init():849] wandb.init called with sweep_config: {}
+config: {'endpoint': 'OS_6', 'model': 'MLP', 'dataset': 'MIMM', 'modalities': ['path', 'rad', 'clin', 'blood', 'radio_report'], 'hp_grid_size': 1, 'epochs': 80, 'inner_splits': 5, 'outer_splits': 5, 'missing_complete_prob': 0.55, 'missing_mild_prob': 0.2, 'missing_moderate_prob': 0.15, 'missing_severe_prob': 0.1, 'seed': 22, 'outer_fold': 3, 'batch_size': 16, 'learning_rate': 5e-05, 'modality_hidden_layers': 1, 'fusion_hidden_dim': 32, 'fusion_hidden_layers': 1, 'dropout': 0.2, 'use_mask': True, 'name': 'lr5e-05_bs16_modL1_fusion32_fusionL1_drop0p2_usemask1', '_wandb': {}}
+2026-02-26 12:22:38,359 INFO    MainThread:50150 [wandb_init.py:init():892] starting backend
+2026-02-26 12:22:38,359 INFO    MainThread:50150 [wandb_init.py:init():895] sending inform_init request
+2026-02-26 12:22:38,402 INFO    MainThread:50150 [wandb_init.py:init():903] backend started and connected
+2026-02-26 12:22:38,932 INFO    MainThread:50150 [wandb_init.py:init():973] updated telemetry
+2026-02-26 12:22:39,408 INFO    MainThread:50150 [wandb_init.py:init():997] communicating run to backend with 90.0 second timeout
+2026-02-26 12:22:39,789 INFO    MainThread:50150 [wandb_init.py:init():1042] starting run threads in backend
+2026-02-26 12:22:39,894 INFO    MainThread:50150 [wandb_run.py:_console_start():2524] atexit reg
+2026-02-26 12:22:39,894 INFO    MainThread:50150 [wandb_run.py:_redirect():2373] redirect: wrap_raw
+2026-02-26 12:22:39,894 INFO    MainThread:50150 [wandb_run.py:_redirect():2442] Wrapping output streams.
+2026-02-26 12:22:39,895 INFO    MainThread:50150 [wandb_run.py:_redirect():2465] Redirects installed.
+2026-02-26 12:22:39,896 INFO    MainThread:50150 [wandb_init.py:init():1082] run started, returning control to user process
+2026-02-26 12:22:39,916 INFO    MainThread:50150 [wandb_run.py:_finish():2291] finishing run marc_albesa/ZI_MLPs_MIMM/zbr9ukll
+2026-02-26 12:22:39,916 INFO    MainThread:50150 [wandb_run.py:_atexit_cleanup():2490] got exitcode: 0
+2026-02-26 12:22:39,916 INFO    MainThread:50150 [wandb_run.py:_restore():2472] restore
+2026-02-26 12:22:39,917 INFO    MainThread:50150 [wandb_run.py:_restore():2478] restore done
+2026-02-26 12:22:41,145 INFO    MainThread:50150 [wandb_run.py:_footer_sync_info():3868] logging synced files

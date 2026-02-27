@@ -1,0 +1,127 @@
+_wandb:
+    value:
+        cli_version: 0.25.0
+        e:
+            lbux51eyny7jzi90qc141rx9lf3w4dwk:
+                args:
+                    - --dataset
+                    - MIMM
+                    - --odir
+                    - /Users/marcalbesa/Desktop/TFM/git_exp/methods/MLPs/ZI_MLP/results
+                    - --endpoint
+                    - OS_6
+                    - --inst_data
+                    - /Users/marcalbesa/Desktop/TFM/data/MIMM/patients_mimm.csv
+                    - --patho_data
+                    - /Users/marcalbesa/Desktop/TFM/data/MIMM/pathology_mimm.csv
+                    - --radio_data
+                    - /Users/marcalbesa/Desktop/TFM/data/MIMM/radiology_mimm.csv
+                    - --clin_data
+                    - /Users/marcalbesa/Desktop/TFM/data/MIMM/clinical_mimm.csv
+                    - --radio_report_data
+                    - /Users/marcalbesa/Desktop/TFM/data/MIMM/radioreports_mimm.csv
+                    - --blood_data
+                    - /Users/marcalbesa/Desktop/TFM/data/MIMM/blood_mimm.csv
+                    - --batch_size
+                    - 16,32
+                    - --learning_rate
+                    - "5e-5"
+                    - --fusion_hidden_dim
+                    - "32"
+                    - --fusion_hidden_layers
+                    - "1"
+                    - --modality_hidden_layers
+                    - "1"
+                    - --use_mask_values
+                    - "true"
+                    - --dropout
+                    - "0.2"
+                    - --seeds
+                    - "22"
+                    - --wandb
+                    - --wandb_project
+                    - ZI_MLPs
+                    - --wandb_mode
+                    - online
+                codePath: methods/MLPs/ZI_MLP/main.py
+                email: albesa.marc@gmail.com
+                executable: /opt/miniconda3/envs/TFM/bin/python
+                git:
+                    commit: f2a9d963b2a16467001c78abcf82393a5268c2ee
+                    remote: https://github.com/marcalvi/TFM.git
+                host: MacBook-Pro-de-Marc-4.local
+                os: macOS-26.2-arm64-arm-64bit
+                program: /Users/marcalbesa/Desktop/TFM/git_exp/methods/MLPs/ZI_MLP/main.py
+                python: CPython 3.9.23
+                root: /Users/marcalbesa/Desktop/TFM/git_exp/methods/MLPs/ZI_MLP/runs
+                startedAt: "2026-02-26T12:11:10.400011Z"
+                writerId: lbux51eyny7jzi90qc141rx9lf3w4dwk
+        m: []
+        python_version: 3.9.23
+        t:
+            "1":
+                - 1
+                - 5
+                - 53
+            "2":
+                - 1
+                - 5
+                - 53
+            "3":
+                - 2
+                - 13
+                - 16
+                - 61
+            "4": 3.9.23
+            "5": 0.25.0
+            "12": 0.25.0
+            "13": darwin-arm64
+batch_size:
+    value: 16
+dataset:
+    value: MIMM
+dropout:
+    value: 0.2
+endpoint:
+    value: OS_6
+epochs:
+    value: 80
+fusion_hidden_dim:
+    value: 32
+fusion_hidden_layers:
+    value: 1
+hp_grid_size:
+    value: 2
+inner_splits:
+    value: 5
+learning_rate:
+    value: 5e-05
+missing_complete_prob:
+    value: 0.55
+missing_mild_prob:
+    value: 0.2
+missing_moderate_prob:
+    value: 0.15
+missing_severe_prob:
+    value: 0.1
+modalities:
+    value:
+        - path
+        - rad
+        - clin
+        - blood
+        - radio_report
+modality_hidden_layers:
+    value: 1
+model:
+    value: MLP
+name:
+    value: lr5e-05_bs16_modL1_fusion32_fusionL1_drop0p2_usemask1
+outer_fold:
+    value: 5
+outer_splits:
+    value: 5
+seed:
+    value: 22
+use_mask:
+    value: true
