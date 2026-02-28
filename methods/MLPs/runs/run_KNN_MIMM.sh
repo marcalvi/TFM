@@ -32,7 +32,7 @@ FUSION_HIDDEN_DIM_GRID="32,64"
 FUSION_HIDDEN_LAYERS_GRID="1"
 MODALITY_HIDDEN_LAYERS_GRID="1"
 DROPOUT_GRID="0.2,0.1"
-IMPUTATION_METHOD="zero"
+IMPUTATION_METHOD="knn"
 
 # Missingness experiments
 MISSING_SCOPE_GRID="train,test,both,none"
@@ -66,5 +66,5 @@ python "${PROJECT_ROOT}/MLPs/main.py" \
   --missing_location "${MISSING_LOCATION_GRID}" \
   --seeds "${SEEDS}" \
   --wandb \
-  --wandb_project "ZI_MLPs" \
+  --wandb_project "KNN_MLPs" \
   --wandb_mode "online"

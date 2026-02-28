@@ -25,6 +25,7 @@ def _build_loaders(
     batch_size,
     train_missing=False,
     val_missing=False,
+    imputation_method="zero",
 ):
     train_base = MLPDataset(dfs=dfs_train_scaled, label_df=inst_df_train, label_col=label_col)
     val_base = MLPDataset(dfs=dfs_eval_scaled, label_df=inst_df_eval, label_col=label_col)
@@ -33,11 +34,13 @@ def _build_loaders(
         base_dataset=train_base,
         simulator=missing_simulator,
         apply_missing=train_missing,
+        imputation_method=imputation_method,
     )
     val_ds = MultimodalDatasetWithMissing(
         base_dataset=val_base,
         simulator=missing_simulator,
         apply_missing=val_missing,
+        imputation_method=imputation_method,
     )
 
     n_train = len(train_ds)
@@ -208,6 +211,7 @@ def nested_cv(
     seed,
     hp_configs,
     missing_simulator,
+    imputation_method="zero",
     missing_scope="none",
     inner_splits=5,
     outer_splits=5,
@@ -321,6 +325,7 @@ def nested_cv(
                     batch_size=hp_cfg["batch_size"],
                     train_missing=apply_missing_train,
                     val_missing=apply_missing_train,
+                    imputation_method=imputation_method,
                 )
 
                 # Get model kwargs from this HP config
@@ -491,6 +496,7 @@ def nested_cv(
                 base_dataset=ensemble_eval_base,
                 simulator=missing_simulator,
                 apply_missing=apply_missing_test,
+                imputation_method=imputation_method,
             )
             ensemble_eval_loader = DataLoader(
                 ensemble_eval_ds,

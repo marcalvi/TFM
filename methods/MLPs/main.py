@@ -61,6 +61,13 @@ def get_args():
         default="global",
         help="Missing location: global or modality key (path, radio, clin, blood, radio_report). Supports scalar or comma-separated list.",
     )
+    parser.add_argument(
+        "--imputation_method",
+        type=str,
+        default="zero",
+        choices=["zero", "knn"],
+        help="Imputation method for missing modalities: zero or knn.",
+    )
 
     # Weights & Biases logging
     parser.add_argument("--wandb", action="store_true", help="Enable Weights & Biases logging")
@@ -309,6 +316,7 @@ def main():
                         "missing_prob": missing_prob,
                         "missing_scope": missing_scope,
                         "missing_location": missing_location,
+                        "imputation_method": args.imputation_method,
                     }
 
                     # Run nested cross-validation
@@ -320,6 +328,7 @@ def main():
                         seed=seed,
                         hp_configs=hp_configs,
                         missing_simulator=missing_simulator,
+                        imputation_method=args.imputation_method,
                         missing_scope=missing_scope,
                         inner_splits=args.inner_splits,
                         outer_splits=args.outer_splits,
