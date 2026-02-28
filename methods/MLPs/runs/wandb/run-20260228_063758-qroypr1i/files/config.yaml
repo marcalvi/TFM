@@ -1,0 +1,131 @@
+_wandb:
+    value:
+        cli_version: 0.25.0
+        e:
+            yuhdlknp4njx3f5driy77p0gqgqg0li6:
+                args:
+                    - --dataset
+                    - MIMM
+                    - --odir
+                    - /home/osiris-user/Desktop/TFM/methods/results
+                    - --endpoint
+                    - OS_6
+                    - --model
+                    - ZI_MLP
+                    - --inst_data
+                    - /nfs/rnas/projects/M3BENCH/data/inputs/MIMM//patients_mimm.csv
+                    - --patho_data
+                    - /nfs/rnas/projects/M3BENCH/data/inputs/MIMM//pathology_mimm.csv
+                    - --radio_data
+                    - /nfs/rnas/projects/M3BENCH/data/inputs/MIMM//radiology_mimm.csv
+                    - --clin_data
+                    - /nfs/rnas/projects/M3BENCH/data/inputs/MIMM//clinical_mimm.csv
+                    - --radio_report_data
+                    - /nfs/rnas/projects/M3BENCH/data/inputs/MIMM//radioreports_mimm.csv
+                    - --blood_data
+                    - /nfs/rnas/projects/M3BENCH/data/inputs/MIMM//blood_mimm.csv
+                    - --inner_splits
+                    - "5"
+                    - --outer_splits
+                    - "5"
+                    - --epochs
+                    - "80"
+                    - --batch_size
+                    - 16,32
+                    - --learning_rate
+                    - 5e-5,1e-4
+                    - --fusion_hidden_dim
+                    - 32,64
+                    - --fusion_hidden_layers
+                    - 1,2
+                    - --modality_hidden_layers
+                    - 1,2
+                    - --dropout
+                    - 0.2,0.1
+                    - --missing_prob
+                    - 0.2,0.4,0.6,0.8
+                    - --missing_scope
+                    - train,test,both,none
+                    - --missing_location
+                    - global, path, radio, clin, blood, radio_report
+                    - --seeds
+                    - 22,2002,4,80,348,7391,1414,18473,92841,55602
+                    - --wandb
+                    - --wandb_project
+                    - ZI_MLPs
+                    - --wandb_mode
+                    - online
+                codePath: methods/MLPs/main.py
+                email: albesa.marc@gmail.com
+                executable: /home/osiris-user/anaconda3/envs/TFM/bin/python
+                git:
+                    commit: 775821071f2851be516031bdc94b5ad72b27d197
+                    remote: git@github.com:marcalvi/TFM.git
+                host: dd8fc34a3737
+                os: Linux-6.8.0-90-generic-x86_64-with-glibc2.35
+                program: /home/osiris-user/Desktop/TFM/methods/MLPs/main.py
+                python: CPython 3.9.23
+                root: /home/osiris-user/Desktop/TFM/methods/MLPs/runs
+                startedAt: "2026-02-28T05:37:58.406324Z"
+                writerId: yuhdlknp4njx3f5driy77p0gqgqg0li6
+        m: []
+        python_version: 3.9.23
+        t:
+            "1":
+                - 1
+                - 5
+                - 53
+            "2":
+                - 1
+                - 5
+                - 53
+            "3":
+                - 2
+                - 13
+                - 16
+                - 61
+                - 62
+            "4": 3.9.23
+            "5": 0.25.0
+            "12": 0.25.0
+            "13": linux-x86_64
+dataset:
+    value: MIMM
+endpoint:
+    value: OS_6
+epochs:
+    value: 80
+hp_grid_size:
+    value: 64
+inner_splits:
+    value: 5
+missing_location:
+    value: global
+missing_prob:
+    value: 0.4
+missing_scope:
+    value: train
+modalities:
+    value:
+        - path
+        - radio
+        - clin
+        - blood
+        - radio_report
+model:
+    value: ZI_MLP
+outer_fold:
+    value: 1
+outer_splits:
+    value: 5
+phase:
+    value: avg_inner_curve_best_per_fold
+seed:
+    value: 22
+selected_inner_hp_names:
+    value:
+        - lr5e-05_bs16_modL1_fusion64_fusionL2_drop0p2_miss40_scopetrain_locglobal
+        - lr5e-05_bs16_modL1_fusion64_fusionL1_drop0p2_miss40_scopetrain_locglobal
+        - lr5e-05_bs32_modL1_fusion64_fusionL1_drop0p1_miss40_scopetrain_locglobal
+        - lr1e-04_bs16_modL1_fusion32_fusionL2_drop0p2_miss40_scopetrain_locglobal
+        - lr5e-05_bs32_modL1_fusion32_fusionL2_drop0p2_miss40_scopetrain_locglobal
