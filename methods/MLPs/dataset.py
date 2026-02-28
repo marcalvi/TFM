@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+from imputation_methods import KNNModalityImputer
 
 
 class MLPDataset(Dataset):
@@ -121,10 +122,24 @@ class MissingModalitySimulator:
 class MultimodalDatasetWithMissing(Dataset):
     """Wrap a complete base dataset and inject simulated missing modalities."""
 
-    def __init__(self, base_dataset, simulator, apply_missing=True):
+    def __init__(
+        self,
+        base_dataset,
+        simulator,
+        apply_missing=True,
+        imputation_method="zero",
+        knn_k=5,
+    ):
         self.base_dataset = base_dataset
         self.simulator = simulator
         self.apply_missing = apply_missing
+        self.imputation_method = str(imputation_method).strip().lower()
+        if self.imputation_method not in {"zero", "knn"}:
+            raise ValueError("imputation_method must be one of: zero, knn")
+
+        self.imputer = None
+        if self.apply_missing and self.imputation_method == "knn":
+            self.imputer = KNNModalityImputer(base_dataset=self.base_dataset, k=knn_k)
 
     def __len__(self):
         return len(self.base_dataset)
@@ -138,10 +153,18 @@ class MultimodalDatasetWithMissing(Dataset):
             # Clone tensors so masking does not mutate base dataset outputs.
             Xs_missing = [m.clone() for m in Xs]
             present_mask = torch.as_tensor(self.simulator.generate_missing_pattern(), dtype=torch.bool)
-            # Zero-out modalities marked as missing by the simulator.
-            for i, present in enumerate(present_mask):
-                if not bool(present):
-                    Xs_missing[i] = torch.zeros_like(Xs_missing[i])
+            if self.imputation_method == "zero":
+                # Replace missing modalities by zeros.
+                for i, present in enumerate(present_mask):
+                    if not bool(present):
+                        Xs_missing[i] = torch.zeros_like(Xs_missing[i])
+            else:
+                # Replace missing modalities with KNN mean imputation.
+                Xs_missing = self.imputer.impute_modalities(
+                    modalities=Xs_missing,
+                    present_mask=present_mask,
+                    sample_index=idx,
+                )
         else:
             # Validation/test path: keep all modalities as present.
             present_mask = torch.ones(self.simulator.num_modalities, dtype=torch.bool)
