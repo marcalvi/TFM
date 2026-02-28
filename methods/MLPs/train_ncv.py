@@ -23,21 +23,21 @@ def _build_loaders(
     label_col,
     missing_simulator,
     batch_size,
-    train_missing=True,
-    eval_missing=False,
+    train_missing=False,
+    val_missing=False,
 ):
     train_base = MLPDataset(dfs=dfs_train_scaled, label_df=inst_df_train, label_col=label_col)
-    eval_base = MLPDataset(dfs=dfs_eval_scaled, label_df=inst_df_eval, label_col=label_col)
+    val_base = MLPDataset(dfs=dfs_eval_scaled, label_df=inst_df_eval, label_col=label_col)
 
     train_ds = MultimodalDatasetWithMissing(
         base_dataset=train_base,
         simulator=missing_simulator,
         apply_missing=train_missing,
     )
-    eval_ds = MultimodalDatasetWithMissing(
-        base_dataset=eval_base,
+    val_ds = MultimodalDatasetWithMissing(
+        base_dataset=val_base,
         simulator=missing_simulator,
-        apply_missing=eval_missing,
+        apply_missing=val_missing,
     )
 
     n_train = len(train_ds)
@@ -56,15 +56,15 @@ def _build_loaders(
         collate_fn=multimodal_collate,
         drop_last=drop_last_train,
     )
-    eval_loader = DataLoader(
-        eval_ds,
+    val_loader = DataLoader(
+        val_ds,
         batch_size=batch_size,
         shuffle=False,
         collate_fn=multimodal_collate,
         drop_last=False,
     )
 
-    return train_loader, eval_loader
+    return train_loader, val_loader
 
 # Function to transform outer train with each inner train scaler
 def _transform_modalities_with_fitted_scalers(dfs_raw, scalers):
@@ -220,12 +220,12 @@ def nested_cv(
     if wandb_enabled and wandb is None:
         print("wandb is not installed. Continuing without wandb logging.")
     
-    # Create boolean flags for missing modalities in train and/or test
+    # Create boolean flags for missing modalities in train and test
     missing_scope = str(missing_scope).lower()
     if missing_scope not in {"train", "test", "both", "none"}:
         raise ValueError("missing_scope must be one of: train, test, both, none")
     apply_missing_train = missing_scope in {"train", "both"}
-    apply_missing_eval = missing_scope in {"test", "both"}
+    apply_missing_test = missing_scope in {"test", "both"}
 
     # Get patient IDs and labels from  inst_df
     patients = inst_df["patient"].values
@@ -310,7 +310,7 @@ def nested_cv(
             for hp_cfg in hp_configs:
                 hp_name = hp_cfg["name"]
 
-                # Get train and val loaders according to missing scope, simulator and batch size
+                # Inner validation belongs to outer-train, so it follows train missingness.
                 train_loader, val_loader = _build_loaders(
                     inst_df_train=inst_df_train_inner,
                     inst_df_eval=inst_df_val_inner,
@@ -320,7 +320,7 @@ def nested_cv(
                     missing_simulator=missing_simulator,
                     batch_size=hp_cfg["batch_size"],
                     train_missing=apply_missing_train,
-                    eval_missing=apply_missing_eval,
+                    val_missing=apply_missing_train,
                 )
 
                 # Get model kwargs from this HP config
@@ -409,11 +409,17 @@ def nested_cv(
             selected_inner_histories.append(best_inner_history)
 
         # Log averaged learning curve of the selected best inner-fold models for this outer fold
+        inner_curve_run = None
         if wandb_active and selected_inner_histories:
             selected_hp_names = [row["hp_name"] for row in selected_inner_rows]
+            missing_location = str((wandb_base_config or {}).get("missing_location", "na")).strip().lower()
+            missing_prob = float((wandb_base_config or {}).get("missing_prob", 0.0))
             run_name = (
-                f"avg_inner_best_seed{seed}_outer{outer_fold_idx}_"
-                + "__".join(selected_hp_names)
+                f"scope{missing_scope}_"
+                f"loc{missing_location}_"
+                f"prob{missing_prob:g}_"
+                f"seed{seed}_"
+                f"outer{outer_fold_idx}"
             )
             run_config = dict(wandb_base_config or {})
             run_config.update(
@@ -424,7 +430,7 @@ def nested_cv(
                     "selected_inner_hp_names": selected_hp_names,
                 }
             )
-            run = wandb.init(
+            inner_curve_run = wandb.init(
                 project=wandb_project,
                 group=f"outer_fold_{outer_fold_idx}",
                 name=run_name,
@@ -444,28 +450,26 @@ def nested_cv(
                 val_aucs = [float(r["val_auc"]) for r in epoch_rows]
                 val_accs = [float(r["val_acc"]) for r in epoch_rows]
 
-                run.log(
+                inner_curve_run.log(
                     {
                         "avg_inner_best_models/train_loss_mean": float(np.mean(train_losses)),
-                        "avg_inner_best_models/train_loss_std": float(np.std(train_losses)),
                         "avg_inner_best_models/val_loss_mean": float(np.mean(val_losses)),
-                        "avg_inner_best_models/val_loss_std": float(np.std(val_losses)),
                         "avg_inner_best_models/val_auc_mean": float(np.mean(val_aucs)),
-                        "avg_inner_best_models/val_auc_std": float(np.std(val_aucs)),
                         "avg_inner_best_models/val_acc_mean": float(np.mean(val_accs)),
-                        "avg_inner_best_models/val_acc_std": float(np.std(val_accs)),
                         "cv/outer_fold": outer_fold_idx,
                         "cv/inner_folds_count": len(epoch_rows),
                     },
                     step=epoch_i,
                 )
 
-            run.summary["avg_inner_best_models/selected_inner_count"] = len(selected_inner_histories)
-            run.summary["avg_inner_best_models/selected_inner_hp_names"] = "|".join(selected_hp_names)
-            run.finish()
+            inner_curve_run.summary["avg_inner_best_models/selected_inner_count"] = len(selected_inner_histories)
+            inner_curve_run.summary["avg_inner_best_models/selected_inner_hp_names"] = "|".join(selected_hp_names)
 
-        # Outer prediction = average predictions of selected inner models on outer-train data (80%).
+        # Outer prediction = average predictions of selected inner models on outer-test data (20%).
         # Each model must evaluate on data transformed with its own inner-train scalers.
+        inst_df_test_outer = filter_by_patients(inst_df, test_outer_ids)
+        dfs_test_outer_raw = {name: filter_by_patients(df, test_outer_ids) for name, df in dfs.items()}
+
         outer_eval_batch_size = max(int(h["batch_size"]) for h in hp_configs)
         model_probs = []
         y_true_outer = None
@@ -475,18 +479,18 @@ def nested_cv(
             scalers = member["scalers"]
 
             dfs_outer_eval_scaled = _transform_modalities_with_fitted_scalers(
-                dfs_train_outer_raw,
+                dfs_test_outer_raw,
                 scalers,
             )
             ensemble_eval_base = MLPDataset(
                 dfs=dfs_outer_eval_scaled,
-                label_df=inst_df_train_outer,
+                label_df=inst_df_test_outer,
                 label_col=label_col,
             )
             ensemble_eval_ds = MultimodalDatasetWithMissing(
                 base_dataset=ensemble_eval_base,
                 simulator=missing_simulator,
-                apply_missing=apply_missing_eval,
+                apply_missing=apply_missing_test,
             )
             ensemble_eval_loader = DataLoader(
                 ensemble_eval_ds,
@@ -508,20 +512,26 @@ def nested_cv(
         outer_results.append(
             {
                 "outer_fold": outer_fold_idx,
-                "outer_eval_target": "train_outer",
+                "outer_eval_target": "test_outer",
                 "inner_models_count": len(selected_inner_members),
                 "selected_inner_hp_names": "|".join(r["hp_name"] for r in selected_inner_rows),
                 "selected_inner_mean_AUC": float(np.mean([r["val_best_AUC"] for r in selected_inner_rows])),
                 "selected_inner_mean_LOGLOSS": float(np.mean([r["val_best_LOGLOSS"] for r in selected_inner_rows])),
-                "outer_train_LOGLOSS": float(outer_metrics["LOGLOSS"]),
-                "outer_train_AUC": float(outer_metrics["AUC"]),
-                "outer_train_AUCPR": float(outer_metrics["AUCPR"]),
-                "outer_train_ACC": float(outer_metrics["ACC"]),
-                "outer_train_SEN": float(outer_metrics["SEN"]),
-                "outer_train_SP": float(outer_metrics["SP"]),
-                "outer_train_MCC": float(outer_metrics["MCC"]),
+                "outer_test_LOGLOSS": float(outer_metrics["LOGLOSS"]),
+                "outer_test_AUC": float(outer_metrics["AUC"]),
+                "outer_test_AUCPR": float(outer_metrics["AUCPR"]),
+                "outer_test_ACC": float(outer_metrics["ACC"]),
+                "outer_test_SEN": float(outer_metrics["SEN"]),
+                "outer_test_SP": float(outer_metrics["SP"]),
+                "outer_test_MCC": float(outer_metrics["MCC"]),
             }
         )
+
+        if inner_curve_run is not None:
+            inner_curve_run.summary["outer_test/acc"] = float(outer_metrics["ACC"])
+            inner_curve_run.summary["outer_test/auc"] = float(outer_metrics["AUC"])
+            inner_curve_run.summary["outer_test/aucpr"] = float(outer_metrics["AUCPR"])
+            inner_curve_run.finish()
 
     return (
         pd.DataFrame(inner_eval_rows),

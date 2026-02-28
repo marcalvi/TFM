@@ -356,7 +356,7 @@ def main():
                     split_df.to_csv(os.path.join(odir, "splits_manifest.csv"), index=False)
 
                     # Create outer test summary
-                    metric_cols = [c for c in outer_df.columns if c.startswith("outer_train_")]
+                    metric_cols = [c for c in outer_df.columns if c.startswith("outer_test_")]
                     if metric_cols:
                         summary = {}
                         for col in metric_cols:
