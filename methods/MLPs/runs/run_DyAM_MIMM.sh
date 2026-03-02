@@ -20,21 +20,19 @@ RESULTS_ROOT="${PROJECT_ROOT}/results"
 # Define endpoint
 ENDPOINT="OS_6"
 
-# Proposed tuning grid
-SEEDS="22,2002,639"
-#SEEDS="4,18473,55602"
-
+# Proposed tuning grid (DyAM)
+SEEDS="22,2002,4,18473,55602"
 INNER_SPLITS=5
 OUTER_SPLITS=5
 EPOCHS=80
 
+# Shared optimization hparams
 BATCH_SIZE_GRID="16,32"
 LR_GRID="5e-5,1e-4"
-FUSION_HIDDEN_DIM_GRID="32,64"
-FUSION_HIDDEN_LAYERS_GRID="1"
-MODALITY_HIDDEN_LAYERS_GRID="1"
-DROPOUT_GRID="0.2,0.1"
-IMPUTATION_METHOD="zero"
+
+# DyAM-specific hparams (suggested)
+DYAM_DROPOUT_GRID="0.2,0.4"
+DYAM_TEMPERATURE_GRID="1.0,2.0"
 
 # Missingness experiments
 MISSING_SCOPE_GRID="train,test,both,none"
@@ -46,7 +44,7 @@ python "${PROJECT_ROOT}/MLPs/main.py" \
   --dataset "MIMM" \
   --odir "${RESULTS_ROOT}" \
   --endpoint "${ENDPOINT}" \
-  --model "MLP" \
+  --model "DyAM" \
   --inst_data "${DATA_ROOT}/patients_mimm.csv" \
   --patho_data "${DATA_ROOT}/pathology_mimm.csv" \
   --radio_data "${DATA_ROOT}/radiology_mimm.csv" \
@@ -58,15 +56,12 @@ python "${PROJECT_ROOT}/MLPs/main.py" \
   --epochs "${EPOCHS}" \
   --batch_size "${BATCH_SIZE_GRID}" \
   --learning_rate "${LR_GRID}" \
-  --fusion_hidden_dim "${FUSION_HIDDEN_DIM_GRID}" \
-  --fusion_hidden_layers "${FUSION_HIDDEN_LAYERS_GRID}" \
-  --modality_hidden_layers "${MODALITY_HIDDEN_LAYERS_GRID}" \
-  --dropout "${DROPOUT_GRID}" \
-  --imputation_method "${IMPUTATION_METHOD}" \
+  --dyam_dropout "${DYAM_DROPOUT_GRID}" \
+  --dyam_temperature "${DYAM_TEMPERATURE_GRID}" \
   --missing_prob "${MISSING_PROB_GRID}" \
   --missing_scope "${MISSING_SCOPE_GRID}" \
   --missing_location "${MISSING_LOCATION_GRID}" \
   --seeds "${SEEDS}" \
   --wandb \
-  --wandb_project "ZI_MLPs" \
+  --wandb_project "DyAMs" \
   --wandb_mode "online"
