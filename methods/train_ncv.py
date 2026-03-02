@@ -14,6 +14,10 @@ try:
 except ImportError:
     wandb = None
 
+# Set a reasonable memory fraction for GPU in my brother's docker (he still needs to play fortnite)
+torch.cuda.set_per_process_memory_fraction(0.6, 0)
+torch.backends.cudnn.benchmark = True
+
 # ---------------------------- HELPER FUNCTIONS -----------------------------
 
 # Function to transform outer test with each inner train scaler
