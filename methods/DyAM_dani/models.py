@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -67,22 +66,30 @@ class DyAM(nn.Module):
                 risk_scores.append(self.risk_layers[i](feat))
                 attn_logits.append(self.attn_layers[i](feat))
 
+        # Concatenate modality-wise scores and logits
         R = torch.cat(risk_scores, dim=1)
-        R_masked = R * masks
         A_logits = torch.cat(attn_logits, dim=1)
+
+        # Apply softplus and temperature scaling to attention logits
         A_softplus = F.softplus(A_logits)
         A_softplus_T = A_softplus / self.T
+
+        # Masking: Zero out logits for missing modalities
         masked_logits = A_softplus_T * masks
-        a = masked_logits / masked_logits.sum(dim=1, keepdim=True)
+        R_masked = R * masks
 
-        # The count of available modalities per patient
+        # Normalize masked logits to get attention weights
+        attn_weights = masked_logits / masked_logits.sum(dim=1, keepdim=True)
+
+        # Conut number of active modalities for each patient
         num_active = masks.sum(dim=1, keepdim=True)
-        # The Attention Share (scaled by count)
-        alpha = a * num_active
 
-        output = (a * R_masked).sum(dim=1, keepdim=True)
+        # Get the attention share for each modality relative to the number of active modalities
+        alpha = attn_weights * num_active
 
-        return output, a, alpha, R_masked
+        output = (attn_weights * R_masked).sum(dim=1, keepdim=True)
+
+        return output, attn_weights, alpha, R_masked
     
 
 

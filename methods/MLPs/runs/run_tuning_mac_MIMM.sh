@@ -39,7 +39,7 @@ python "${PROJECT_ROOT}/MLPs/main.py" \
   --dataset "MIMM" \
   --odir "${RESULTS_ROOT}" \
   --endpoint "${ENDPOINT}" \
-  --model "ZI_MLP" \
+  --model "MLP" \
   --inst_data "${DATA_ROOT}/patients_mimm.csv" \
   --patho_data "${DATA_ROOT}/pathology_mimm.csv" \
   --radio_data "${DATA_ROOT}/radiology_mimm.csv" \

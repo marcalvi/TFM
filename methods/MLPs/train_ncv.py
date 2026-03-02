@@ -6,70 +6,15 @@ import torch.nn as nn
 import torch.optim as optim
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader
-from dataset import MLPDataset, MultimodalDatasetWithMissing, multimodal_collate
-from models import MultimodalMLP
-from utils import safe_binary_metrics, select_device, filter_by_patients, fit_and_transform_modalities
+from dataset import MLPDataset, MultimodalDatasetWithMissing, multimodal_collate, build_loaders
+from models import MultimodalMLP, DyAM
+from utils import build_model, safe_binary_metrics, select_device, filter_by_patients, fit_and_transform_modalities
 try:
     import wandb
 except ImportError:
     wandb = None
 
-# Function to build data loaders with missing data for training and evaluation
-def _build_loaders(
-    dfs_train_scaled,
-    inst_df_train,
-    dfs_eval_scaled,
-    inst_df_eval,
-    label_col,
-    missing_simulator,
-    batch_size,
-    train_missing=False,
-    val_missing=False,
-    imputation_method="zero",
-):
-    train_base = MLPDataset(dfs=dfs_train_scaled, label_df=inst_df_train, label_col=label_col)
-    val_base = MLPDataset(dfs=dfs_eval_scaled, label_df=inst_df_eval, label_col=label_col)
-
-    train_ds = MultimodalDatasetWithMissing(
-        base_dataset=train_base,
-        simulator=missing_simulator,
-        apply_missing=train_missing,
-        imputation_method=imputation_method,
-    )
-    val_ds = MultimodalDatasetWithMissing(
-        base_dataset=val_base,
-        simulator=missing_simulator,
-        apply_missing=val_missing,
-        imputation_method=imputation_method,
-    )
-
-    n_train = len(train_ds)
-    if n_train < 2:
-        raise ValueError(
-            f"Inner-train split has only {n_train} sample(s). "
-            "At least 2 are required with BatchNorm."
-        )
-    # Drop only when the last batch would have size 1 (BatchNorm issue).
-    drop_last_train = (n_train % batch_size) == 1
-
-    train_loader = DataLoader(
-        train_ds,
-        batch_size=batch_size,
-        shuffle=True,
-        collate_fn=multimodal_collate,
-        drop_last=drop_last_train,
-    )
-    val_loader = DataLoader(
-        val_ds,
-        batch_size=batch_size,
-        shuffle=False,
-        collate_fn=multimodal_collate,
-        drop_last=False,
-    )
-
-    return train_loader, val_loader
-
-# Function to transform outer train with each inner train scaler
+# Function to transform outer test with each inner train scaler
 def _transform_modalities_with_fitted_scalers(dfs_raw, scalers):
     """Apply pre-fitted per-modality scalers to raw modality dataframes."""
     dfs_scaled = {}
@@ -82,20 +27,35 @@ def _transform_modalities_with_fitted_scalers(dfs_raw, scalers):
         if len(df_scaled) > 0 and feats:
             values = df_scaled[feats].to_numpy(dtype=np.float32, copy=True)
             transformed = scalers[name].transform(values).astype(np.float32)
-            # Ensure feature columns are float-compatible before assignment
-            # to avoid pandas dtype warnings when original columns are int64.
-            df_scaled = df_scaled.astype({c: np.float32 for c in feats}, copy=False)
-            df_scaled[feats] = transformed
+            feat_df = pd.DataFrame(transformed, columns=feats, index=df_scaled.index)
+            base_cols = [c for c in df_scaled.columns if c not in feats]
+            df_scaled = pd.concat([df_scaled[base_cols], feat_df], axis=1)
 
         dfs_scaled[name] = df_scaled
 
     return dfs_scaled
 
 # Train function with validation and early stopping
-def train_model_with_validation(train_loader, val_loader, device, input_dims, epochs, lr, model_kwargs=None):
+def train_model_with_validation(
+    train_loader,
+    val_loader,
+    device,
+    input_dims,
+    epochs,
+    lr,
+    model_name,
+    imputation_method="zero",
+    model_kwargs=None,
+):
     model_kwargs = model_kwargs or {}
 
-    model = MultimodalMLP(input_dims, **model_kwargs).to(device)
+    # For MLP with KNN imputation, we do not use masking since KNN already imputes missing modalities
+    bypass_mask = (
+        str(model_name).strip().lower() == "mlp"
+        and str(imputation_method).strip().lower() == "knn"
+    )
+
+    model = build_model(model_name, input_dims, model_kwargs).to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=5)
     criterion = nn.BCEWithLogitsLoss()
@@ -119,9 +79,10 @@ def train_model_with_validation(train_loader, val_loader, device, input_dims, ep
             Xs = [x.to(device) for x in Xs]
             present_mask = present_mask.to(device)
             y = y.to(device)
+            model_mask = None if bypass_mask else present_mask
 
             optimizer.zero_grad()
-            logits = model(Xs, present_mask).squeeze(1)
+            logits = model(Xs, model_mask).squeeze(1)
             loss = criterion(logits, y)
             loss.backward()
             optimizer.step()
@@ -140,8 +101,9 @@ def train_model_with_validation(train_loader, val_loader, device, input_dims, ep
                 Xs = [x.to(device) for x in Xs]
                 present_mask = present_mask.to(device)
                 y = y.to(device)
+                model_mask = None if bypass_mask else present_mask
 
-                logits = model(Xs, present_mask).squeeze(1)
+                logits = model(Xs, model_mask).squeeze(1)
                 loss = criterion(logits, y)
 
                 val_loss += loss.item()
@@ -184,17 +146,28 @@ def train_model_with_validation(train_loader, val_loader, device, input_dims, ep
     return model, history, best_metrics
 
 # Function to predict on outer fold for each inner fold model
-def _predict_model_probabilities(model, data_loader, device):
+def _predict_model_probabilities(
+    model,
+    data_loader,
+    device,
+    model_name,
+    imputation_method="zero",
+):
     """Run one model on a loader and return y_true / probabilities."""
     model.eval()
     y_true = []
     y_prob = []
+    bypass_mask = (
+        str(model_name).strip().lower() == "mlp"
+        and str(imputation_method).strip().lower() == "knn"
+    )
 
     with torch.no_grad():
         for Xs, present_mask, y, _ in data_loader:
             Xs = [x.to(device) for x in Xs]
             present_mask = present_mask.to(device)
-            logits = model(Xs, present_mask).squeeze(1)
+            model_mask = None if bypass_mask else present_mask
+            logits = model(Xs, model_mask).squeeze(1)
             probs = torch.sigmoid(logits).cpu().numpy().reshape(-1)
 
             y_prob.extend(probs.tolist())
@@ -211,6 +184,7 @@ def nested_cv(
     seed,
     hp_configs,
     missing_simulator,
+    model_name,
     imputation_method="zero",
     missing_scope="none",
     inner_splits=5,
@@ -315,7 +289,7 @@ def nested_cv(
                 hp_name = hp_cfg["name"]
 
                 # Inner validation belongs to outer-train, so it follows train missingness.
-                train_loader, val_loader = _build_loaders(
+                train_loader, val_loader = build_loaders(
                     inst_df_train=inst_df_train_inner,
                     inst_df_eval=inst_df_val_inner,
                     dfs_train_scaled=dfs_train_inner_scaled,
@@ -329,12 +303,23 @@ def nested_cv(
                 )
 
                 # Get model kwargs from this HP config
-                model_kwargs = {
-                    "modality_hidden_layers": hp_cfg["modality_hidden_layers"],
-                    "fusion_hidden_dim": hp_cfg["fusion_hidden_dim"],
-                    "fusion_hidden_layers": hp_cfg["fusion_hidden_layers"],
-                    "dropout_p": hp_cfg["dropout"],
-                }
+                model_name_l = str(model_name).strip().lower()
+                if model_name_l in {"mlp"}:
+                    model_kwargs = {
+                        "modality_hidden_layers": hp_cfg["modality_hidden_layers"],
+                        "fusion_hidden_dim": hp_cfg["fusion_hidden_dim"],
+                        "fusion_hidden_layers": hp_cfg["fusion_hidden_layers"],
+                        "dropout_p": hp_cfg["dropout"],
+                    }
+                elif model_name_l in {"dyam"}:
+                    model_kwargs = {
+                        "dropout_p": hp_cfg["dyam_dropout"],
+                        "temperature": hp_cfg["dyam_temperature"],
+                    }
+                else:
+                    raise ValueError(
+                        f"Unsupported model '{model_name}'. Supported: mlp, dyam"
+                    )
 
                 # Train the model and evaluate on inner-val fold
                 model, history, best_metrics = train_model_with_validation(
@@ -344,6 +329,8 @@ def nested_cv(
                     input_dims=input_dims,
                     epochs=epochs,
                     lr=hp_cfg["learning_rate"],
+                    model_name=model_name,
+                    imputation_method=imputation_method,
                     model_kwargs=model_kwargs,
                 )
 
@@ -506,7 +493,13 @@ def nested_cv(
                 drop_last=False,
             )
 
-            y_true_i, y_prob_i = _predict_model_probabilities(model, ensemble_eval_loader, device)
+            y_true_i, y_prob_i = _predict_model_probabilities(
+                model=model,
+                data_loader=ensemble_eval_loader,
+                device=device,
+                model_name=model_name,
+                imputation_method=imputation_method,
+            )
             if y_true_outer is None:
                 y_true_outer = y_true_i
             model_probs.append(y_prob_i)

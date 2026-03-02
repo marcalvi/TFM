@@ -16,7 +16,7 @@ def get_args():
 
     # Required arguments
     parser.add_argument("--odir", type=str, required=True, help="Output directory")
-    parser.add_argument("--model", type=str, default="MLP", help="Model name for output path")
+    parser.add_argument("--model",type=str, required=True, choices=["MLP", "DyAM"])
     parser.add_argument("--dataset", type=str, required=True, help="Dataset name suffix")
     parser.add_argument("--endpoint", type=str, required=True, help="Endpoint base name")
     parser.add_argument("--inst_data", type=str, required=True, help="CSV with patient and label")
@@ -41,6 +41,10 @@ def get_args():
     parser.add_argument("--fusion_hidden_layers", type=str, default="1") # Supports scalar or comma-separated list for tuning
     parser.add_argument("--modality_hidden_layers", type=str, default="1") # Supports scalar or comma-separated list for tuning
     parser.add_argument("--dropout", type=str, default="0.2") # Supports scalar or comma-separated list for tuning
+
+    # DyAM architecture hyperparameters
+    parser.add_argument("--dyam_dropout", type=str, default="0.4")  # scalar or comma-separated list
+    parser.add_argument("--dyam_temperature", type=str, default="2.0")  # scalar or comma-separated list
 
     # Missing-modality setup
     parser.add_argument(
@@ -206,7 +210,7 @@ def main():
     inst_df["patient"] = inst_df["patient"].astype(int)
     inst_df = inst_df.set_index("patient", drop=False)
 
-    print("Dataframes read. Starting MLP training.")
+    print(f"Dataframes read. Starting {args.model} training.")
      
     # Parse run axes (supports scalar or comma-separated list)
     seeds_list = parse_value_or_list(args.seeds, int)
@@ -241,7 +245,10 @@ def main():
         )
 
     # Construct base output labels
-    model_label = str(args.model).strip().upper().replace("_", "-")
+    model_label = (
+        f"{str(args.imputation_method).strip().upper()}_"
+        f"{str(args.model).strip().upper().replace('_', '-')}"
+    )
     dataset_label = str(args.dataset).strip().upper()
     combo_count = 0
     for missing_scope in missing_scopes:
@@ -328,6 +335,7 @@ def main():
                         seed=seed,
                         hp_configs=hp_configs,
                         missing_simulator=missing_simulator,
+                        model_name=args.model,
                         imputation_method=args.imputation_method,
                         missing_scope=missing_scope,
                         inner_splits=args.inner_splits,
