@@ -1,0 +1,13 @@
+{"time":"2026-03-02T21:34:46.676093096+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-02T21:34:46.791931003+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-02T21:34:46.791985757+01:00","level":"INFO","msg":"stream: created new stream","id":"lemghspu"}
+{"time":"2026-03-02T21:34:46.792054879+01:00","level":"INFO","msg":"handler: started","stream_id":"lemghspu"}
+{"time":"2026-03-02T21:34:46.796073703+01:00","level":"INFO","msg":"stream: started","id":"lemghspu"}
+{"time":"2026-03-02T21:34:46.796251001+01:00","level":"INFO","msg":"writer: started","stream_id":"lemghspu"}
+{"time":"2026-03-02T21:34:46.796289625+01:00","level":"INFO","msg":"sender: started","stream_id":"lemghspu"}
+{"time":"2026-03-02T21:34:46.796582482+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-02T21:34:47.613726346+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-02T21:34:47.615919794+01:00","level":"INFO","msg":"stream: closing","id":"lemghspu"}
+{"time":"2026-03-02T21:34:47.615934442+01:00","level":"INFO","msg":"handler: closed","stream_id":"lemghspu"}
+{"time":"2026-03-02T21:34:47.616700371+01:00","level":"INFO","msg":"sender: closed","stream_id":"lemghspu"}
+{"time":"2026-03-02T21:34:47.616711251+01:00","level":"INFO","msg":"stream: closed","id":"lemghspu"}

@@ -21,7 +21,7 @@ RESULTS_ROOT="${PROJECT_ROOT}/results"
 ENDPOINT="OS_6"
 
 # Proposed tuning grid
-SEEDS="22,2002,639"
+SEEDS="22,2002"
 #SEEDS="4,18473,55602"
 
 INNER_SPLITS=5
@@ -42,7 +42,7 @@ MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
 MISSING_PROB_GRID="0.2,0.4,0.6,0.8"
 
 # Run training
-python "${PROJECT_ROOT}/MLPs/main.py" \
+python "${PROJECT_ROOT}/main.py" \
   --dataset "MIMM" \
   --odir "${RESULTS_ROOT}" \
   --endpoint "${ENDPOINT}" \

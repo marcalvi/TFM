@@ -1,0 +1,13 @@
+{"time":"2026-03-02T20:32:46.908372536+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-02T20:32:47.033076214+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-02T20:32:47.033132712+01:00","level":"INFO","msg":"stream: created new stream","id":"wsos2thz"}
+{"time":"2026-03-02T20:32:47.033191935+01:00","level":"INFO","msg":"handler: started","stream_id":"wsos2thz"}
+{"time":"2026-03-02T20:32:47.036909437+01:00","level":"INFO","msg":"stream: started","id":"wsos2thz"}
+{"time":"2026-03-02T20:32:47.037033995+01:00","level":"INFO","msg":"writer: started","stream_id":"wsos2thz"}
+{"time":"2026-03-02T20:32:47.037097876+01:00","level":"INFO","msg":"sender: started","stream_id":"wsos2thz"}
+{"time":"2026-03-02T20:32:47.037348724+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-02T20:32:47.840806176+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-02T20:32:47.842989235+01:00","level":"INFO","msg":"stream: closing","id":"wsos2thz"}
+{"time":"2026-03-02T20:32:47.843005065+01:00","level":"INFO","msg":"handler: closed","stream_id":"wsos2thz"}
+{"time":"2026-03-02T20:32:47.843528633+01:00","level":"INFO","msg":"sender: closed","stream_id":"wsos2thz"}
+{"time":"2026-03-02T20:32:47.843544162+01:00","level":"INFO","msg":"stream: closed","id":"wsos2thz"}
