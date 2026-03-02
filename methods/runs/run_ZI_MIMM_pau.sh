@@ -16,7 +16,7 @@ wandb login wandb_v1_J28MMe3nFCG1djcBu2SJAVMkG6l_cnWyTiDzTXgV9K55L7EI6LJIwR21J9d
 #DATA_ROOT="/Users/marcalbesa/Desktop/TFM/data/MIMM"
 
 PROJECT_ROOT="/workspace/TFM/methods"
-DATA_ROOT="workspace/data"
+DATA_ROOT="/workspace/data/MIMM"
 RESULTS_ROOT="${PROJECT_ROOT}/results"
 
 # Define endpoint
@@ -45,7 +45,7 @@ MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
 MISSING_PROB_GRID="0.2,0.4,0.6,0.8"
 
 # Run training
-python "${PROJECT_ROOT}/MLPs/main.py" \
+python "${PROJECT_ROOT}/main.py" \
   --dataset "MIMM" \
   --odir "${RESULTS_ROOT}" \
   --endpoint "${ENDPOINT}" \
