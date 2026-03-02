@@ -35,6 +35,12 @@ def get_args():
     parser.add_argument("--epochs", type=int, default=80)
     parser.add_argument("--learning_rate", type=str, default="5e-5") # Supports scalar or comma-separated list for tuning
     parser.add_argument("--seeds", type=str, default="123") # Supports scalar or comma-separated list for tuning
+    parser.add_argument(
+        "--gpu_memory_fraction",
+        type=float,
+        default=1.0,
+        help="Fraction of total GPU memory this process can use (CUDA only, in (0, 1]).",
+    )
 
     # MLP architecture hyperparameters
     parser.add_argument("--fusion_hidden_dim", type=str, default="32") # Supports scalar or comma-separated list for tuning
@@ -174,6 +180,9 @@ def main():
     args = get_args()
     start_time = time.time()
     print("Running")
+
+    if not (0.0 < float(args.gpu_memory_fraction) <= 1.0):
+        raise ValueError("--gpu_memory_fraction must be in (0, 1].")
 
     # Read labels dataframe and resolve label column name
     inst_df = pd.read_csv(args.inst_data)
@@ -340,6 +349,7 @@ def main():
                         missing_scope=missing_scope,
                         inner_splits=args.inner_splits,
                         outer_splits=args.outer_splits,
+                        gpu_memory_fraction=float(args.gpu_memory_fraction),
                         wandb_enabled=(args.wandb and args.wandb_mode != "disabled"),
                         wandb_project=wandb_project_name,
                         wandb_mode=args.wandb_mode,
