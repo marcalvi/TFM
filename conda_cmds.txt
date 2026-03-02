@@ -6,9 +6,12 @@ conda env remove -n nombre_del_entorno
 
 conda install -c conda-forge shap tensorboard
 
-conda env create -f environment.yml
+conda env create -f environment_linux.yml
 
 conda env update -n TFM -f /Users/marcalbesa/Desktop/TFM/git_exp/environment_mac.yml --prune
+
+
+
 
 
 Hi all, please try to use the new local pip and conda cache.
