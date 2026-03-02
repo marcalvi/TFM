@@ -14,6 +14,9 @@ try:
 except ImportError:
     wandb = None
 
+
+# ---------------------------- HELPER FUNCTIONS -----------------------------
+
 # Function to transform outer test with each inner train scaler
 def _transform_modalities_with_fitted_scalers(dfs_raw, scalers):
     """Apply pre-fitted per-modality scalers to raw modality dataframes."""
@@ -34,6 +37,39 @@ def _transform_modalities_with_fitted_scalers(dfs_raw, scalers):
         dfs_scaled[name] = df_scaled
 
     return dfs_scaled
+
+# Function to predict on outer fold for each inner fold model
+def _predict_model_probabilities(
+    model,
+    data_loader,
+    device,
+    model_name,
+    imputation_method="zero",
+):
+    """Run one model on a loader and return y_true / probabilities."""
+    model.eval()
+    y_true = []
+    y_prob = []
+    bypass_mask = (
+        str(model_name).strip().lower() == "mlp"
+        and str(imputation_method).strip().lower() == "knn"
+    )
+
+    with torch.no_grad():
+        for Xs, present_mask, y, _ in data_loader:
+            Xs = [x.to(device) for x in Xs]
+            present_mask = present_mask.to(device)
+            model_mask = None if bypass_mask else present_mask
+            logits = model(Xs, model_mask).squeeze(1)
+            probs = torch.sigmoid(logits).cpu().numpy().reshape(-1)
+
+            y_prob.extend(probs.tolist())
+            y_true.extend(y.cpu().numpy().tolist())
+
+    return np.asarray(y_true), np.asarray(y_prob)
+
+
+# ---------------------------- TRAIN FUNCTION -------------------------------
 
 # Train function with validation and early stopping
 def train_model_with_validation(
@@ -145,35 +181,8 @@ def train_model_with_validation(
 
     return model, history, best_metrics
 
-# Function to predict on outer fold for each inner fold model
-def _predict_model_probabilities(
-    model,
-    data_loader,
-    device,
-    model_name,
-    imputation_method="zero",
-):
-    """Run one model on a loader and return y_true / probabilities."""
-    model.eval()
-    y_true = []
-    y_prob = []
-    bypass_mask = (
-        str(model_name).strip().lower() == "mlp"
-        and str(imputation_method).strip().lower() == "knn"
-    )
 
-    with torch.no_grad():
-        for Xs, present_mask, y, _ in data_loader:
-            Xs = [x.to(device) for x in Xs]
-            present_mask = present_mask.to(device)
-            model_mask = None if bypass_mask else present_mask
-            logits = model(Xs, model_mask).squeeze(1)
-            probs = torch.sigmoid(logits).cpu().numpy().reshape(-1)
-
-            y_prob.extend(probs.tolist())
-            y_true.extend(y.cpu().numpy().tolist())
-
-    return np.asarray(y_true), np.asarray(y_prob)
+# --------------------------- NESTED CV FUNCTION -----------------------------
 
 # Main nested cross-validation function
 def nested_cv(

@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 
+# ---------------------------- KNN-IMPUTATION -----------------------------
 
 class KNNModalityImputer:
     """KNN imputer for missing modalities at patient level.
