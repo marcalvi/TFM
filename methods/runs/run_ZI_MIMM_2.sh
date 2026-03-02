@@ -36,16 +36,17 @@ MODALITY_HIDDEN_LAYERS_GRID="1"
 DROPOUT_GRID="0.2,0.1"
 
 # Missingness experiments
-MISSING_SCOPE_GRID="train,test,both,none"
-MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
-MISSING_PROB_GRID="0.2,0.4,0.6,0.8"
+TRAIN_MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
+TRAIN_MISSING_PROB_GRID="0.0,0.2,0.4,0.6,0.8"
+TEST_MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
+TEST_MISSING_PROB_GRID="0.0,0.2,0.4,0.6,0.8"
 
 # Run training
 python "${PROJECT_ROOT}/main.py" \
   --dataset "MIMM" \
   --odir "${RESULTS_ROOT}" \
   --endpoint "${ENDPOINT}" \
-  --model "ZI_MLP" \
+  --model "MLP" \
   --inst_data "${DATA_ROOT}/patients_mimm.csv" \
   --patho_data "${DATA_ROOT}/pathology_mimm.csv" \
   --radio_data "${DATA_ROOT}/radiology_mimm.csv" \
@@ -61,9 +62,10 @@ python "${PROJECT_ROOT}/main.py" \
   --fusion_hidden_layers "${FUSION_HIDDEN_LAYERS_GRID}" \
   --modality_hidden_layers "${MODALITY_HIDDEN_LAYERS_GRID}" \
   --dropout "${DROPOUT_GRID}" \
-  --missing_prob "${MISSING_PROB_GRID}" \
-  --missing_scope "${MISSING_SCOPE_GRID}" \
-  --missing_location "${MISSING_LOCATION_GRID}" \
+  --train_missing_prob "${TRAIN_MISSING_PROB_GRID}" \
+  --train_missing_location "${TRAIN_MISSING_LOCATION_GRID}" \
+  --test_missing_prob "${TEST_MISSING_PROB_GRID}" \
+  --test_missing_location "${TEST_MISSING_LOCATION_GRID}" \
   --seeds "${SEEDS}" \
   --wandb \
   --wandb_project "ZI_MLPs" \

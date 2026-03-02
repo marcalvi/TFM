@@ -54,22 +54,28 @@ def get_args():
 
     # Missing-modality setup
     parser.add_argument(
-        "--missing_prob",
+        "--train_missing_prob",
         type=str,
         default="0",
-        help="Missing probability in [0, 1]. Supports scalar or comma-separated list.",
+        help="Train/validation missing probability in [0, 1]. Supports scalar or comma-separated list.",
     )
     parser.add_argument(
-        "--missing_scope",
-        type=str,
-        default="none",
-        help="Where to apply missingness. Supports scalar or comma-separated list of: train,test,both,none",
-    )
-    parser.add_argument(
-        "--missing_location",
+        "--train_missing_location",
         type=str,
         default="global",
-        help="Missing location: global or modality key (path, radio, clin, blood, radio_report). Supports scalar or comma-separated list.",
+        help="Train/validation missing location: global or modality key (path, radio, clin, blood, radio_report). Supports scalar or comma-separated list.",
+    )
+    parser.add_argument(
+        "--test_missing_prob",
+        type=str,
+        default="0",
+        help="Test missing probability in [0, 1]. Supports scalar or comma-separated list.",
+    )
+    parser.add_argument(
+        "--test_missing_location",
+        type=str,
+        default="global",
+        help="Test missing location: global or modality key (path, radio, clin, blood, radio_report). Supports scalar or comma-separated list.",
     )
     parser.add_argument(
         "--imputation_method",
@@ -152,16 +158,6 @@ def _check_and_collapse_modality_rows(dfs):
 
     return cleaned
 
-# Function to map arg value to folder name
-def _missing_scope_label(missing_scope):
-    mapping = {
-        "train": "MISSING_TRAIN",
-        "test": "MISSING_VAL",
-        "both": "MISSING_ALL",
-        "none": "NONE",
-    }
-    return mapping[str(missing_scope).strip().lower()]
-
 # Function to map missing location to folder name
 def _missing_modality_label(missing_location):
     mapping = {
@@ -174,6 +170,68 @@ def _missing_modality_label(missing_location):
     }
     key = str(missing_location).strip().lower()
     return mapping.get(key, key.upper())
+
+
+def _build_output_dir(base_odir, model_label, dataset_label, train_missing_location, train_missing_prob, seed):
+    missing_modality_label = _missing_modality_label(train_missing_location)
+    missing_pct = str(float(train_missing_prob) * 100.0)
+    return os.path.join(
+        base_odir,
+        model_label,
+        dataset_label,
+        "TRAIN_MISSING",
+        missing_modality_label,
+        missing_pct,
+        f"seed_{seed}",
+    )
+
+def _save_run_outputs(
+    odir,
+    inner_df,
+    outer_df,
+    history_df,
+    split_df,
+    seed,
+    train_missing_location,
+    train_missing_prob,
+):
+    os.makedirs(odir, exist_ok=True)
+
+    inner_df = inner_df.copy()
+    outer_df = outer_df.copy()
+    history_df = history_df.copy()
+    split_df = split_df.copy()
+
+    inner_df["seed"] = seed
+    inner_df["train_missing_location"] = train_missing_location
+    inner_df["train_missing_prob"] = float(train_missing_prob)
+
+    outer_df["seed"] = seed
+    outer_df["train_missing_location"] = train_missing_location
+    outer_df["train_missing_prob"] = float(train_missing_prob)
+
+    history_df["seed"] = seed
+    history_df["train_missing_location"] = train_missing_location
+    history_df["train_missing_prob"] = float(train_missing_prob)
+
+    split_df["seed"] = seed
+    split_df["train_missing_location"] = train_missing_location
+    split_df["train_missing_prob"] = float(train_missing_prob)
+
+    inner_df.to_csv(os.path.join(odir, "inner_hp_eval.csv"), index=False)
+    outer_df.to_csv(os.path.join(odir, "outer_test_metrics.csv"), index=False)
+    history_df.to_csv(os.path.join(odir, "inner_epoch_history.csv"), index=False)
+    split_df.to_csv(os.path.join(odir, "splits_manifest.csv"), index=False)
+
+    # Create outer test summary
+    metric_cols = [c for c in outer_df.columns if c.startswith("outer_test_")]
+    if metric_cols:
+        summary = {}
+        for col in metric_cols:
+            summary[f"{col}_mean"] = float(outer_df[col].mean())
+            summary[f"{col}_std"] = float(outer_df[col].std())
+        summary_df = pd.DataFrame([summary])
+        summary_df.to_csv(os.path.join(odir, "outer_test_summary.csv"), index=False)
 
 def main():
     # Start timer
@@ -223,33 +281,43 @@ def main():
      
     # Parse run axes (supports scalar or comma-separated list)
     seeds_list = parse_value_or_list(args.seeds, int)
-    missing_scopes = parse_value_or_list(args.missing_scope, str, to_lower=True)
-    missing_locations = parse_value_or_list(args.missing_location, str, to_lower=True)
-    missing_probs = parse_value_or_list(args.missing_prob, float)
+    train_missing_locations = parse_value_or_list(args.train_missing_location, str, to_lower=True)
+    train_missing_probs = parse_value_or_list(args.train_missing_prob, float)
+    test_missing_locations = parse_value_or_list(args.test_missing_location, str, to_lower=True)
+    test_missing_probs = parse_value_or_list(args.test_missing_prob, float)
 
-    # Check valid values in scope, location, and probabilities
-    valid_scopes = {"train", "test", "both", "none"}
-    invalid_scopes = sorted(set(missing_scopes) - valid_scopes)
-    if invalid_scopes:
-        raise ValueError(
-            f"Invalid --missing_scope values: {', '.join(invalid_scopes)}. "
-            "Valid values: train, test, both, none."
-        )
-
-    invalid_locations = [
-        loc for loc in missing_locations if loc != "global" and loc not in modality_names
+    # Validate train/test missingness locations against available modalities.
+    invalid_train_locations = [
+        loc for loc in train_missing_locations if loc != "global" and loc not in modality_names
     ]
-    if invalid_locations:
+    if invalid_train_locations:
         valid = ", ".join(["global"] + sorted(modality_names))
         raise ValueError(
-            f"Invalid --missing_location values: {', '.join(sorted(set(invalid_locations)))}. "
+            f"Invalid --train_missing_location values: {', '.join(sorted(set(invalid_train_locations)))}. "
             f"Valid values: {valid}"
         )
 
-    invalid_probs = [p for p in missing_probs if p < 0.0 or p > 1.0]
-    if invalid_probs:
+    invalid_test_locations = [
+        loc for loc in test_missing_locations if loc != "global" and loc not in modality_names
+    ]
+    if invalid_test_locations:
+        valid = ", ".join(["global"] + sorted(modality_names))
         raise ValueError(
-            f"Invalid --missing_prob values: {invalid_probs}. "
+            f"Invalid --test_missing_location values: {', '.join(sorted(set(invalid_test_locations)))}. "
+            f"Valid values: {valid}"
+        )
+
+    invalid_train_probs = [p for p in train_missing_probs if p < 0.0 or p > 1.0]
+    if invalid_train_probs:
+        raise ValueError(
+            f"Invalid --train_missing_prob values: {invalid_train_probs}. "
+            "All values must be in [0, 1]."
+        )
+
+    invalid_test_probs = [p for p in test_missing_probs if p < 0.0 or p > 1.0]
+    if invalid_test_probs:
+        raise ValueError(
+            f"Invalid --test_missing_prob values: {invalid_test_probs}. "
             "All values must be in [0, 1]."
         )
 
@@ -259,140 +327,112 @@ def main():
         f"{str(args.model).strip().upper().replace('_', '-')}"
     )
     dataset_label = str(args.dataset).strip().upper()
-    combo_count = 0
-    for missing_scope in missing_scopes:
-        scope_probs = [0.0] if missing_scope == "none" else missing_probs
-        scope_locations = ["global"] if missing_scope == "none" else missing_locations
-        combo_count += len(scope_locations) * len(scope_probs) * len(seeds_list)
-    print(f"Total runs to execute: {combo_count}")
+    combo_count = len(seeds_list) * len(train_missing_locations) * len(train_missing_probs)
+    test_eval_count = len(test_missing_locations) * len(test_missing_probs)
+    print(f"Total training runs to execute: {combo_count}")
+    print(f"Test missingness evaluations per training run: {test_eval_count}")
+
+    wandb_project_name = f"{args.wandb_project}_{args.dataset}"
+    wandb_enabled_flag = (args.wandb and args.wandb_mode != "disabled")
 
     for seed in seeds_list:
-        for missing_scope in missing_scopes:
-            this_probs = [0.0] if missing_scope == "none" else missing_probs
-            this_locations = ["global"] if missing_scope == "none" else missing_locations
-            for missing_location in this_locations:
-                for missing_prob in this_probs:
-                    hp_configs = build_hyperparameter_grid(
-                        args,
-                        missing_prob=missing_prob,
-                        missing_scope=missing_scope,
-                        missing_location=missing_location,
-                    )
+        for train_missing_location in train_missing_locations:
+            for train_missing_prob in train_missing_probs:
+                hp_configs = build_hyperparameter_grid(
+                    args,
+                    train_missing_prob=train_missing_prob,
+                    train_missing_location=train_missing_location,
+                )
 
-                    missing_simulator = MissingModalitySimulator(
-                        num_modalities=num_modalities,
-                        modality_names=modality_names,
-                        missing_prob=missing_prob,
-                        missing_location=missing_location,
-                    )
+                train_missing_simulator = MissingModalitySimulator(
+                    num_modalities=num_modalities,
+                    modality_names=modality_names,
+                    missing_prob=float(train_missing_prob),
+                    missing_location=train_missing_location,
+                )
 
-                    # Construct output directory path
-                    missing_scope_label = _missing_scope_label(missing_scope)
-                    missing_modality_label = _missing_modality_label(missing_location)
-                    if missing_scope_label == "NONE":
-                        odir = os.path.join(
-                            args.odir,
-                            model_label,
-                            dataset_label,
-                            missing_scope_label,
-                            f"seed_{seed}",
+                test_eval_setups = []
+                for test_missing_location in test_missing_locations:
+                    for test_missing_prob in test_missing_probs:
+                        test_eval_setups.append(
+                            {
+                                "missing_location": str(test_missing_location).lower(),
+                                "missing_prob": float(test_missing_prob),
+                                "simulator": MissingModalitySimulator(
+                                    num_modalities=num_modalities,
+                                    modality_names=modality_names,
+                                    missing_prob=float(test_missing_prob),
+                                    missing_location=test_missing_location,
+                                ),
+                            }
                         )
-                    else:
-                        missing_pct = str(float(missing_prob) * 100.0)
-                        odir = os.path.join(
-                            args.odir,
-                            model_label,
-                            dataset_label,
-                            missing_scope_label,
-                            missing_modality_label,
-                            missing_pct,
-                            f"seed_{seed}",
-                        )
-                    os.makedirs(odir, exist_ok=True)
 
-                    print(
-                        "Running seed="
-                        f"{seed}, missing_scope={missing_scope}, "
-                        f"missing_location={missing_location}, missing_prob={missing_prob}"
-                    )
-                    print(f"Output directory: {odir}")
-                    print(f"Hyperparameter combinations to evaluate: {len(hp_configs)}")
+                odir = _build_output_dir(
+                    base_odir=args.odir,
+                    model_label=model_label,
+                    dataset_label=dataset_label,
+                    train_missing_location=train_missing_location,
+                    train_missing_prob=train_missing_prob,
+                    seed=seed,
+                )
+                print(
+                    "Running seed="
+                    f"{seed}, train_missing_location={train_missing_location}, "
+                    f"train_missing_prob={train_missing_prob}"
+                )
+                print(f"Output directory: {odir}")
+                print(f"Hyperparameter combinations to evaluate: {len(hp_configs)}")
+                print(f"Test missingness combinations to evaluate: {len(test_eval_setups)}")
 
-                    # Weights & Biases setup
-                    wandb_project_name = f"{args.wandb_project}_{args.dataset}"
-                    wandb_base_config = {
-                        "endpoint": args.endpoint,
-                        "model": args.model,
-                        "dataset": args.dataset,
-                        "modalities": modality_names,
-                        "hp_grid_size": len(hp_configs),
-                        "epochs": args.epochs,
-                        "inner_splits": args.inner_splits,
-                        "outer_splits": args.outer_splits,
-                        "missing_prob": missing_prob,
-                        "missing_scope": missing_scope,
-                        "missing_location": missing_location,
-                        "imputation_method": args.imputation_method,
-                    }
+                wandb_base_config = {
+                    "endpoint": args.endpoint,
+                    "model": args.model,
+                    "dataset": args.dataset,
+                    "modalities": modality_names,
+                    "hp_grid_size": len(hp_configs),
+                    "epochs": args.epochs,
+                    "inner_splits": args.inner_splits,
+                    "outer_splits": args.outer_splits,
+                    "train_missing_prob": float(train_missing_prob),
+                    "train_missing_location": str(train_missing_location).lower(),
+                    "imputation_method": args.imputation_method,
+                    "test_eval_combinations": len(test_eval_setups),
+                    "test_missing_probs_grid": ",".join(str(float(p)) for p in test_missing_probs),
+                    "test_missing_locations_grid": ",".join(str(loc).lower() for loc in test_missing_locations),
+                }
 
-                    # Run nested cross-validation
-                    inner_df, outer_df, history_df, split_df = nested_cv(
-                        dfs=dfs,
-                        inst_df=inst_df,
-                        label_col=label_col,
-                        epochs=args.epochs,
-                        seed=seed,
-                        hp_configs=hp_configs,
-                        missing_simulator=missing_simulator,
-                        model_name=args.model,
-                        imputation_method=args.imputation_method,
-                        missing_scope=missing_scope,
-                        inner_splits=args.inner_splits,
-                        outer_splits=args.outer_splits,
-                        gpu_memory_fraction=float(args.gpu_memory_fraction),
-                        wandb_enabled=(args.wandb and args.wandb_mode != "disabled"),
-                        wandb_project=wandb_project_name,
-                        wandb_mode=args.wandb_mode,
-                        wandb_base_config=wandb_base_config,
-                    )
+                inner_df, outer_df, history_df, split_df = nested_cv(
+                    dfs=dfs,
+                    inst_df=inst_df,
+                    label_col=label_col,
+                    epochs=args.epochs,
+                    seed=seed,
+                    hp_configs=hp_configs,
+                    train_missing_simulator=train_missing_simulator,
+                    model_name=args.model,
+                    imputation_method=args.imputation_method,
+                    inner_splits=args.inner_splits,
+                    outer_splits=args.outer_splits,
+                    gpu_memory_fraction=float(args.gpu_memory_fraction),
+                    wandb_enabled=wandb_enabled_flag,
+                    wandb_project=wandb_project_name,
+                    wandb_mode=args.wandb_mode,
+                    wandb_base_config=wandb_base_config,
+                    test_eval_setups=test_eval_setups,
+                )
 
-                    # Save results and history to CSVs with run metadata
-                    inner_df["seed"] = seed
-                    inner_df["missing_scope"] = missing_scope
-                    inner_df["missing_location"] = missing_location
-                    inner_df["missing_prob"] = float(missing_prob)
+                _save_run_outputs(
+                    odir=odir,
+                    inner_df=inner_df,
+                    outer_df=outer_df,
+                    history_df=history_df,
+                    split_df=split_df,
+                    seed=seed,
+                    train_missing_location=train_missing_location,
+                    train_missing_prob=float(train_missing_prob),
+                )
 
-                    outer_df["seed"] = seed
-                    outer_df["missing_scope"] = missing_scope
-                    outer_df["missing_location"] = missing_location
-                    outer_df["missing_prob"] = float(missing_prob)
-
-                    history_df["seed"] = seed
-                    history_df["missing_scope"] = missing_scope
-                    history_df["missing_location"] = missing_location
-                    history_df["missing_prob"] = float(missing_prob)
-
-                    split_df["seed"] = seed
-                    split_df["missing_scope"] = missing_scope
-                    split_df["missing_location"] = missing_location
-                    split_df["missing_prob"] = float(missing_prob)
-
-                    inner_df.to_csv(os.path.join(odir, "inner_hp_eval.csv"), index=False)
-                    outer_df.to_csv(os.path.join(odir, "outer_test_metrics.csv"), index=False)
-                    history_df.to_csv(os.path.join(odir, "inner_epoch_history.csv"), index=False)
-                    split_df.to_csv(os.path.join(odir, "splits_manifest.csv"), index=False)
-
-                    # Create outer test summary
-                    metric_cols = [c for c in outer_df.columns if c.startswith("outer_test_")]
-                    if metric_cols:
-                        summary = {}
-                        for col in metric_cols:
-                            summary[f"{col}_mean"] = float(outer_df[col].mean())
-                            summary[f"{col}_std"] = float(outer_df[col].std())
-                        summary_df = pd.DataFrame([summary])
-                        summary_df.to_csv(os.path.join(odir, "outer_test_summary.csv"), index=False)
-
-                    print(f"Run finished in {time.time() - start_time:.2f} seconds.")
+                print(f"Run finished in {time.time() - start_time:.2f} seconds.")
 
 
 if __name__ == "__main__":

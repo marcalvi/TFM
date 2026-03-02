@@ -72,7 +72,7 @@ def parse_value_or_list(raw_value, dtype, to_lower=None):
     return casted
 
 # Format hp_name for runs' names
-def _format_hp_name(cfg, missing_pct, missing_scope, missing_location, model_name):
+def _format_hp_name(cfg, train_missing_pct, train_missing_location, model_name):
     model_name = str(model_name).strip().lower()
     lr_str = f"{cfg['learning_rate']:.0e}"
     bs_str = str(cfg["batch_size"])
@@ -84,9 +84,8 @@ def _format_hp_name(cfg, missing_pct, missing_scope, missing_location, model_nam
             f"bs{bs_str}_"
             f"drop{dropout_str}_"
             f"temp{temp_str}_"
-            f"miss{missing_pct}_"
-            f"scope{missing_scope}_"
-            f"loc{missing_location}"
+            f"trmiss{train_missing_pct}_"
+            f"trloc{train_missing_location}"
         )
 
     fusion_str = str(cfg["fusion_hidden_dim"])
@@ -100,17 +99,15 @@ def _format_hp_name(cfg, missing_pct, missing_scope, missing_location, model_nam
         f"fusion{fusion_str}_"
         f"fusionL{fusion_layers_str}_"
         f"drop{dropout_str}_"
-        f"miss{missing_pct}_"
-        f"scope{missing_scope}_"
-        f"loc{missing_location}"
+        f"trmiss{train_missing_pct}_"
+        f"trloc{train_missing_location}"
     )
 
 # Function to build hyperparameter grid from args (supports scalar and comma-separated list for each HP argument)
-def build_hyperparameter_grid(args, missing_prob, missing_scope, missing_location):
-    # missingness config
-    missing_pct = f"{float(missing_prob) * 100:g}"
-    missing_scope = str(missing_scope).strip().lower()
-    missing_location = str(missing_location).strip().lower()
+def build_hyperparameter_grid(args, train_missing_prob, train_missing_location):
+    # Train missingness config (used in run naming for reproducibility).
+    train_missing_pct = f"{float(train_missing_prob) * 100:g}"
+    train_missing_location = str(train_missing_location).strip().lower()
 
     model_name = str(args.model).strip().lower()
 
@@ -147,7 +144,7 @@ def build_hyperparameter_grid(args, missing_prob, missing_scope, missing_locatio
                 continue
             seen.add(key)
             cfg["name"] = _format_hp_name(
-                cfg, missing_pct, missing_scope, missing_location, model_name=model_name
+                cfg, train_missing_pct, train_missing_location, model_name=model_name
             )
             hp_configs.append(cfg)
     if model_name in {"mlp"}:
@@ -184,7 +181,7 @@ def build_hyperparameter_grid(args, missing_prob, missing_scope, missing_locatio
                 continue
             seen.add(key)
             cfg["name"] = _format_hp_name(
-                cfg, missing_pct, missing_scope, missing_location, model_name=model_name
+                cfg, train_missing_pct, train_missing_location, model_name=model_name
             )
             hp_configs.append(cfg)
 

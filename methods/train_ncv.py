@@ -7,7 +7,6 @@ import torch.optim as optim
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader
 from dataset import MLPDataset, MultimodalDatasetWithMissing, multimodal_collate, build_loaders
-from models import MultimodalMLP, DyAM
 from utils import build_model, safe_binary_metrics, select_device, filter_by_patients, fit_and_transform_modalities
 try:
     import wandb
@@ -194,10 +193,9 @@ def nested_cv(
     epochs,
     seed,
     hp_configs,
-    missing_simulator,
+    train_missing_simulator,
     model_name,
     imputation_method="zero",
-    missing_scope="none",
     inner_splits=5,
     outer_splits=5,
     gpu_memory_fraction=1.0,
@@ -205,17 +203,29 @@ def nested_cv(
     wandb_project=None,
     wandb_mode="online",
     wandb_base_config=None,
+    test_eval_setups=None,
 ):
     wandb_active = bool(wandb_enabled and wandb is not None)
     if wandb_enabled and wandb is None:
         print("wandb is not installed. Continuing without wandb logging.")
-    
-    # Create boolean flags for missing modalities in train and test
-    missing_scope = str(missing_scope).lower()
-    if missing_scope not in {"train", "test", "both", "none"}:
-        raise ValueError("missing_scope must be one of: train, test, both, none")
-    apply_missing_train = missing_scope in {"train", "both"}
-    apply_missing_test = missing_scope in {"test", "both"}
+
+    # Train missingness is applied on both inner-train and inner-validation.
+    apply_missing_train = float(getattr(train_missing_simulator, "missing_prob", 0.0)) > 0.0
+
+    # Test-time evaluation setups:
+    # by default evaluate once with the provided train simulator.
+    if test_eval_setups is None:
+        eval_missing_prob = float(getattr(train_missing_simulator, "missing_prob", 0.0))
+        eval_missing_location = str(getattr(train_missing_simulator, "missing_location", "global")).lower()
+        test_eval_setups = [
+            {
+                "missing_prob": eval_missing_prob,
+                "missing_location": eval_missing_location,
+                "simulator": train_missing_simulator,
+            }
+        ]
+    elif len(test_eval_setups) == 0:
+        raise ValueError("test_eval_setups cannot be empty when provided.")
 
     # Get patient IDs and labels from  inst_df
     patients = inst_df["patient"].values
@@ -313,7 +323,7 @@ def nested_cv(
                     dfs_train_scaled=dfs_train_inner_scaled,
                     dfs_eval_scaled=dfs_val_inner_scaled,
                     label_col=label_col,
-                    missing_simulator=missing_simulator,
+                    missing_simulator=train_missing_simulator,
                     batch_size=hp_cfg["batch_size"],
                     train_missing=apply_missing_train,
                     val_missing=apply_missing_train,
@@ -422,12 +432,11 @@ def nested_cv(
         inner_curve_run = None
         if wandb_active and selected_inner_histories:
             selected_hp_names = [row["hp_name"] for row in selected_inner_rows]
-            missing_location = str((wandb_base_config or {}).get("missing_location", "na")).strip().lower()
-            missing_prob = float((wandb_base_config or {}).get("missing_prob", 0.0))
+            train_missing_location = str((wandb_base_config or {}).get("train_missing_location", "na")).strip().lower()
+            train_missing_prob = float((wandb_base_config or {}).get("train_missing_prob", 0.0))
             run_name = (
-                f"scope{missing_scope}_"
-                f"loc{missing_location}_"
-                f"prob{missing_prob:g}_"
+                f"trainloc{train_missing_location}_"
+                f"trainprob{train_missing_prob:g}_"
                 f"seed{seed}_"
                 f"outer{outer_fold_idx}"
             )
@@ -481,73 +490,84 @@ def nested_cv(
         dfs_test_outer_raw = {name: filter_by_patients(df, test_outer_ids) for name, df in dfs.items()}
 
         outer_eval_batch_size = max(int(h["batch_size"]) for h in hp_configs)
-        model_probs = []
-        y_true_outer = None
-        
-        for member in selected_inner_members:
-            model = member["model"]
-            scalers = member["scalers"]
+        first_outer_metrics = None
+        for eval_setup in test_eval_setups:
+            eval_simulator = eval_setup["simulator"]
+            eval_missing_location = str(eval_setup["missing_location"]).lower()
+            eval_missing_prob = float(eval_setup["missing_prob"])
+            apply_missing_eval = eval_missing_prob > 0.0
 
-            dfs_outer_eval_scaled = _transform_modalities_with_fitted_scalers(
-                dfs_test_outer_raw,
-                scalers,
-            )
-            ensemble_eval_base = MLPDataset(
-                dfs=dfs_outer_eval_scaled,
-                label_df=inst_df_test_outer,
-                label_col=label_col,
-            )
-            ensemble_eval_ds = MultimodalDatasetWithMissing(
-                base_dataset=ensemble_eval_base,
-                simulator=missing_simulator,
-                apply_missing=apply_missing_test,
-                imputation_method=imputation_method,
-            )
-            ensemble_eval_loader = DataLoader(
-                ensemble_eval_ds,
-                batch_size=outer_eval_batch_size,
-                shuffle=False,
-                collate_fn=multimodal_collate,
-                drop_last=False,
+            model_probs = []
+            y_true_outer = None
+
+            for member in selected_inner_members:
+                model = member["model"]
+                scalers = member["scalers"]
+
+                dfs_outer_eval_scaled = _transform_modalities_with_fitted_scalers(
+                    dfs_test_outer_raw,
+                    scalers,
+                )
+                ensemble_eval_base = MLPDataset(
+                    dfs=dfs_outer_eval_scaled,
+                    label_df=inst_df_test_outer,
+                    label_col=label_col,
+                )
+                ensemble_eval_ds = MultimodalDatasetWithMissing(
+                    base_dataset=ensemble_eval_base,
+                    simulator=eval_simulator,
+                    apply_missing=apply_missing_eval,
+                    imputation_method=imputation_method,
+                )
+                ensemble_eval_loader = DataLoader(
+                    ensemble_eval_ds,
+                    batch_size=outer_eval_batch_size,
+                    shuffle=False,
+                    collate_fn=multimodal_collate,
+                    drop_last=False,
+                )
+
+                y_true_i, y_prob_i = _predict_model_probabilities(
+                    model=model,
+                    data_loader=ensemble_eval_loader,
+                    device=device,
+                    model_name=model_name,
+                    imputation_method=imputation_method,
+                )
+                if y_true_outer is None:
+                    y_true_outer = y_true_i
+                model_probs.append(y_prob_i)
+
+            # Average probabilities across inner models to get ensemble prediction
+            ensemble_prob = np.mean(np.stack(model_probs, axis=0), axis=0)
+            outer_metrics = safe_binary_metrics(y_true_outer, ensemble_prob)
+            if first_outer_metrics is None:
+                first_outer_metrics = outer_metrics
+
+            outer_results.append(
+                {
+                    "outer_fold": outer_fold_idx,
+                    "outer_eval_target": "test_outer",
+                    "eval_missing_location": eval_missing_location,
+                    "eval_missing_prob": eval_missing_prob,
+                    "inner_models_count": len(selected_inner_members),
+                    "selected_inner_hp_names": "|".join(r["hp_name"] for r in selected_inner_rows),
+                    "selected_inner_mean_AUC": float(np.mean([r["val_best_AUC"] for r in selected_inner_rows])),
+                    "selected_inner_mean_LOGLOSS": float(np.mean([r["val_best_LOGLOSS"] for r in selected_inner_rows])),
+                    "outer_test_LOGLOSS": float(outer_metrics["LOGLOSS"]),
+                    "outer_test_AUC": float(outer_metrics["AUC"]),
+                    "outer_test_AUCPR": float(outer_metrics["AUCPR"]),
+                    "outer_test_ACC": float(outer_metrics["ACC"]),
+                    "outer_test_SEN": float(outer_metrics["SEN"]),
+                    "outer_test_SP": float(outer_metrics["SP"]),
+                    "outer_test_MCC": float(outer_metrics["MCC"]),
+                }
             )
 
-            y_true_i, y_prob_i = _predict_model_probabilities(
-                model=model,
-                data_loader=ensemble_eval_loader,
-                device=device,
-                model_name=model_name,
-                imputation_method=imputation_method,
-            )
-            if y_true_outer is None:
-                y_true_outer = y_true_i
-            model_probs.append(y_prob_i)
-
-        
-        # Average probabilities across inner models to get ensemble prediction
-        ensemble_prob = np.mean(np.stack(model_probs, axis=0), axis=0)
-        outer_metrics = safe_binary_metrics(y_true_outer, ensemble_prob)
-        outer_results.append(
-            {
-                "outer_fold": outer_fold_idx,
-                "outer_eval_target": "test_outer",
-                "inner_models_count": len(selected_inner_members),
-                "selected_inner_hp_names": "|".join(r["hp_name"] for r in selected_inner_rows),
-                "selected_inner_mean_AUC": float(np.mean([r["val_best_AUC"] for r in selected_inner_rows])),
-                "selected_inner_mean_LOGLOSS": float(np.mean([r["val_best_LOGLOSS"] for r in selected_inner_rows])),
-                "outer_test_LOGLOSS": float(outer_metrics["LOGLOSS"]),
-                "outer_test_AUC": float(outer_metrics["AUC"]),
-                "outer_test_AUCPR": float(outer_metrics["AUCPR"]),
-                "outer_test_ACC": float(outer_metrics["ACC"]),
-                "outer_test_SEN": float(outer_metrics["SEN"]),
-                "outer_test_SP": float(outer_metrics["SP"]),
-                "outer_test_MCC": float(outer_metrics["MCC"]),
-            }
-        )
-
-        if inner_curve_run is not None:
-            inner_curve_run.summary["outer_test/acc"] = float(outer_metrics["ACC"])
-            inner_curve_run.summary["outer_test/auc"] = float(outer_metrics["AUC"])
-            inner_curve_run.summary["outer_test/aucpr"] = float(outer_metrics["AUCPR"])
+        if inner_curve_run is not None and first_outer_metrics is not None:
+            inner_curve_run.summary["outer_test/acc"] = float(first_outer_metrics["ACC"])
+            inner_curve_run.summary["outer_test/auc"] = float(first_outer_metrics["AUC"])
+            inner_curve_run.summary["outer_test/aucpr"] = float(first_outer_metrics["AUCPR"])
             inner_curve_run.finish()
 
     return (

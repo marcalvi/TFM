@@ -41,9 +41,11 @@ DROPOUT_GRID="0.2,0.1"
 IMPUTATION_METHOD="zero"
 
 # Missingness experiments
-MISSING_SCOPE_GRID="train"
-MISSING_LOCATION_GRID="global"
-MISSING_PROB_GRID="0.2,0.4,0.6,0.8"
+# This run keeps the previous "train-only" behavior by setting test missingness to 0.0.
+TRAIN_MISSING_LOCATION_GRID="global"
+TRAIN_MISSING_PROB_GRID="0.2,0.4,0.6,0.8"
+TEST_MISSING_LOCATION_GRID="global"
+TEST_MISSING_PROB_GRID="0.0"
 
 # Run training
 python "${PROJECT_ROOT}/main.py" \
@@ -68,9 +70,10 @@ python "${PROJECT_ROOT}/main.py" \
   --modality_hidden_layers "${MODALITY_HIDDEN_LAYERS_GRID}" \
   --dropout "${DROPOUT_GRID}" \
   --imputation_method "${IMPUTATION_METHOD}" \
-  --missing_prob "${MISSING_PROB_GRID}" \
-  --missing_scope "${MISSING_SCOPE_GRID}" \
-  --missing_location "${MISSING_LOCATION_GRID}" \
+  --train_missing_prob "${TRAIN_MISSING_PROB_GRID}" \
+  --train_missing_location "${TRAIN_MISSING_LOCATION_GRID}" \
+  --test_missing_prob "${TEST_MISSING_PROB_GRID}" \
+  --test_missing_location "${TEST_MISSING_LOCATION_GRID}" \
   --seeds "${SEEDS}" \
   --wandb \
   --wandb_project "ZI_MLPs" \
