@@ -466,23 +466,16 @@ def nested_cv(
 
                 train_losses = [float(r["train_loss"]) for r in epoch_rows]
                 val_losses = [float(r["val_loss"]) for r in epoch_rows]
-                val_aucs = [float(r["val_auc"]) for r in epoch_rows]
-                val_accs = [float(r["val_acc"]) for r in epoch_rows]
 
                 inner_curve_run.log(
                     {
                         "avg_inner_best_models/train_loss_mean": float(np.mean(train_losses)),
                         "avg_inner_best_models/val_loss_mean": float(np.mean(val_losses)),
-                        "avg_inner_best_models/val_auc_mean": float(np.mean(val_aucs)),
-                        "avg_inner_best_models/val_acc_mean": float(np.mean(val_accs)),
-                        "cv/outer_fold": outer_fold_idx,
-                        "cv/inner_folds_count": len(epoch_rows),
                     },
                     step=epoch_i,
                 )
 
-            inner_curve_run.summary["avg_inner_best_models/selected_inner_count"] = len(selected_inner_histories)
-            inner_curve_run.summary["avg_inner_best_models/selected_inner_hp_names"] = "|".join(selected_hp_names)
+            inner_curve_run.finish()
 
         # Outer prediction = average predictions of selected inner models on outer-test data (20%).
         # Each model must evaluate on data transformed with its own inner-train scalers.
@@ -490,7 +483,6 @@ def nested_cv(
         dfs_test_outer_raw = {name: filter_by_patients(df, test_outer_ids) for name, df in dfs.items()}
 
         outer_eval_batch_size = max(int(h["batch_size"]) for h in hp_configs)
-        first_outer_metrics = None
         for eval_setup in test_eval_setups:
             eval_simulator = eval_setup["simulator"]
             eval_missing_location = str(eval_setup["missing_location"]).lower()
@@ -541,8 +533,6 @@ def nested_cv(
             # Average probabilities across inner models to get ensemble prediction
             ensemble_prob = np.mean(np.stack(model_probs, axis=0), axis=0)
             outer_metrics = safe_binary_metrics(y_true_outer, ensemble_prob)
-            if first_outer_metrics is None:
-                first_outer_metrics = outer_metrics
 
             outer_results.append(
                 {
@@ -563,12 +553,6 @@ def nested_cv(
                     "outer_test_MCC": float(outer_metrics["MCC"]),
                 }
             )
-
-        if inner_curve_run is not None and first_outer_metrics is not None:
-            inner_curve_run.summary["outer_test/acc"] = float(first_outer_metrics["ACC"])
-            inner_curve_run.summary["outer_test/auc"] = float(first_outer_metrics["AUC"])
-            inner_curve_run.summary["outer_test/aucpr"] = float(first_outer_metrics["AUCPR"])
-            inner_curve_run.finish()
 
     return (
         pd.DataFrame(inner_eval_rows),
