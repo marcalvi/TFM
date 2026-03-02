@@ -21,8 +21,8 @@ RESULTS_ROOT="${PROJECT_ROOT}/results"
 ENDPOINT="OS_6"
 
 # Proposed tuning grid
-SEEDS="22,2002"
-#SEEDS="4,18473,55602"
+SEEDS="22"
+#SEEDS="2002,4,18473,55602"
 
 INNER_SPLITS=5
 OUTER_SPLITS=5
@@ -37,7 +37,7 @@ DROPOUT_GRID="0.2,0.1"
 IMPUTATION_METHOD="zero"
 
 # Missingness experiments
-MISSING_SCOPE_GRID="train,test,both,none"
+MISSING_SCOPE_GRID="test,both,none"
 MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
 MISSING_PROB_GRID="0.2,0.4,0.6,0.8"
 
