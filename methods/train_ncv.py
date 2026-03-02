@@ -14,6 +14,8 @@ try:
 except ImportError:
     wandb = None
 
+# Enable cuDNN autotuner for stable input shapes.
+torch.backends.cudnn.benchmark = True
 
 # ---------------------------- HELPER FUNCTIONS -----------------------------
 
@@ -198,6 +200,7 @@ def nested_cv(
     missing_scope="none",
     inner_splits=5,
     outer_splits=5,
+    gpu_memory_fraction=1.0,
     wandb_enabled=False,
     wandb_project=None,
     wandb_mode="online",
@@ -226,8 +229,14 @@ def nested_cv(
     input_dims = [df.shape[1] - 1 for df in dfs.values()]
     device = select_device()
     if device.type == "cuda":
+        # Optionally cap per-process CUDA memory usage.
+        fraction = float(gpu_memory_fraction)
+        if not (0.0 < fraction <= 1.0):
+            raise ValueError("gpu_memory_fraction must be in (0, 1].")
+        gpu_idx = device.index if device.index is not None else 0
+        torch.cuda.set_per_process_memory_fraction(fraction, gpu_idx)
         gpu_name = torch.cuda.get_device_name(device)
-        print(f"Using device: cuda ({gpu_name})")
+        print(f"Using device: cuda ({gpu_name}) | memory_fraction={fraction}")
     elif device.type == "mps":
         print("Using device: mps (Apple Metal)")
     else:
