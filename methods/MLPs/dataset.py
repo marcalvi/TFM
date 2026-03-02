@@ -46,9 +46,6 @@ class MissingModalitySimulator:
         modality_names,
         missing_prob=0,
         missing_location="global",
-        mild_weight=4.0 / 9.0,
-        moderate_weight=3.0 / 9.0,
-        severe_weight=2.0 / 9.0,
     ):
         if num_modalities < 1:
             raise ValueError("num_modalities must be >= 1")
@@ -66,15 +63,6 @@ class MissingModalitySimulator:
         self.missing_location = str(missing_location).lower()
 
         if self.missing_location == "global":
-            missing_weights = np.array([mild_weight, moderate_weight, severe_weight], dtype=float)
-            if np.any(missing_weights < 0):
-                raise ValueError("Global missing severity weights must be non-negative")
-            if not np.isclose(missing_weights.sum(), 1.0):
-                raise ValueError("Global missing severity weights must sum to 1")
-            self.complete_prob = 1.0 - self.missing_prob
-            self.mild_prob = self.missing_prob * missing_weights[0]
-            self.moderate_prob = self.missing_prob * missing_weights[1]
-            self.severe_prob = self.missing_prob * missing_weights[2]
             self.specific_missing_idx = None
         else:
             if self.missing_location not in self.modality_name_to_idx:
@@ -92,30 +80,17 @@ class MissingModalitySimulator:
         if self.specific_missing_idx is not None:
             if np.random.random() < self.missing_prob:
                 pattern[self.specific_missing_idx] = False
-            return pattern
+        else:
+            # Global missingness: each modality is independently removed
+            # with probability `missing_prob`.
+            missing_draw = np.random.random(self.num_modalities) < self.missing_prob
+            pattern[missing_draw] = False
 
-        # Global missingness: missing_prob is split into mild/moderate/severe with baseline ratios.
-        r = np.random.random()
+        # Always keep at least one modality present.
+        if not pattern.any():
+            keep_idx = np.random.randint(self.num_modalities)
+            pattern[keep_idx] = True
 
-        if r < self.complete_prob:
-            return pattern
-
-        if r < self.complete_prob + self.mild_prob:
-            missing_idx = np.random.randint(self.num_modalities)
-            pattern[missing_idx] = False
-            return pattern
-
-        if r < self.complete_prob + self.mild_prob + self.moderate_prob:
-            if self.num_modalities == 1:
-                return pattern
-            missing_idxs = np.random.choice(self.num_modalities, min(2, self.num_modalities), replace=False)
-            pattern[missing_idxs] = False
-            return pattern
-
-        min_missing = min(3, self.num_modalities)
-        num_missing = np.random.randint(min_missing, self.num_modalities + 1)
-        missing_idxs = np.random.choice(self.num_modalities, num_missing, replace=False)
-        pattern[missing_idxs] = False
         return pattern
 
 
