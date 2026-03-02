@@ -4,9 +4,11 @@ export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256
 export OMP_NUM_THREADS=6
 export MKL_NUM_THREADS=6
 
-# Activate conda environment
-source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-conda activate TFM
+# Initialize micromamba shell
+eval "$(micromamba shell hook --shell bash)"
+
+# Activate micromamba environment
+micromamba activate TFM
 
 # Optional WandB login from environment variable
 wandb login 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
@@ -23,8 +25,7 @@ RESULTS_ROOT="${PROJECT_ROOT}/results"
 ENDPOINT="OS_6"
 
 # Proposed tuning grid
-SEEDS="22,2002,639"
-#SEEDS="4,18473,55602"
+SEEDS="22,4"
 
 INNER_SPLITS=5
 OUTER_SPLITS=5
@@ -40,8 +41,8 @@ DROPOUT_GRID="0.2,0.1"
 IMPUTATION_METHOD="zero"
 
 # Missingness experiments
-MISSING_SCOPE_GRID="train,test,both,none"
-MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
+MISSING_SCOPE_GRID="train"
+MISSING_LOCATION_GRID="global"
 MISSING_PROB_GRID="0.2,0.4,0.6,0.8"
 
 # Run training
