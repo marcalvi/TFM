@@ -21,7 +21,7 @@ RESULTS_ROOT="${PROJECT_ROOT}/results"
 ENDPOINT="OS_6"
 
 # Proposed tuning grid
-SEEDS="22,2002,4,18473,55602"
+SEEDS="22,2002,4"
 INNER_SPLITS=5
 OUTER_SPLITS=5
 EPOCHS=80
@@ -67,4 +67,4 @@ python "${PROJECT_ROOT}/MLPs/main.py" \
   --seeds "${SEEDS}" \
   --wandb \
   --wandb_project "KNN_MLPs" \
-  --wandb_mode "online"
+  --wandb_mode "offline"

@@ -1,0 +1,13 @@
+{"time":"2026-03-01T21:57:16.14321504+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-01T21:57:16.270879399+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-01T21:57:16.27094787+01:00","level":"INFO","msg":"stream: created new stream","id":"gbsudvj1"}
+{"time":"2026-03-01T21:57:16.271000099+01:00","level":"INFO","msg":"handler: started","stream_id":"gbsudvj1"}
+{"time":"2026-03-01T21:57:16.276191099+01:00","level":"INFO","msg":"stream: started","id":"gbsudvj1"}
+{"time":"2026-03-01T21:57:16.276215756+01:00","level":"INFO","msg":"writer: started","stream_id":"gbsudvj1"}
+{"time":"2026-03-01T21:57:16.276261513+01:00","level":"INFO","msg":"sender: started","stream_id":"gbsudvj1"}
+{"time":"2026-03-01T21:57:16.276729495+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-01T21:57:25.207715252+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-01T21:57:25.209976069+01:00","level":"INFO","msg":"stream: closing","id":"gbsudvj1"}
+{"time":"2026-03-01T21:57:25.209988012+01:00","level":"INFO","msg":"handler: closed","stream_id":"gbsudvj1"}
+{"time":"2026-03-01T21:57:25.21039649+01:00","level":"INFO","msg":"sender: closed","stream_id":"gbsudvj1"}
+{"time":"2026-03-01T21:57:25.210413172+01:00","level":"INFO","msg":"stream: closed","id":"gbsudvj1"}

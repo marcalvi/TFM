@@ -1,0 +1,13 @@
+{"time":"2026-03-01T23:12:06.78060557+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-01T23:12:06.90837105+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-01T23:12:06.908434681+01:00","level":"INFO","msg":"stream: created new stream","id":"dcspu5sg"}
+{"time":"2026-03-01T23:12:06.908490558+01:00","level":"INFO","msg":"handler: started","stream_id":"dcspu5sg"}
+{"time":"2026-03-01T23:12:06.91289007+01:00","level":"INFO","msg":"stream: started","id":"dcspu5sg"}
+{"time":"2026-03-01T23:12:06.912942961+01:00","level":"INFO","msg":"writer: started","stream_id":"dcspu5sg"}
+{"time":"2026-03-01T23:12:06.912987305+01:00","level":"INFO","msg":"sender: started","stream_id":"dcspu5sg"}
+{"time":"2026-03-01T23:12:06.913422725+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-01T23:12:15.771744345+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-01T23:12:15.773906043+01:00","level":"INFO","msg":"stream: closing","id":"dcspu5sg"}
+{"time":"2026-03-01T23:12:15.773916834+01:00","level":"INFO","msg":"handler: closed","stream_id":"dcspu5sg"}
+{"time":"2026-03-01T23:12:15.774710065+01:00","level":"INFO","msg":"sender: closed","stream_id":"dcspu5sg"}
+{"time":"2026-03-01T23:12:15.77472864+01:00","level":"INFO","msg":"stream: closed","id":"dcspu5sg"}

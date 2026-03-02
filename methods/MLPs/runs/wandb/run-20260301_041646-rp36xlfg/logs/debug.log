@@ -1,0 +1,71 @@
+2026-03-01 04:16:46,416 INFO    MainThread:2480 [wandb_init.py:setup_run_log_directory():717] Logging user logs to /home/osiris-user/Desktop/TFM/methods/MLPs/runs/wandb/run-20260301_041646-rp36xlfg/logs/debug.log
+2026-03-01 04:16:46,416 INFO    MainThread:2480 [wandb_init.py:setup_run_log_directory():718] Logging internal logs to /home/osiris-user/Desktop/TFM/methods/MLPs/runs/wandb/run-20260301_041646-rp36xlfg/logs/debug-internal.log
+2026-03-01 04:16:46,416 INFO    MainThread:2480 [wandb_init.py:init():844] calling init triggers
+2026-03-01 04:16:46,416 INFO    MainThread:2480 [wandb_init.py:init():849] wandb.init called with sweep_config: {}
+config: {'endpoint': 'OS_6', 'model': 'ZI_MLP', 'dataset': 'MIMM', 'modalities': ['path', 'radio', 'clin', 'blood', 'radio_report'], 'hp_grid_size': 16, 'epochs': 80, 'inner_splits': 5, 'outer_splits': 5, 'missing_prob': 0.2, 'missing_scope': 'train', 'missing_location': 'path', 'seed': 4, 'outer_fold': 1, 'phase': 'avg_inner_curve_best_per_fold', 'selected_inner_hp_names': ['lr5e-05_bs16_modL1_fusion32_fusionL1_drop0p2_miss20_scopetrain_locpath', 'lr5e-05_bs16_modL1_fusion32_fusionL1_drop0p2_miss20_scopetrain_locpath', 'lr1e-04_bs16_modL1_fusion32_fusionL1_drop0p1_miss20_scopetrain_locpath', 'lr5e-05_bs32_modL1_fusion64_fusionL1_drop0p2_miss20_scopetrain_locpath', 'lr1e-04_bs32_modL1_fusion32_fusionL1_drop0p1_miss20_scopetrain_locpath'], '_wandb': {}}
+2026-03-01 04:16:46,416 INFO    MainThread:2480 [wandb_init.py:init():892] starting backend
+2026-03-01 04:16:46,416 INFO    MainThread:2480 [wandb_init.py:init():895] sending inform_init request
+2026-03-01 04:16:46,417 INFO    MainThread:2480 [wandb_init.py:init():903] backend started and connected
+2026-03-01 04:16:46,418 INFO    MainThread:2480 [wandb_init.py:init():973] updated telemetry
+2026-03-01 04:16:46,446 INFO    MainThread:2480 [wandb_init.py:init():997] communicating run to backend with 90.0 second timeout
+2026-03-01 04:17:53,723 INFO    Thread-23 :2480 [retry.py:__call__():167] [no run ID] Retry attempt failed:
+Traceback (most recent call last):
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/urllib3/connectionpool.py", line 534, in _make_request
+    response = conn.getresponse()
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/urllib3/connection.py", line 571, in getresponse
+    httplib_response = super().getresponse()
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/http/client.py", line 1377, in getresponse
+    response.begin()
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/http/client.py", line 320, in begin
+    version, status, reason = self._read_status()
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/http/client.py", line 281, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/socket.py", line 716, in readinto
+    return self._sock.recv_into(b)
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/ssl.py", line 1275, in recv_into
+    return self.read(nbytes, buffer)
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/ssl.py", line 1133, in read
+    return self._sslobj.read(len, buffer)
+socket.timeout: The read operation timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/requests/adapters.py", line 644, in send
+    resp = conn.urlopen(
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/urllib3/util/retry.py", line 490, in increment
+    raise reraise(type(error), error, _stacktrace)
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/urllib3/connectionpool.py", line 536, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/urllib3/connectionpool.py", line 367, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='api.wandb.ai', port=443): Read timed out. (read timeout=20)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/wandb/sdk/lib/retry.py", line 160, in __call__
+    result = self._call_fn(*args, **kwargs)
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/wandb/sdk/internal/internal_api.py", line 394, in execute
+    return self.client.execute(*args, **kwargs)  # type: ignore
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/wandb/vendor/gql-0.2.0/wandb_gql/client.py", line 52, in execute
+    result = self._get_result(document, *args, **kwargs)
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/wandb/vendor/gql-0.2.0/wandb_gql/client.py", line 60, in _get_result
+    return self.transport.execute(document, *args, **kwargs)
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/wandb/sdk/lib/gql_request.py", line 70, in execute
+    request = self.session.post(self.url, **post_args)
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/requests/sessions.py", line 637, in post
+    return self.request("POST", url, data=data, json=json, **kwargs)
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "/home/osiris-user/anaconda3/envs/TFM/lib/python3.9/site-packages/requests/adapters.py", line 690, in send
+    raise ReadTimeout(e, request=request)
+requests.exceptions.ReadTimeout: HTTPSConnectionPool(host='api.wandb.ai', port=443): Read timed out. (read timeout=20)

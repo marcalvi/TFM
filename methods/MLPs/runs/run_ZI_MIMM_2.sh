@@ -67,4 +67,4 @@ python "${PROJECT_ROOT}/MLPs/main.py" \
   --seeds "${SEEDS}" \
   --wandb \
   --wandb_project "ZI_MLPs" \
-  --wandb_mode "online"
+  --wandb_mode "offline"
