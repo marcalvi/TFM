@@ -68,5 +68,5 @@ python "${PROJECT_ROOT}/main.py" \
   --test_missing_location "${TEST_MISSING_LOCATION_GRID}" \
   --seeds "${SEEDS}" \
   --wandb \
-  --wandb_project "KNN_MLPs" \
+  --wandb_project "KNN_MLP" \
   --wandb_mode "offline"
