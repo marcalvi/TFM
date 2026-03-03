@@ -1,0 +1,13 @@
+{"time":"2026-03-03T18:07:56.286953027+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-03T18:07:56.39138422+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-03T18:07:56.391412954+01:00","level":"INFO","msg":"stream: created new stream","id":"fokt34v8"}
+{"time":"2026-03-03T18:07:56.391430026+01:00","level":"INFO","msg":"handler: started","stream_id":"fokt34v8"}
+{"time":"2026-03-03T18:07:56.394954702+01:00","level":"INFO","msg":"stream: started","id":"fokt34v8"}
+{"time":"2026-03-03T18:07:56.395018802+01:00","level":"INFO","msg":"writer: started","stream_id":"fokt34v8"}
+{"time":"2026-03-03T18:07:56.395029553+01:00","level":"INFO","msg":"sender: started","stream_id":"fokt34v8"}
+{"time":"2026-03-03T18:07:56.395167212+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-03T18:07:56.431306532+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-03T18:07:56.432753751+01:00","level":"INFO","msg":"stream: closing","id":"fokt34v8"}
+{"time":"2026-03-03T18:07:56.432759582+01:00","level":"INFO","msg":"handler: closed","stream_id":"fokt34v8"}
+{"time":"2026-03-03T18:07:56.433188961+01:00","level":"INFO","msg":"sender: closed","stream_id":"fokt34v8"}
+{"time":"2026-03-03T18:07:56.433193239+01:00","level":"INFO","msg":"stream: closed","id":"fokt34v8"}
