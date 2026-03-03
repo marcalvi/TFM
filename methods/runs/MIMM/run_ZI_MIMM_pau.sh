@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export MAMBA_ROOT_PREFIX=/root/.local/share/mamba
 export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256
 export OMP_NUM_THREADS=6
 export MKL_NUM_THREADS=6
