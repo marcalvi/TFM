@@ -1,0 +1,13 @@
+{"time":"2026-03-03T11:25:38.224982534+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-03T11:25:38.329341565+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-03T11:25:38.329369137+01:00","level":"INFO","msg":"stream: created new stream","id":"ptym4dz9"}
+{"time":"2026-03-03T11:25:38.329385217+01:00","level":"INFO","msg":"handler: started","stream_id":"ptym4dz9"}
+{"time":"2026-03-03T11:25:38.333539968+01:00","level":"INFO","msg":"stream: started","id":"ptym4dz9"}
+{"time":"2026-03-03T11:25:38.333565826+01:00","level":"INFO","msg":"writer: started","stream_id":"ptym4dz9"}
+{"time":"2026-03-03T11:25:38.333569053+01:00","level":"INFO","msg":"sender: started","stream_id":"ptym4dz9"}
+{"time":"2026-03-03T11:25:38.333741448+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-03T11:25:38.381409976+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-03T11:25:38.382615712+01:00","level":"INFO","msg":"stream: closing","id":"ptym4dz9"}
+{"time":"2026-03-03T11:25:38.38262033+01:00","level":"INFO","msg":"handler: closed","stream_id":"ptym4dz9"}
+{"time":"2026-03-03T11:25:38.38291143+01:00","level":"INFO","msg":"sender: closed","stream_id":"ptym4dz9"}
+{"time":"2026-03-03T11:25:38.382914595+01:00","level":"INFO","msg":"stream: closed","id":"ptym4dz9"}
