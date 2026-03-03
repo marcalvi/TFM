@@ -1,0 +1,13 @@
+{"time":"2026-03-03T08:32:12.625856737+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-03T08:32:12.730076413+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-03T08:32:12.730102652+01:00","level":"INFO","msg":"stream: created new stream","id":"bttpeqmq"}
+{"time":"2026-03-03T08:32:12.730118963+01:00","level":"INFO","msg":"handler: started","stream_id":"bttpeqmq"}
+{"time":"2026-03-03T08:32:12.733905761+01:00","level":"INFO","msg":"stream: started","id":"bttpeqmq"}
+{"time":"2026-03-03T08:32:12.733973659+01:00","level":"INFO","msg":"sender: started","stream_id":"bttpeqmq"}
+{"time":"2026-03-03T08:32:12.733961206+01:00","level":"INFO","msg":"writer: started","stream_id":"bttpeqmq"}
+{"time":"2026-03-03T08:32:12.734098645+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-03T08:32:12.783142939+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-03T08:32:12.784451095+01:00","level":"INFO","msg":"stream: closing","id":"bttpeqmq"}
+{"time":"2026-03-03T08:32:12.784455093+01:00","level":"INFO","msg":"handler: closed","stream_id":"bttpeqmq"}
+{"time":"2026-03-03T08:32:12.784872119+01:00","level":"INFO","msg":"sender: closed","stream_id":"bttpeqmq"}
+{"time":"2026-03-03T08:32:12.784875566+01:00","level":"INFO","msg":"stream: closed","id":"bttpeqmq"}

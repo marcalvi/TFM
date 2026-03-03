@@ -1,0 +1,13 @@
+{"time":"2026-03-03T14:41:59.958130679+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-03T14:42:00.062907754+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-03T14:42:00.062939454+01:00","level":"INFO","msg":"stream: created new stream","id":"toofubj6"}
+{"time":"2026-03-03T14:42:00.062966896+01:00","level":"INFO","msg":"handler: started","stream_id":"toofubj6"}
+{"time":"2026-03-03T14:42:00.066169675+01:00","level":"INFO","msg":"stream: started","id":"toofubj6"}
+{"time":"2026-03-03T14:42:00.066189622+01:00","level":"INFO","msg":"writer: started","stream_id":"toofubj6"}
+{"time":"2026-03-03T14:42:00.066208929+01:00","level":"INFO","msg":"sender: started","stream_id":"toofubj6"}
+{"time":"2026-03-03T14:42:00.066368429+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-03T14:42:00.104639078+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-03T14:42:00.105938969+01:00","level":"INFO","msg":"stream: closing","id":"toofubj6"}
+{"time":"2026-03-03T14:42:00.105942395+01:00","level":"INFO","msg":"handler: closed","stream_id":"toofubj6"}
+{"time":"2026-03-03T14:42:00.106406871+01:00","level":"INFO","msg":"sender: closed","stream_id":"toofubj6"}
+{"time":"2026-03-03T14:42:00.106410167+01:00","level":"INFO","msg":"stream: closed","id":"toofubj6"}

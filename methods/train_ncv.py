@@ -104,7 +104,7 @@ def train_model_with_validation(
     best_val_probs = None
 
     early_stop = 0
-    patience = 10
+    patience = 20
 
     history = []
 

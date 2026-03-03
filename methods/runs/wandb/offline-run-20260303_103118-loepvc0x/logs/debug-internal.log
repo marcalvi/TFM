@@ -1,0 +1,13 @@
+{"time":"2026-03-03T10:31:18.786639047+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-03T10:31:18.912252937+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-03T10:31:18.912297211+01:00","level":"INFO","msg":"stream: created new stream","id":"loepvc0x"}
+{"time":"2026-03-03T10:31:18.912356704+01:00","level":"INFO","msg":"handler: started","stream_id":"loepvc0x"}
+{"time":"2026-03-03T10:31:18.916785455+01:00","level":"INFO","msg":"stream: started","id":"loepvc0x"}
+{"time":"2026-03-03T10:31:18.916846712+01:00","level":"INFO","msg":"writer: started","stream_id":"loepvc0x"}
+{"time":"2026-03-03T10:31:18.916870307+01:00","level":"INFO","msg":"sender: started","stream_id":"loepvc0x"}
+{"time":"2026-03-03T10:31:18.917224181+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-03T10:31:19.063321755+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-03T10:31:19.066925735+01:00","level":"INFO","msg":"stream: closing","id":"loepvc0x"}
+{"time":"2026-03-03T10:31:19.06694897+01:00","level":"INFO","msg":"handler: closed","stream_id":"loepvc0x"}
+{"time":"2026-03-03T10:31:19.067526379+01:00","level":"INFO","msg":"sender: closed","stream_id":"loepvc0x"}
+{"time":"2026-03-03T10:31:19.067544183+01:00","level":"INFO","msg":"stream: closed","id":"loepvc0x"}
