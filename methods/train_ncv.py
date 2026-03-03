@@ -105,6 +105,7 @@ def train_model_with_validation(
 
     early_stop = 0
     patience = 10
+    min_epoch_for_early_stop = 50
 
     history = []
 
@@ -170,9 +171,11 @@ def train_model_with_validation(
             best_val_probs = np.asarray(val_probs)
             early_stop = 0
         else:
-            early_stop += 1
-            if early_stop >= patience:
-                break
+            # Activate early stopping only after a minimum training horizon.
+            if epoch >= min_epoch_for_early_stop:
+                early_stop += 1
+                if early_stop >= patience:
+                    break
 
     if best_model_state is not None:
         model.load_state_dict(best_model_state)
