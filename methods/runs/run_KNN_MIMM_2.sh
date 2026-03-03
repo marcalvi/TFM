@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export MAMBA_ROOT_PREFIX=/root/.local/share/mamba
+export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256
+export OMP_NUM_THREADS=6
+export MKL_NUM_THREADS=6
 
-# Activate conda environment
-#source /opt/miniconda3/etc/profile.d/conda.sh
-source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-conda activate TFM
+# Initialize micromamba shell
+eval "$(micromamba shell hook --shell bash)"
+
+# Activate micromamba environment
+micromamba activate TFM
 
 # Optional WandB login from environment variable
 wandb login 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
 
-# Define paths
-#PROJECT_ROOT="/Users/marcalbesa/Desktop/TFM/git_exp/methods"
-#DATA_ROOT="/Users/marcalbesa/Desktop/TFM/data/MIMM"
-
-PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
-DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/"
+PROJECT_ROOT="/workspace/TFM/methods"
+DATA_ROOT="/workspace/data/MIMM"
 RESULTS_ROOT="${PROJECT_ROOT}/results"
 
 # Define endpoint
@@ -26,6 +27,7 @@ SEEDS="18473,55602"
 INNER_SPLITS=5
 OUTER_SPLITS=5
 EPOCHS=80
+GPU_MEMORY_FRACTION="0.6"
 
 BATCH_SIZE_GRID="16,32"
 LR_GRID="5e-5,1e-4"
@@ -56,6 +58,7 @@ python "${PROJECT_ROOT}/main.py" \
   --inner_splits "${INNER_SPLITS}" \
   --outer_splits "${OUTER_SPLITS}" \
   --epochs "${EPOCHS}" \
+  --gpu_memory_fraction "${GPU_MEMORY_FRACTION}" \
   --batch_size "${BATCH_SIZE_GRID}" \
   --learning_rate "${LR_GRID}" \
   --fusion_hidden_dim "${FUSION_HIDDEN_DIM_GRID}" \
