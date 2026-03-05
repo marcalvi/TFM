@@ -56,32 +56,32 @@ def load_preprocessed_dataset(args):
 
     inst_path = _resolve_csv_path(
         dataset_dir,
-        "patients_MIMM.csv",
+        "patients_mimm.csv",
         required=True,
     )
     patho_path = _resolve_csv_path(
         dataset_dir,
-        "pathology_MIMM.csv",
+        "pathology_mimm.csv",
         required=False,
     )
     radio_path = _resolve_csv_path(
         dataset_dir,
-        "radiology_MIMM.csv",
+        "radiology_mimm.csv",
         required=False,
     )
     clin_path = _resolve_csv_path(
         dataset_dir,
-        "clinical_MIMM.csv",
+        "clinical_mimm.csv",
         required=False,
     )
     blood_path = _resolve_csv_path(
         dataset_dir,
-        "blood_MIMM.csv",
+        "blood_mimm.csv",
         required=False,
     )
     radio_report_path = _resolve_csv_path(
         dataset_dir,
-        "radioreports_MIMM.csv",
+        "radioreports_mimm.csv",
         required=False,
     )
 
