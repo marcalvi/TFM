@@ -21,7 +21,7 @@ RESULTS_ROOT="${PROJECT_ROOT}/results"
 ENDPOINT="OS_6"
 
 # Proposed tuning grid
-SEEDS="22,2002,4"
+SEEDS="22,2002,4,18473,55602"
 #SEEDS="2002,4,18473,55602"
 
 INNER_SPLITS=5
@@ -70,5 +70,5 @@ python "${PROJECT_ROOT}/main.py" \
   --test_missing_location "${TEST_MISSING_LOCATION_GRID}" \
   --seeds "${SEEDS}" \
   --wandb \
-  --wandb_project "ZI_MLPs" \
+  --wandb_project "ZI_MLP" \
   --wandb_mode "online"

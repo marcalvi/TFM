@@ -21,7 +21,7 @@ RESULTS_ROOT="${PROJECT_ROOT}/results"
 ENDPOINT="OS_6"
 
 # Proposed tuning grid (DyAM)
-SEEDS="22,2002,4"
+SEEDS="22,2002,4,18473,55602"
 #SEEDS="22,2002,4,18473,55602"
 
 INNER_SPLITS=5
@@ -67,5 +67,5 @@ python "${PROJECT_ROOT}/main.py" \
   --test_missing_location "${TEST_MISSING_LOCATION_GRID}" \
   --seeds "${SEEDS}" \
   --wandb \
-  --wandb_project "DyAMs" \
-  --wandb_mode "online"
+  --wandb_project "DyAM" \
+  --wandb_mode "offline"
