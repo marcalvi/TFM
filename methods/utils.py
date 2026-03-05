@@ -1,10 +1,11 @@
 import numpy as np
 import torch
 import pandas as pd
+import random
 from itertools import product
-from models import MultimodalMLP, DyAM
+from models import MultimodalMLP, DyAM, HealNetBinaryWrapper
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, average_precision_score, confusion_matrix, matthews_corrcoef, roc_auc_score
+from sklearn.metrics import average_precision_score, roc_auc_score
 
 # ------------------------ 0. CONFIGURATION --------------------------
 
@@ -17,14 +18,32 @@ def select_device():
         return torch.device("mps")
     return torch.device("cpu")
 
+# Function to set global seed for reproducibility across random, numpy, and torch (including CUDA)
+def set_global_seed(seed, deterministic=True):
+    """Seed python/numpy/torch RNGs for reproducible runs."""
+    seed = int(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+    if deterministic:
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    else:
+        torch.backends.cudnn.deterministic = False
+        torch.backends.cudnn.benchmark = True
+
 # ------------------------ 1. PREPROCESSING --------------------------
 
 # Function to filter dataframes by patient IDs
-def filter_by_patients(df, patient_ids):
-    return df[df["patient"].isin(patient_ids)].copy()
+def filter_by_patients(df, patient_ids, id_col="patient"):
+    return df[df[id_col].isin(patient_ids)].copy()
 
 # Function to scale features of each modality using only traiing data
-def fit_and_transform_modalities(dfs_train_raw, dfs_eval_raw):
+def fit_and_transform_modalities(dfs_train_raw, dfs_eval_raw, id_col="patient"):
     dfs_train_scaled = {}
     dfs_eval_scaled = {}
     scalers = {}
@@ -32,7 +51,7 @@ def fit_and_transform_modalities(dfs_train_raw, dfs_eval_raw):
     for name in dfs_train_raw.keys():
         df_tr = dfs_train_raw[name].copy()
         df_ev = dfs_eval_raw[name].copy()
-        feats = [c for c in df_tr.columns if c != "patient"]
+        feats = [c for c in df_tr.columns if c != id_col]
 
         scaler = StandardScaler()
         if len(df_tr) > 0 and feats:
@@ -84,6 +103,25 @@ def _format_hp_name(cfg, train_missing_pct, train_missing_location, model_name):
             f"bs{bs_str}_"
             f"drop{dropout_str}_"
             f"temp{temp_str}_"
+            f"trmiss{train_missing_pct}_"
+            f"trloc{train_missing_location}"
+        )
+    if model_name in {"healnet"}:
+        depth_str = str(cfg["healnet_depth"])
+        lat_str = str(cfg["healnet_num_latents"])
+        ldim_str = str(cfg["healnet_latent_dim"])
+        xh_str = str(cfg["healnet_cross_heads"])
+        lh_str = str(cfg["healnet_latent_heads"])
+        selfcross_str = str(cfg["healnet_self_per_cross_attn"])
+        return (
+            f"lr{lr_str}_"
+            f"bs{bs_str}_"
+            f"depth{depth_str}_"
+            f"lat{lat_str}_"
+            f"ldim{ldim_str}_"
+            f"xh{xh_str}_"
+            f"lh{lh_str}_"
+            f"selfx{selfcross_str}_"
             f"trmiss{train_missing_pct}_"
             f"trloc{train_missing_location}"
         )
@@ -184,6 +222,85 @@ def build_hyperparameter_grid(args, train_missing_prob, train_missing_location):
                 cfg, train_missing_pct, train_missing_location, model_name=model_name
             )
             hp_configs.append(cfg)
+    if model_name in {"healnet"}:
+        healnet_depths = parse_value_or_list(args.healnet_depth, int)
+        healnet_num_freq_bands = parse_value_or_list(args.healnet_num_freq_bands, int)
+        healnet_num_latents = parse_value_or_list(args.healnet_num_latents, int)
+        healnet_latent_dims = parse_value_or_list(args.healnet_latent_dim, int)
+        healnet_cross_heads = parse_value_or_list(args.healnet_cross_heads, int)
+        healnet_latent_heads = parse_value_or_list(args.healnet_latent_heads, int)
+        healnet_cross_dim_head = parse_value_or_list(args.healnet_cross_dim_head, int)
+        healnet_latent_dim_head = parse_value_or_list(args.healnet_latent_dim_head, int)
+        healnet_attn_dropout = parse_value_or_list(args.healnet_attn_dropout, float)
+        healnet_ff_dropout = parse_value_or_list(args.healnet_ff_dropout, float)
+        healnet_self_per_cross_attn = parse_value_or_list(args.healnet_self_per_cross_attn, int)
+
+        for (
+            bs,
+            lr,
+            depth,
+            num_freq_bands,
+            num_latents,
+            latent_dim,
+            cross_heads,
+            latent_heads,
+            cross_dim_head,
+            latent_dim_head,
+            attn_dropout,
+            ff_dropout,
+            self_per_cross_attn,
+        ) in product(
+            batch_sizes,
+            learning_rates,
+            healnet_depths,
+            healnet_num_freq_bands,
+            healnet_num_latents,
+            healnet_latent_dims,
+            healnet_cross_heads,
+            healnet_latent_heads,
+            healnet_cross_dim_head,
+            healnet_latent_dim_head,
+            healnet_attn_dropout,
+            healnet_ff_dropout,
+            healnet_self_per_cross_attn,
+        ):
+            cfg = {
+                "batch_size": int(bs),
+                "learning_rate": float(lr),
+                "healnet_depth": int(depth),
+                "healnet_num_freq_bands": int(num_freq_bands),
+                "healnet_num_latents": int(num_latents),
+                "healnet_latent_dim": int(latent_dim),
+                "healnet_cross_heads": int(cross_heads),
+                "healnet_latent_heads": int(latent_heads),
+                "healnet_cross_dim_head": int(cross_dim_head),
+                "healnet_latent_dim_head": int(latent_dim_head),
+                "healnet_attn_dropout": float(attn_dropout),
+                "healnet_ff_dropout": float(ff_dropout),
+                "healnet_self_per_cross_attn": int(self_per_cross_attn),
+            }
+            key = (
+                cfg["batch_size"],
+                cfg["learning_rate"],
+                cfg["healnet_depth"],
+                cfg["healnet_num_freq_bands"],
+                cfg["healnet_num_latents"],
+                cfg["healnet_latent_dim"],
+                cfg["healnet_cross_heads"],
+                cfg["healnet_latent_heads"],
+                cfg["healnet_cross_dim_head"],
+                cfg["healnet_latent_dim_head"],
+                cfg["healnet_attn_dropout"],
+                cfg["healnet_ff_dropout"],
+                cfg["healnet_self_per_cross_attn"],
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            cfg["name"] = _format_hp_name(
+                cfg, train_missing_pct, train_missing_location, model_name=model_name
+            )
+            hp_configs.append(cfg)
 
     if not hp_configs:
         raise ValueError("No hyperparameter combinations were generated.")
@@ -199,35 +316,59 @@ def build_model(model_name, input_dims, model_kwargs):
         return MultimodalMLP(input_dims, **model_kwargs)
     if name in {"dyam"}:
         return DyAM(input_dims, **model_kwargs)
-    raise ValueError(f"Unsupported model '{model_name}'. Supported: mlp, dyam")
+    if name in {"healnet"}:
+        return HealNetBinaryWrapper(input_dims, **model_kwargs)
+    raise ValueError(f"Unsupported model '{model_name}'. Supported: mlp, dyam, healnet")
 
 # -------------------------- 5. EVALUATION ----------------------------
 
 # Metric calculation for binary classification that handles edge cases gracefully
-def safe_binary_metrics(y_true, y_prob):
-    y_true = np.asarray(y_true).astype(int)
-    y_prob = np.asarray(y_prob).reshape(-1)
+def safe_binary_metrics(y_true, y_prob, include_raw=False):
+    y_true = np.asarray(y_true, dtype=np.int64).reshape(-1)
+    y_prob = np.asarray(y_prob, dtype=np.float64).reshape(-1)
+    if y_true.shape[0] != y_prob.shape[0]:
+        raise ValueError(
+            f"safe_binary_metrics expects same length for y_true and y_prob, got "
+            f"{y_true.shape[0]} and {y_prob.shape[0]}."
+        )
+    if y_true.shape[0] == 0:
+        raise ValueError("safe_binary_metrics received empty arrays.")
+
     y_prob_safe = np.clip(y_prob, 1e-7, 1 - 1e-7)
-    y_pred = (y_prob >= 0.5).astype(int)
+    y_pred = y_prob >= 0.5
+    y_true_pos = y_true == 1
 
     if len(np.unique(y_true)) > 1:
-        auc = roc_auc_score(y_true, y_prob)
-        aucpr = average_precision_score(y_true, y_prob)
+        auc = float(roc_auc_score(y_true, y_prob))
+        aucpr = float(average_precision_score(y_true, y_prob))
     else:
         auc = 0.5
         aucpr = float(y_true.mean())
 
-    tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
+    tp = int(np.sum(y_true_pos & y_pred))
+    tn = int(np.sum(~y_true_pos & ~y_pred))
+    fp = int(np.sum(~y_true_pos & y_pred))
+    fn = int(np.sum(y_true_pos & ~y_pred))
 
-    return {
+    total = tp + tn + fp + fn
+    acc = float((tp + tn) / total) if total > 0 else 0.0
+    sen = float(tp / (tp + fn)) if (tp + fn) > 0 else 0.0
+    sp = float(tn / (tn + fp)) if (tn + fp) > 0 else 0.0
+
+    mcc_den = float(np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)))
+    mcc = float(((tp * tn) - (fp * fn)) / mcc_den) if mcc_den > 0 else 0.0
+
+    metrics = {
         "AUC": auc,
         "AUCPR": aucpr,
-        "ACC": accuracy_score(y_true, y_pred),
-        "SEN": tp / (tp + fn) if (tp + fn) > 0 else 0.0,
-        "SP": tn / (tn + fp) if (tn + fp) > 0 else 0.0,
-        "MCC": matthews_corrcoef(y_true, y_pred) if len(np.unique(y_true)) > 1 else 0.0,
+        "ACC": acc,
+        "SEN": sen,
+        "SP": sp,
+        "MCC": mcc,
         "LOGLOSS": float(-(y_true * np.log(y_prob_safe) + (1 - y_true) * np.log(1 - y_prob_safe)).mean()),
-        "Predicted_Probas": y_prob.tolist(),
-        "Binary_Preds": y_pred.tolist(),
-        "True_Labels": y_true.tolist(),
     }
+    if include_raw:
+        metrics["Predicted_Probas"] = y_prob.tolist()
+        metrics["Binary_Preds"] = y_pred.astype(np.int8).tolist()
+        metrics["True_Labels"] = y_true.tolist()
+    return metrics

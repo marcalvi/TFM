@@ -6,20 +6,29 @@ import torch.nn as nn
 import torch.optim as optim
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader
-from dataset import MLPDataset, MultimodalDatasetWithMissing, multimodal_collate, build_loaders
-from utils import build_model, safe_binary_metrics, select_device, filter_by_patients, fit_and_transform_modalities
+from dataset import (
+    MultimodalBaseDataset,
+    MultimodalDatasetWithMissing,
+    multimodal_collate,
+    build_loaders,
+)
+from utils import (
+    build_model,
+    safe_binary_metrics,
+    select_device,
+    filter_by_patients,
+    fit_and_transform_modalities,
+    set_global_seed,
+)
 try:
     import wandb
 except ImportError:
     wandb = None
 
-# Enable cuDNN autotuner for stable input shapes.
-torch.backends.cudnn.benchmark = True
-
 # ---------------------------- HELPER FUNCTIONS -----------------------------
 
 # Function to transform outer test with each inner train scaler
-def _transform_modalities_with_fitted_scalers(dfs_raw, scalers):
+def _transform_modalities_with_fitted_scalers(dfs_raw, scalers, patient_id_col="patient"):
     """Apply pre-fitted per-modality scalers to raw modality dataframes."""
     dfs_scaled = {}
     for name, df_raw in dfs_raw.items():
@@ -27,7 +36,7 @@ def _transform_modalities_with_fitted_scalers(dfs_raw, scalers):
             raise ValueError(f"Missing scaler for modality '{name}'.")
 
         df_scaled = df_raw.copy()
-        feats = [c for c in df_scaled.columns if c != "patient"]
+        feats = [c for c in df_scaled.columns if c != patient_id_col]
         if len(df_scaled) > 0 and feats:
             values = df_scaled[feats].to_numpy(dtype=np.float32, copy=True)
             transformed = scalers[name].transform(values).astype(np.float32)
@@ -51,8 +60,9 @@ def _predict_model_probabilities(
     model.eval()
     y_true = []
     y_prob = []
+    model_name_l = str(model_name).strip().lower()
     bypass_mask = (
-        str(model_name).strip().lower() == "mlp"
+        model_name_l == "mlp"
         and str(imputation_method).strip().lower() == "knn"
     )
 
@@ -60,6 +70,7 @@ def _predict_model_probabilities(
         for Xs, present_mask, y, _ in data_loader:
             Xs = [x.to(device) for x in Xs]
             present_mask = present_mask.to(device)
+
             model_mask = None if bypass_mask else present_mask
             logits = model(Xs, model_mask).squeeze(1)
             probs = torch.sigmoid(logits).cpu().numpy().reshape(-1)
@@ -85,10 +96,11 @@ def train_model_with_validation(
     model_kwargs=None,
 ):
     model_kwargs = model_kwargs or {}
+    model_name_l = str(model_name).strip().lower()
 
     # For MLP with KNN imputation, we do not use masking since KNN already imputes missing modalities
     bypass_mask = (
-        str(model_name).strip().lower() == "mlp"
+        model_name_l == "mlp"
         and str(imputation_method).strip().lower() == "knn"
     )
 
@@ -111,22 +123,28 @@ def train_model_with_validation(
     for epoch in range(1, epochs + 1):
         model.train()
         train_loss = 0.0
+        train_steps = 0
 
         for Xs, present_mask, y, _ in train_loader:
             Xs = [x.to(device) for x in Xs]
             present_mask = present_mask.to(device)
             y = y.to(device)
+
             model_mask = None if bypass_mask else present_mask
 
             optimizer.zero_grad()
-            logits = model(Xs, model_mask).squeeze(1)
+            logits_out = model(Xs, model_mask)
+            if logits_out is None:
+                continue
+            logits = logits_out.squeeze(1)
             loss = criterion(logits, y)
             loss.backward()
             optimizer.step()
 
             train_loss += loss.item()
+            train_steps += 1
 
-        avg_train_loss = train_loss / max(len(train_loader), 1)
+        avg_train_loss = train_loss / max(train_steps, 1)
 
         model.eval()
         val_loss = 0.0
@@ -138,13 +156,13 @@ def train_model_with_validation(
                 Xs = [x.to(device) for x in Xs]
                 present_mask = present_mask.to(device)
                 y = y.to(device)
-                model_mask = None if bypass_mask else present_mask
 
+                model_mask = None if bypass_mask else present_mask
                 logits = model(Xs, model_mask).squeeze(1)
                 loss = criterion(logits, y)
 
                 val_loss += loss.item()
-                val_probs.extend(torch.sigmoid(logits).cpu().numpy())
+                val_probs.extend(torch.sigmoid(logits).cpu().numpy().tolist())
                 val_targets.extend(y.cpu().numpy())
 
         avg_val_loss = val_loss / max(len(val_loader), 1)
@@ -199,6 +217,8 @@ def nested_cv(
     inner_splits=5,
     outer_splits=5,
     gpu_memory_fraction=1.0,
+    missing_pattern_seed=0,
+    patient_id_col="patient",
     wandb_enabled=False,
     wandb_project=None,
     wandb_mode="online",
@@ -211,6 +231,8 @@ def nested_cv(
 
     # Train missingness is applied on both inner-train and inner-validation.
     apply_missing_train = float(getattr(train_missing_simulator, "missing_prob", 0.0)) > 0.0
+    model_name_l = str(model_name).strip().lower()
+    set_global_seed(seed, deterministic=True)
 
     # Test-time evaluation setups:
     # by default evaluate once with the provided train simulator.
@@ -228,7 +250,7 @@ def nested_cv(
         raise ValueError("test_eval_setups cannot be empty when provided.")
 
     # Get patient IDs and labels from  inst_df
-    patients = inst_df["patient"].values
+    patients = inst_df[patient_id_col].values
     y = inst_df[label_col].values
 
     # Set up outer and inner cross-validation splits
@@ -265,17 +287,20 @@ def nested_cv(
         test_outer_ids = patients[test_outer_idx]
 
         for pid in train_outer_ids:
-            split_rows.append({"outer_fold": outer_fold_idx, "split": "train_outer", "patient": int(pid)})
+            split_rows.append({"outer_fold": outer_fold_idx, "split": "train_outer", "patient": pid})
         for pid in test_outer_ids:
-            split_rows.append({"outer_fold": outer_fold_idx, "split": "test_outer", "patient": int(pid)})
+            split_rows.append({"outer_fold": outer_fold_idx, "split": "test_outer", "patient": pid})
 
         # Filter inst_df for outer-train fold and get patient IDs and ys
-        inst_df_train_outer = filter_by_patients(inst_df, train_outer_ids)
-        patients_train_outer = inst_df_train_outer["patient"].values
+        inst_df_train_outer = filter_by_patients(inst_df, train_outer_ids, id_col=patient_id_col)
+        patients_train_outer = inst_df_train_outer[patient_id_col].values
         y_train_outer = inst_df_train_outer[label_col].values
 
         # Split dfs into outer-train data.
-        dfs_train_outer_raw = {name: filter_by_patients(df, train_outer_ids) for name, df in dfs.items()}
+        dfs_train_outer_raw = {
+            name: filter_by_patients(df, train_outer_ids, id_col=patient_id_col)
+            for name, df in dfs.items()
+        }
 
         # Select one best HP config per inner fold and keep the 5 trained models.
         selected_inner_members = []
@@ -290,18 +315,26 @@ def nested_cv(
             val_inner_ids = patients_train_outer[val_inner_idx]
 
             # Filter inst_df for inner-train and inner-val folds
-            inst_df_train_inner = filter_by_patients(inst_df_train_outer, train_inner_ids)
-            inst_df_val_inner = filter_by_patients(inst_df_train_outer, val_inner_ids)
+            inst_df_train_inner = filter_by_patients(
+                inst_df_train_outer, train_inner_ids, id_col=patient_id_col
+            )
+            inst_df_val_inner = filter_by_patients(
+                inst_df_train_outer, val_inner_ids, id_col=patient_id_col
+            )
 
             # Filter dfs for inner-train and inner-val folds, then scale features using only inner-train statistics
             dfs_train_inner_raw = {
-                name: filter_by_patients(df, train_inner_ids) for name, df in dfs_train_outer_raw.items()
+                name: filter_by_patients(df, train_inner_ids, id_col=patient_id_col)
+                for name, df in dfs_train_outer_raw.items()
             }
             dfs_val_inner_raw = {
-                name: filter_by_patients(df, val_inner_ids) for name, df in dfs_train_outer_raw.items()
+                name: filter_by_patients(df, val_inner_ids, id_col=patient_id_col)
+                for name, df in dfs_train_outer_raw.items()
             }
             dfs_train_inner_scaled, dfs_val_inner_scaled, scalers_inner = fit_and_transform_modalities(
-                dfs_train_inner_raw, dfs_val_inner_raw
+                dfs_train_inner_raw,
+                dfs_val_inner_raw,
+                id_col=patient_id_col,
             )
 
             # Keep track of the best model and HP config for this inner fold
@@ -313,7 +346,7 @@ def nested_cv(
             best_inner_score = (-np.inf, -np.inf)  # (AUC, -LOGLOSS)
 
             # Iterate over each HP config, train a model, and evaluate on inner-val fold
-            for hp_cfg in hp_configs:
+            for hp_idx, hp_cfg in enumerate(hp_configs):
                 hp_name = hp_cfg["name"]
 
                 # Inner validation belongs to outer-train, so it follows train missingness.
@@ -328,10 +361,13 @@ def nested_cv(
                     train_missing=apply_missing_train,
                     val_missing=apply_missing_train,
                     imputation_method=imputation_method,
+                    missing_pattern_seed=missing_pattern_seed,
+                    model_name=model_name,
+                    loader_seed=int(seed + outer_fold_idx * 10_000 + inner_fold_idx * 100 + hp_idx),
+                    id_col=patient_id_col,
                 )
 
                 # Get model kwargs from this HP config
-                model_name_l = str(model_name).strip().lower()
                 if model_name_l in {"mlp"}:
                     model_kwargs = {
                         "modality_hidden_layers": hp_cfg["modality_hidden_layers"],
@@ -344,9 +380,23 @@ def nested_cv(
                         "dropout_p": hp_cfg["dyam_dropout"],
                         "temperature": hp_cfg["dyam_temperature"],
                     }
+                elif model_name_l in {"healnet"}:
+                    model_kwargs = {
+                        "depth": hp_cfg["healnet_depth"],
+                        "num_freq_bands": hp_cfg["healnet_num_freq_bands"],
+                        "num_latents": hp_cfg["healnet_num_latents"],
+                        "latent_dim": hp_cfg["healnet_latent_dim"],
+                        "cross_heads": hp_cfg["healnet_cross_heads"],
+                        "latent_heads": hp_cfg["healnet_latent_heads"],
+                        "cross_dim_head": hp_cfg["healnet_cross_dim_head"],
+                        "latent_dim_head": hp_cfg["healnet_latent_dim_head"],
+                        "attn_dropout": hp_cfg["healnet_attn_dropout"],
+                        "ff_dropout": hp_cfg["healnet_ff_dropout"],
+                        "self_per_cross_attn": hp_cfg["healnet_self_per_cross_attn"],
+                    }
                 else:
                     raise ValueError(
-                        f"Unsupported model '{model_name}'. Supported: mlp, dyam"
+                        f"Unsupported model '{model_name}'. Supported: mlp, dyam, healnet"
                     )
 
                 # Train the model and evaluate on inner-val fold
@@ -479,10 +529,13 @@ def nested_cv(
 
         # Outer prediction = average predictions of selected inner models on outer-test data (20%).
         # Each model must evaluate on data transformed with its own inner-train scalers.
-        inst_df_test_outer = filter_by_patients(inst_df, test_outer_ids)
-        dfs_test_outer_raw = {name: filter_by_patients(df, test_outer_ids) for name, df in dfs.items()}
+        inst_df_test_outer = filter_by_patients(inst_df, test_outer_ids, id_col=patient_id_col)
+        dfs_test_outer_raw = {
+            name: filter_by_patients(df, test_outer_ids, id_col=patient_id_col)
+            for name, df in dfs.items()
+        }
 
-        outer_eval_batch_size = max(int(h["batch_size"]) for h in hp_configs)
+        outer_eval_batch_size = 1 if model_name_l == "healnet" else max(int(h["batch_size"]) for h in hp_configs)
         for eval_setup in test_eval_setups:
             eval_simulator = eval_setup["simulator"]
             eval_missing_location = str(eval_setup["missing_location"]).lower()
@@ -492,24 +545,27 @@ def nested_cv(
             model_probs = []
             y_true_outer = None
 
-            for member in selected_inner_members:
+            for member_idx, member in enumerate(selected_inner_members):
                 model = member["model"]
                 scalers = member["scalers"]
 
                 dfs_outer_eval_scaled = _transform_modalities_with_fitted_scalers(
                     dfs_test_outer_raw,
                     scalers,
+                    patient_id_col=patient_id_col,
                 )
-                ensemble_eval_base = MLPDataset(
+                ensemble_eval_base = MultimodalBaseDataset(
                     dfs=dfs_outer_eval_scaled,
                     label_df=inst_df_test_outer,
                     label_col=label_col,
+                    id_col=patient_id_col,
                 )
                 ensemble_eval_ds = MultimodalDatasetWithMissing(
                     base_dataset=ensemble_eval_base,
                     simulator=eval_simulator,
                     apply_missing=apply_missing_eval,
                     imputation_method=imputation_method,
+                    missing_pattern_seed=missing_pattern_seed,
                 )
                 ensemble_eval_loader = DataLoader(
                     ensemble_eval_ds,
