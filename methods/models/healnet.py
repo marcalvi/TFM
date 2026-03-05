@@ -223,17 +223,21 @@ class HealNet(nn.Module):
 
         for layer_idx, layer in enumerate(self.layers):
             for i in range(self.modalities):
-                if i in missing_idx: 
-                    if verbose: 
+                if i in missing_idx:
+                    if verbose:
                         print(f"Skipping update in fusion layer {layer_idx + 1} for missing modality {i+1}")
-                        continue
-                cross_attn=layer[i*2]
-                cross_ff = layer[(i*2)+1]
+                    continue
+
+                cross_attn = layer[i * 2]
+                cross_ff = layer[(i * 2) + 1]
                 try:
-                    x = cross_attn(x, context = tensors[i], mask = mask) + x
-                    x =  cross_ff(x) + x
-                except:
-                    pass
+                    x = cross_attn(x, context=tensors[i], mask=mask) + x
+                    x = cross_ff(x) + x
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"HealNet fusion update failed at layer={layer_idx + 1}, modality={i + 1}. "
+                        f"Context shape={None if tensors[i] is None else tuple(tensors[i].shape)}"
+                    ) from exc
 
                 if self.self_per_cross_attn > 0:
                     self_attn, self_ff = layer[-1]
