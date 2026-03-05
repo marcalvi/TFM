@@ -1,8 +1,10 @@
 from .mlp import MultimodalMLP
 from .dyam import DyAM
+_HEALNET_IMPORT_ERROR = None
 try:
     from .healnet import HealNet, HealNetBinaryWrapper
 except Exception as _healnet_import_error:
+    _HEALNET_IMPORT_ERROR = _healnet_import_error
     HealNet = None
 
     class HealNetBinaryWrapper:  # pragma: no cover - import fallback
@@ -10,7 +12,7 @@ except Exception as _healnet_import_error:
             raise ImportError(
                 "HealNet dependencies are not available. "
                 "Install missing packages (e.g. einops) to use model='HealNet'."
-            ) from _healnet_import_error
+            ) from _HEALNET_IMPORT_ERROR
 
 __all__ = [
     "MultimodalMLP",

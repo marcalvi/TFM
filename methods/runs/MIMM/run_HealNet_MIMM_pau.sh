@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export MAMBA_ROOT_PREFIX=/root/.local/share/mamba
+export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256
+export OMP_NUM_THREADS=6
+export MKL_NUM_THREADS=6
 
-# Activate conda environment
-#source /opt/miniconda3/etc/profile.d/conda.sh
-source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-conda activate TFM
+# Initialize micromamba shell
+eval "$(micromamba shell hook --shell bash)"
+
+# Activate micromamba environment
+micromamba activate TFM
 
 # Optional WandB login from environment variable
 wandb login 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
 
-PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
-DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/"
+PROJECT_ROOT="/workspace/TFM/methods"
+DATA_ROOT="/workspace/data/MIMM"
 RESULTS_ROOT="${PROJECT_ROOT}/results"
 
 ENDPOINT="OS_6"
@@ -19,6 +24,7 @@ MISSING_PATTERN_SEED=2026
 INNER_SPLITS=5
 OUTER_SPLITS=5
 EPOCHS=80
+GPU_MEMORY_FRACTION="0.6"
 
 # Shared optimization
 BATCH_SIZE_GRID="4"
@@ -71,5 +77,5 @@ python "${PROJECT_ROOT}/main.py" \
   --seeds "${SEEDS}" \
   --missing_pattern_seed "${MISSING_PATTERN_SEED}" \
   --wandb \
-  --wandb_project "HEALNet" \
+  --wandb_project "HealNet" \
   --wandb_mode "online"

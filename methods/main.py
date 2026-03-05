@@ -3,13 +3,12 @@ import argparse
 import os
 import time
 import pandas as pd
-from dataset import MissingModalitySimulator
+from dataset import MissingModalitySimulator, load_or_preprocess_dataset
 from train_ncv import nested_cv
 from utils import (
     build_hyperparameter_grid,
     parse_value_or_list,
 )
-
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -19,7 +18,13 @@ def get_args():
     parser.add_argument("--model",type=str, required=True, choices=["MLP", "DyAM", "HealNet"])
     parser.add_argument("--dataset", type=str, required=True, help="Dataset name suffix")
     parser.add_argument("--endpoint", type=str, required=True, help="Endpoint base name")
-    parser.add_argument("--inst_data", type=str, required=True, help="CSV with patient and label")
+    parser.add_argument(
+        "--dataset_dir",
+        type=str,
+        default=None,
+        help="Directory containing all CSV files for the selected dataset.",
+    )
+    parser.add_argument("--inst_data", type=str, default=None, help="CSV with patient and label")
     parser.add_argument(
         "--patient_ids_col",
         dest="patient_ids_col",
@@ -124,73 +129,8 @@ def get_args():
 
     return parser.parse_args()
 
-
-# Find the label column in the inst_df
-def _find_label_column(inst_df, endpoint):
-    preferred = f"{endpoint}_label"
-    if preferred in inst_df.columns:
-        return preferred
-    if endpoint in inst_df.columns:
-        return endpoint
-    raise ValueError(f"Label column not found. Tried '{preferred}' and '{endpoint}'.")
-
-# Modality-specific loading functions
-def _load_patho_df(patho_dir, inst_df, id_col):
-    path_df = pd.read_csv(patho_dir)
-    path_df = path_df.rename(columns=lambda x: x.replace("embedding_", "patho_"))
-    path_df = pd.merge(path_df, inst_df[[id_col]], on=id_col, how = "inner")
-    keep = [id_col] + [c for c in path_df.columns if c.startswith("patho_")]
-    return path_df[keep]
-
-def _load_prefixed_df(csv_path, inst_df, prefix, id_col):
-    df = pd.read_csv(csv_path)
-    df = df.rename(columns=lambda x: f"{prefix}_{x}" if x != id_col else x)
-    return pd.merge(df, inst_df[[id_col]], on=id_col)
-
-def _load_radio_df(radio_dir, inst_df, id_col):
-    rad_df = pd.read_csv(radio_dir).rename(columns=lambda x: x.replace("pred_", "radio_"))
-    rad_df = rad_df.drop(columns=["image_path", "lesion_tag"], errors="ignore")
-    rad_df = pd.merge(rad_df, inst_df[[id_col]], on=id_col)
-    keep = [id_col] + [c for c in rad_df.columns if c.startswith("radio_")]
-    return rad_df[keep]
-
-# Collapse duplicated rows by mean for each modality
-def _check_and_collapse_modality_rows(dfs, id_col):
-    """Ensure one row per patient in each modality dataframe."""
-    cleaned = {}
-    for mod_name, df in dfs.items():
-        if id_col not in df.columns:
-            raise ValueError(f"Modality '{mod_name}' does not contain the id column '{id_col}'.")
-
-        work_df = df.copy()
-        patient_counts = work_df[id_col].value_counts()
-        duplicated = patient_counts[patient_counts > 1]
-
-        if duplicated.empty:
-            cleaned[mod_name] = work_df
-            continue
-
-        dup_ids = duplicated.index.tolist()
-        preview = dup_ids[:25]
-        preview_txt = ", ".join(str(x) for x in preview)
-        suffix = " ..." if len(dup_ids) > 25 else ""
-        print(
-            f"[{mod_name}] Duplicated patients detected: {len(dup_ids)}. "
-            f"Collapsing by mean. Patient IDs: {preview_txt}{suffix}"
-        )
-
-        feature_cols = [c for c in work_df.columns if c != id_col]
-
-        # Build a dense temporary frame to avoid pandas fragmentation warnings.
-        numeric_features = work_df[feature_cols].apply(pd.to_numeric, errors="coerce")
-        dense_df = pd.concat([work_df[[id_col]], numeric_features], axis=1).copy()
-        collapsed = dense_df.groupby(id_col, as_index=False)[feature_cols].mean()
-        cleaned[mod_name] = collapsed
-
-    return cleaned
-
-# Function to map missing location to folder name
-def _missing_modality_label(missing_location):
+# Function to build output directory path
+def _build_output_dir(base_odir, model_label, dataset_label, train_missing_location, train_missing_prob, seed):
     mapping = {
         "global": "GLOBAL",
         "radio": "RADIO",
@@ -199,12 +139,8 @@ def _missing_modality_label(missing_location):
         "radio_report": "RADIO_REPORT",
         "blood": "BLOOD",
     }
-    key = str(missing_location).strip().lower()
-    return mapping.get(key, key.upper())
-
-
-def _build_output_dir(base_odir, model_label, dataset_label, train_missing_location, train_missing_prob, seed):
-    missing_modality_label = _missing_modality_label(train_missing_location)
+    key = str(train_missing_location).strip().lower()
+    missing_modality_label = mapping.get(key, key.upper())
     missing_pct = str(float(train_missing_prob) * 100.0)
     return os.path.join(
         base_odir,
@@ -216,6 +152,7 @@ def _build_output_dir(base_odir, model_label, dataset_label, train_missing_locat
         f"seed_{seed}",
     )
 
+# Function to save outputs of a training run
 def _save_run_outputs(
     odir,
     inner_df,
@@ -273,42 +210,11 @@ def main():
     if not (0.0 < float(args.gpu_memory_fraction) <= 1.0):
         raise ValueError("--gpu_memory_fraction must be in (0, 1].")
 
-    # Read labels dataframe and resolve label column name
-    inst_df = pd.read_csv(args.inst_data)
-    if args.patient_ids_col not in inst_df.columns:
-        raise ValueError(
-            f"ID column '{args.patient_ids_col}' not found in --inst_data."
-        )
-    label_col = _find_label_column(inst_df, args.endpoint)
-    inst_df = inst_df[[args.patient_ids_col, label_col]].copy()
-
-    # Read modality dataframes and keep only patients from inst_df
-    dfs = {}
-    if args.patho_data:
-        dfs["path"] = _load_patho_df(args.patho_data, inst_df, args.patient_ids_col)
-    if args.radio_data:
-        dfs["radio"] = _load_radio_df(args.radio_data, inst_df, args.patient_ids_col)
-    if args.clin_data:
-        dfs["clin"] = _load_prefixed_df(args.clin_data, inst_df, "clin", args.patient_ids_col)
-    if args.blood_data:
-        dfs["blood"] = _load_prefixed_df(args.blood_data, inst_df, "blood", args.patient_ids_col)
-    if args.radio_report_data:
-        dfs["radio_report"] = _load_prefixed_df(args.radio_report_data, inst_df, "radio_report", args.patient_ids_col)
-
-    # Ensure at least one modality is selected
-    if not dfs:
-        raise ValueError("No modality provided. At least one modality CSV is required.")
-
-    # Verify one row per patient in each modality and collapse duplicates by mean when needed.
-    dfs = _check_and_collapse_modality_rows(dfs, args.patient_ids_col)
+    # Load dataset-specific preprocessed bundle if available (`dataset/<dataset>.py`);
+    # otherwise use the generic preprocessing pipeline.
+    inst_df, dfs, label_col = load_or_preprocess_dataset(args)
     modality_names = list(dfs.keys())
     num_modalities = len(modality_names)
-
-    # Set index by patient id WITHOUT dropping the column
-    for mod in modality_names:
-        dfs[mod] = dfs[mod].set_index(args.patient_ids_col, drop=False)
-
-    inst_df = inst_df.set_index(args.patient_ids_col, drop=False)
 
     print(f"Dataframes read. Starting {args.model} training.")
      

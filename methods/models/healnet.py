@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from einops import rearrange, repeat, einsum
+from einops import rearrange, repeat
 from einops.layers.torch import Reduce
 
 class HealNet(nn.Module):
@@ -223,17 +223,21 @@ class HealNet(nn.Module):
 
         for layer_idx, layer in enumerate(self.layers):
             for i in range(self.modalities):
-                if i in missing_idx: 
-                    if verbose: 
+                if i in missing_idx:
+                    if verbose:
                         print(f"Skipping update in fusion layer {layer_idx + 1} for missing modality {i+1}")
-                        continue
-                cross_attn=layer[i*2]
-                cross_ff = layer[(i*2)+1]
+                    continue
+
+                cross_attn = layer[i * 2]
+                cross_ff = layer[(i * 2) + 1]
                 try:
-                    x = cross_attn(x, context = tensors[i], mask = mask) + x
-                    x =  cross_ff(x) + x
-                except:
-                    pass
+                    x = cross_attn(x, context=tensors[i], mask=mask) + x
+                    x = cross_ff(x) + x
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"HealNet fusion update failed at layer={layer_idx + 1}, modality={i + 1}. "
+                        f"Context shape={None if tensors[i] is None else tuple(tensors[i].shape)}"
+                    ) from exc
 
                 if self.self_per_cross_attn > 0:
                     self_attn, self_ff = layer[-1]
@@ -400,7 +404,7 @@ class Attention(nn.Module):
 
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h = h), (q, k, v))
 
-        sim = einsum('b i d, b j d -> b i j', q, k) * self.scale
+        sim = torch.einsum('b i d, b j d -> b i j', q, k) * self.scale
 
         if exists(mask):
             mask = rearrange(mask, 'b ... -> b (...)')
@@ -415,7 +419,7 @@ class Attention(nn.Module):
         attn = self.dropout(attn)
 
 
-        out = einsum('b i j, b j d -> b i d', attn, v)
+        out = torch.einsum('b i j, b j d -> b i d', attn, v)
         out = rearrange(out, '(b h) n d -> b n (h d)', h = h)
         return self.to_out(out)
 

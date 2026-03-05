@@ -26,6 +26,7 @@ class KNNModalityImputer:
         else:
             raise ValueError("base_dataset must expose 'patient_ids' (or legacy 'patients').")
         self.n_samples = len(self.patient_ids)
+        self.patient_id_to_index = {pid: i for i, pid in enumerate(self.patient_ids)}
 
         self.modality_arrays = []
         self.modality_means = []
@@ -36,7 +37,7 @@ class KNNModalityImputer:
             self.modality_arrays.append(arr)
             self.modality_means.append(arr.mean(axis=0, dtype=np.float32))
 
-    def impute_modalities(self, modalities, present_mask, sample_index):
+    def impute_modalities(self, modalities, present_mask, sample_index=None, sample_id=None):
         present = np.asarray(present_mask.detach().cpu().numpy(), dtype=bool)
         missing_idx = np.where(~present)[0]
         if missing_idx.size == 0:
@@ -53,7 +54,14 @@ class KNNModalityImputer:
                 diff = arr - query
                 dist2 += np.sum(diff * diff, axis=1)
 
-            dist2[int(sample_index)] = np.inf
+            self_idx = None
+            if sample_id is not None and sample_id in self.patient_id_to_index:
+                self_idx = int(self.patient_id_to_index[sample_id])
+            elif sample_index is not None and 0 <= int(sample_index) < self.n_samples:
+                self_idx = int(sample_index)
+
+            if self_idx is not None:
+                dist2[self_idx] = np.inf
             k_eff = min(self.k, self.n_samples - 1)
             if k_eff > 0:
                 neighbors = np.argpartition(dist2, kth=k_eff - 1)[:k_eff]
