@@ -43,17 +43,11 @@ TEST_MISSING_PROB_GRID="0.0,0.2,0.4,0.6,0.8"
 
 # Run training
 python "${PROJECT_ROOT}/main.py" \
+  --model "MLP" \
   --dataset "MIMM" \
   --odir "${RESULTS_ROOT}" \
+  --dataset_dir "${DATA_ROOT}" \
   --endpoint "${ENDPOINT}" \
-  --model "MLP" \
-  --inst_data "${DATA_ROOT}/patients_mimm.csv" \
-  --patient_ids_col "patient" \
-  --patho_data "${DATA_ROOT}/pathology_mimm.csv" \
-  --radio_data "${DATA_ROOT}/radiology_mimm.csv" \
-  --clin_data "${DATA_ROOT}/clinical_mimm.csv" \
-  --radio_report_data "${DATA_ROOT}/radioreports_mimm.csv" \
-  --blood_data "${DATA_ROOT}/blood_mimm.csv" \
   --inner_splits "${INNER_SPLITS}" \
   --outer_splits "${OUTER_SPLITS}" \
   --epochs "${EPOCHS}" \
