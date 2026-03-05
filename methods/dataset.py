@@ -374,6 +374,8 @@ def build_loaders(
     )
 
     model_name_l = str(model_name).strip().lower()
+    train_batch_size = int(batch_size)
+    eval_batch_size = 1 if model_name_l == "healnet" else train_batch_size
     n_train = len(train_ds)
     if model_name_l in {"mlp", "dyam"} and n_train < 2:
         raise ValueError(
@@ -381,10 +383,10 @@ def build_loaders(
             "At least 2 are required with BatchNorm."
         )
 
-    if model_name_l == "healnet" and bool(train_missing):
+    if model_name_l == "healnet" and bool(train_missing) and train_batch_size > 1:
         train_sampler = HealNetMaskAwareBatchSampler(
             dataset=train_ds,
-            batch_size=batch_size,
+            batch_size=train_batch_size,
             shuffle=True,
             seed=int(loader_seed),
             drop_last=False,
@@ -394,42 +396,22 @@ def build_loaders(
             batch_sampler=train_sampler,
             collate_fn=multimodal_collate,
         )
-        train_loader.trainable_batches = train_sampler.trainable_batches
-        train_loader.total_batches = train_sampler.total_batches
-        train_loader.trainable_batch_pct = train_sampler.trainable_batch_pct
     else:
-        drop_last_train = model_name_l in {"mlp", "dyam"} and (n_train % batch_size) == 1
+        drop_last_train = model_name_l in {"mlp", "dyam"} and (n_train % train_batch_size) == 1
         train_loader = DataLoader(
             train_ds,
-            batch_size=batch_size,
+            batch_size=train_batch_size,
             shuffle=True,
             collate_fn=multimodal_collate,
             drop_last=drop_last_train,
         )
-        train_loader.trainable_batches = len(train_loader)
-        train_loader.total_batches = len(train_loader)
-        train_loader.trainable_batch_pct = 1.0 if len(train_loader) > 0 else 0.0
 
-    if model_name_l == "healnet" and bool(val_missing):
-        val_sampler = HealNetMaskAwareBatchSampler(
-            dataset=val_ds,
-            batch_size=batch_size,
-            shuffle=False,
-            seed=int(loader_seed) + 10_000,
-            drop_last=False,
-        )
-        val_loader = DataLoader(
-            val_ds,
-            batch_sampler=val_sampler,
-            collate_fn=multimodal_collate,
-        )
-    else:
-        val_loader = DataLoader(
-            val_ds,
-            batch_size=batch_size,
-            shuffle=False,
-            collate_fn=multimodal_collate,
-            drop_last=False,
-        )
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=eval_batch_size,
+        shuffle=False,
+        collate_fn=multimodal_collate,
+        drop_last=False,
+    )
 
     return train_loader, val_loader

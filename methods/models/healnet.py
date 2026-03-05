@@ -502,13 +502,9 @@ class HealNetBinaryWrapper(nn.Module):
 
             tensors.append(Xi.unsqueeze(1))
 
-        # Safety fallback: if all modalities were skipped for this batch,
-        # keep one modality to avoid null-context failures.
+        # If all modalities are unavailable for this batch, let the training
+        # loop skip this batch.
         if all(t is None for t in tensors):
-            if present_mask is not None:
-                best_mod = int(torch.argmax(present_mask.to(dtype=torch.int64).sum(dim=0)).item())
-                tensors[best_mod] = Xs[best_mod].unsqueeze(1)
-            else:
-                tensors[0] = Xs[0].unsqueeze(1)
+            return None
 
         return self.model(tensors)

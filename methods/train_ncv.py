@@ -11,7 +11,6 @@ from dataset import (
     MultimodalDatasetWithMissing,
     multimodal_collate,
     build_loaders,
-    HealNetMaskAwareBatchSampler,
 )
 from utils import (
     build_model,
@@ -61,8 +60,9 @@ def _predict_model_probabilities(
     model.eval()
     y_true = []
     y_prob = []
+    model_name_l = str(model_name).strip().lower()
     bypass_mask = (
-        str(model_name).strip().lower() == "mlp"
+        model_name_l == "mlp"
         and str(imputation_method).strip().lower() == "knn"
     )
 
@@ -70,6 +70,7 @@ def _predict_model_probabilities(
         for Xs, present_mask, y, _ in data_loader:
             Xs = [x.to(device) for x in Xs]
             present_mask = present_mask.to(device)
+
             model_mask = None if bypass_mask else present_mask
             logits = model(Xs, model_mask).squeeze(1)
             probs = torch.sigmoid(logits).cpu().numpy().reshape(-1)
@@ -95,10 +96,11 @@ def train_model_with_validation(
     model_kwargs=None,
 ):
     model_kwargs = model_kwargs or {}
+    model_name_l = str(model_name).strip().lower()
 
     # For MLP with KNN imputation, we do not use masking since KNN already imputes missing modalities
     bypass_mask = (
-        str(model_name).strip().lower() == "mlp"
+        model_name_l == "mlp"
         and str(imputation_method).strip().lower() == "knn"
     )
 
@@ -121,22 +123,28 @@ def train_model_with_validation(
     for epoch in range(1, epochs + 1):
         model.train()
         train_loss = 0.0
+        train_steps = 0
 
         for Xs, present_mask, y, _ in train_loader:
             Xs = [x.to(device) for x in Xs]
             present_mask = present_mask.to(device)
             y = y.to(device)
+
             model_mask = None if bypass_mask else present_mask
 
             optimizer.zero_grad()
-            logits = model(Xs, model_mask).squeeze(1)
+            logits_out = model(Xs, model_mask)
+            if logits_out is None:
+                continue
+            logits = logits_out.squeeze(1)
             loss = criterion(logits, y)
             loss.backward()
             optimizer.step()
 
             train_loss += loss.item()
+            train_steps += 1
 
-        avg_train_loss = train_loss / max(len(train_loader), 1)
+        avg_train_loss = train_loss / max(train_steps, 1)
 
         model.eval()
         val_loss = 0.0
@@ -148,13 +156,13 @@ def train_model_with_validation(
                 Xs = [x.to(device) for x in Xs]
                 present_mask = present_mask.to(device)
                 y = y.to(device)
-                model_mask = None if bypass_mask else present_mask
 
+                model_mask = None if bypass_mask else present_mask
                 logits = model(Xs, model_mask).squeeze(1)
                 loss = criterion(logits, y)
 
                 val_loss += loss.item()
-                val_probs.extend(torch.sigmoid(logits).cpu().numpy())
+                val_probs.extend(torch.sigmoid(logits).cpu().numpy().tolist())
                 val_targets.extend(y.cpu().numpy())
 
         avg_val_loss = val_loss / max(len(val_loader), 1)
@@ -358,9 +366,6 @@ def nested_cv(
                     loader_seed=int(seed + outer_fold_idx * 10_000 + inner_fold_idx * 100 + hp_idx),
                     id_col=patient_id_col,
                 )
-                trainable_batches = int(getattr(train_loader, "trainable_batches", len(train_loader)))
-                total_batches = int(getattr(train_loader, "total_batches", len(train_loader)))
-                trainable_batch_pct = float(getattr(train_loader, "trainable_batch_pct", 1.0))
 
                 # Get model kwargs from this HP config
                 if model_name_l in {"mlp"}:
@@ -422,9 +427,6 @@ def nested_cv(
                         "val_best_SEN": float(best_metrics["SEN"]),
                         "val_best_SP": float(best_metrics["SP"]),
                         "val_best_MCC": float(best_metrics["MCC"]),
-                        "trainable_batches": trainable_batches,
-                        "total_train_batches": total_batches,
-                        "trainable_batch_pct": trainable_batch_pct,
                     }
                 )
 
@@ -448,11 +450,6 @@ def nested_cv(
                     best_inner_metrics = best_metrics
                     best_inner_scalers = scalers_inner
                     best_inner_history = history
-                    best_inner_trainable = {
-                        "trainable_batches": trainable_batches,
-                        "total_train_batches": total_batches,
-                        "trainable_batch_pct": trainable_batch_pct,
-                    }
 
             if best_inner_model is None:
                 raise RuntimeError(
@@ -477,9 +474,6 @@ def nested_cv(
                     **best_inner_hp,
                     "val_best_AUC": float(best_inner_metrics["AUC"]),
                     "val_best_LOGLOSS": float(best_inner_metrics["LOGLOSS"]),
-                    "trainable_batches": int(best_inner_trainable["trainable_batches"]),
-                    "total_train_batches": int(best_inner_trainable["total_train_batches"]),
-                    "trainable_batch_pct": float(best_inner_trainable["trainable_batch_pct"]),
                 }
             )
             selected_inner_histories.append(best_inner_history)
@@ -541,7 +535,7 @@ def nested_cv(
             for name, df in dfs.items()
         }
 
-        outer_eval_batch_size = max(int(h["batch_size"]) for h in hp_configs)
+        outer_eval_batch_size = 1 if model_name_l == "healnet" else max(int(h["batch_size"]) for h in hp_configs)
         for eval_setup in test_eval_setups:
             eval_simulator = eval_setup["simulator"]
             eval_missing_location = str(eval_setup["missing_location"]).lower()
@@ -573,27 +567,13 @@ def nested_cv(
                     imputation_method=imputation_method,
                     missing_pattern_seed=missing_pattern_seed,
                 )
-                if model_name_l == "healnet" and apply_missing_eval:
-                    eval_sampler = HealNetMaskAwareBatchSampler(
-                        dataset=ensemble_eval_ds,
-                        batch_size=outer_eval_batch_size,
-                        shuffle=False,
-                        seed=int(seed + outer_fold_idx * 1000 + member_idx),
-                        drop_last=False,
-                    )
-                    ensemble_eval_loader = DataLoader(
-                        ensemble_eval_ds,
-                        batch_sampler=eval_sampler,
-                        collate_fn=multimodal_collate,
-                    )
-                else:
-                    ensemble_eval_loader = DataLoader(
-                        ensemble_eval_ds,
-                        batch_size=outer_eval_batch_size,
-                        shuffle=False,
-                        collate_fn=multimodal_collate,
-                        drop_last=False,
-                    )
+                ensemble_eval_loader = DataLoader(
+                    ensemble_eval_ds,
+                    batch_size=outer_eval_batch_size,
+                    shuffle=False,
+                    collate_fn=multimodal_collate,
+                    drop_last=False,
+                )
 
                 y_true_i, y_prob_i = _predict_model_probabilities(
                     model=model,
