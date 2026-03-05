@@ -48,6 +48,27 @@ def _transform_modalities_with_fitted_scalers(dfs_raw, scalers, patient_id_col="
 
     return dfs_scaled
 
+
+def _build_knn_reference_base_dataset(
+    dfs_raw_full,
+    scalers,
+    inst_df_full,
+    label_col,
+    patient_id_col="patient",
+):
+    """Build full-dataset KNN reference pool in the current scaler space."""
+    dfs_knn_ref_scaled = _transform_modalities_with_fitted_scalers(
+        dfs_raw_full,
+        scalers,
+        patient_id_col=patient_id_col,
+    )
+    return MultimodalBaseDataset(
+        dfs=dfs_knn_ref_scaled,
+        label_df=inst_df_full,
+        label_col=label_col,
+        id_col=patient_id_col,
+    )
+
 # Function to predict on outer fold for each inner fold model
 def _predict_model_probabilities(
     model,
@@ -60,6 +81,7 @@ def _predict_model_probabilities(
     model.eval()
     y_true = []
     y_prob = []
+    pids = []
     model_name_l = str(model_name).strip().lower()
     bypass_mask = (
         model_name_l == "mlp"
@@ -67,7 +89,7 @@ def _predict_model_probabilities(
     )
 
     with torch.no_grad():
-        for Xs, present_mask, y, _ in data_loader:
+        for Xs, present_mask, y, pid_batch in data_loader:
             Xs = [x.to(device) for x in Xs]
             present_mask = present_mask.to(device)
 
@@ -77,8 +99,9 @@ def _predict_model_probabilities(
 
             y_prob.extend(probs.tolist())
             y_true.extend(y.cpu().numpy().tolist())
+            pids.extend(pid_batch)
 
-    return np.asarray(y_true), np.asarray(y_prob)
+    return np.asarray(y_true), np.asarray(y_prob), list(pids)
 
 
 # ---------------------------- TRAIN FUNCTION -------------------------------
@@ -105,18 +128,27 @@ def train_model_with_validation(
     )
 
     model = build_model(model_name, input_dims, model_kwargs).to(device)
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=5)
+    weight_decay = 1e-3 if model_name_l == "healnet" else 1e-4
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    scheduler_patience = 3 if model_name_l == "healnet" else 5
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="min",
+        factor=0.5,
+        patience=scheduler_patience,
+    )
     criterion = nn.BCEWithLogitsLoss()
 
-    best_val_loss = float("inf")
+    # Align epoch selection with inner-fold HP selection:
+    # maximize AUC, break ties with lower validation loss.
+    best_epoch_score = (-np.inf, -np.inf)  # (AUC, -VAL_LOSS)
     best_epoch = 1
     best_model_state = None
     best_val_targets = None
     best_val_probs = None
 
     early_stop = 0
-    patience = 20
+    patience = 8 if model_name_l == "healnet" else 20
 
     history = []
 
@@ -180,8 +212,9 @@ def train_model_with_validation(
             }
         )
 
-        if avg_val_loss < best_val_loss:
-            best_val_loss = float(avg_val_loss)
+        epoch_score = (float(val_metrics_epoch["AUC"]), -float(avg_val_loss))
+        if epoch_score > best_epoch_score:
+            best_epoch_score = epoch_score
             best_epoch = epoch
             best_model_state = copy.deepcopy(model.state_dict())
             best_val_targets = np.asarray(val_targets)
@@ -337,6 +370,18 @@ def nested_cv(
                 id_col=patient_id_col,
             )
 
+            # For KNN imputation, use a reference pool built from the full dataset
+            # transformed with the current inner-fold scalers (split-independent pool).
+            knn_reference_base_inner = None
+            if str(imputation_method).strip().lower() == "knn":
+                knn_reference_base_inner = _build_knn_reference_base_dataset(
+                    dfs_raw_full=dfs,
+                    scalers=scalers_inner,
+                    inst_df_full=inst_df,
+                    label_col=label_col,
+                    patient_id_col=patient_id_col,
+                )
+
             # Keep track of the best model and HP config for this inner fold
             best_inner_model = None
             best_inner_hp = None
@@ -365,6 +410,7 @@ def nested_cv(
                     model_name=model_name,
                     loader_seed=int(seed + outer_fold_idx * 10_000 + inner_fold_idx * 100 + hp_idx),
                     id_col=patient_id_col,
+                    knn_reference_base_dataset=knn_reference_base_inner,
                 )
 
                 # Get model kwargs from this HP config
@@ -457,7 +503,8 @@ def nested_cv(
                 )
             print(
                 f"  Inner fold {inner_fold_idx} best hp: {best_inner_hp['name']} "
-                f"(AUC={best_inner_metrics['AUC']:.4f}, LOGLOSS={best_inner_metrics['LOGLOSS']:.4f})"
+                f"(AUC={best_inner_metrics['AUC']:.4f}, LOGLOSS={best_inner_metrics['LOGLOSS']:.4f}, "
+                f"best_epoch={int(best_inner_metrics['best_epoch'])})"
             )
 
             # After iterating over all HP configs, save the best model and its scalers for this inner fold, along with its metrics and history.
@@ -516,11 +563,13 @@ def nested_cv(
 
                 train_losses = [float(r["train_loss"]) for r in epoch_rows]
                 val_losses = [float(r["val_loss"]) for r in epoch_rows]
+                val_aucs = [float(r["val_auc"]) for r in epoch_rows]
 
                 inner_curve_run.log(
                     {
                         "avg_inner_best_models/train_loss_mean": float(np.mean(train_losses)),
                         "avg_inner_best_models/val_loss_mean": float(np.mean(val_losses)),
+                        "avg_inner_best_models/val_auc_mean": float(np.mean(val_aucs)),
                     },
                     step=epoch_i,
                 )
@@ -536,6 +585,43 @@ def nested_cv(
         }
 
         outer_eval_batch_size = 1 if model_name_l == "healnet" else max(int(h["batch_size"]) for h in hp_configs)
+
+        # Pre-build per-inner-model datasets in each model/scaler space once.
+        outer_member_contexts = []
+        for member in selected_inner_members:
+            model = member["model"]
+            scalers = member["scalers"]
+
+            dfs_outer_eval_scaled = _transform_modalities_with_fitted_scalers(
+                dfs_test_outer_raw,
+                scalers,
+                patient_id_col=patient_id_col,
+            )
+            outer_eval_base = MultimodalBaseDataset(
+                dfs=dfs_outer_eval_scaled,
+                label_df=inst_df_test_outer,
+                label_col=label_col,
+                id_col=patient_id_col,
+            )
+
+            knn_reference_base_outer = None
+            if str(imputation_method).strip().lower() == "knn":
+                knn_reference_base_outer = _build_knn_reference_base_dataset(
+                    dfs_raw_full=dfs,
+                    scalers=scalers,
+                    inst_df_full=inst_df,
+                    label_col=label_col,
+                    patient_id_col=patient_id_col,
+                )
+
+            outer_member_contexts.append(
+                {
+                    "model": model,
+                    "outer_eval_base": outer_eval_base,
+                    "knn_reference_base": knn_reference_base_outer,
+                }
+            )
+
         for eval_setup in test_eval_setups:
             eval_simulator = eval_setup["simulator"]
             eval_missing_location = str(eval_setup["missing_location"]).lower()
@@ -544,28 +630,17 @@ def nested_cv(
 
             model_probs = []
             y_true_outer = None
+            pids_outer = None
 
-            for member_idx, member in enumerate(selected_inner_members):
-                model = member["model"]
-                scalers = member["scalers"]
-
-                dfs_outer_eval_scaled = _transform_modalities_with_fitted_scalers(
-                    dfs_test_outer_raw,
-                    scalers,
-                    patient_id_col=patient_id_col,
-                )
-                ensemble_eval_base = MultimodalBaseDataset(
-                    dfs=dfs_outer_eval_scaled,
-                    label_df=inst_df_test_outer,
-                    label_col=label_col,
-                    id_col=patient_id_col,
-                )
+            for member_idx, member_ctx in enumerate(outer_member_contexts):
+                model = member_ctx["model"]
                 ensemble_eval_ds = MultimodalDatasetWithMissing(
-                    base_dataset=ensemble_eval_base,
+                    base_dataset=member_ctx["outer_eval_base"],
                     simulator=eval_simulator,
                     apply_missing=apply_missing_eval,
                     imputation_method=imputation_method,
                     missing_pattern_seed=missing_pattern_seed,
+                    knn_reference_base_dataset=member_ctx["knn_reference_base"],
                 )
                 ensemble_eval_loader = DataLoader(
                     ensemble_eval_ds,
@@ -575,7 +650,7 @@ def nested_cv(
                     drop_last=False,
                 )
 
-                y_true_i, y_prob_i = _predict_model_probabilities(
+                y_true_i, y_prob_i, pids_i = _predict_model_probabilities(
                     model=model,
                     data_loader=ensemble_eval_loader,
                     device=device,
@@ -584,6 +659,20 @@ def nested_cv(
                 )
                 if y_true_outer is None:
                     y_true_outer = y_true_i
+                    pids_outer = pids_i
+                else:
+                    if pids_i != pids_outer:
+                        raise ValueError(
+                            f"Outer-test patient ID order mismatch across inner models "
+                            f"(outer_fold={outer_fold_idx}, eval_missing_location={eval_missing_location}, "
+                            f"eval_missing_prob={eval_missing_prob}, inner_model_idx={member_idx + 1})."
+                        )
+                    if not np.array_equal(y_true_outer, y_true_i):
+                        raise ValueError(
+                            f"Outer-test y_true mismatch across inner models "
+                            f"(outer_fold={outer_fold_idx}, eval_missing_location={eval_missing_location}, "
+                            f"eval_missing_prob={eval_missing_prob}, inner_model_idx={member_idx + 1})."
+                        )
                 model_probs.append(y_prob_i)
 
             # Average probabilities across inner models to get ensemble prediction

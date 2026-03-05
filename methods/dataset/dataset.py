@@ -135,6 +135,7 @@ class MultimodalDatasetWithMissing(Dataset):
         imputation_method="zero",
         knn_k=5,
         missing_pattern_seed=0,
+        knn_reference_base_dataset=None,
     ):
         self.base_dataset = base_dataset
         self.simulator = simulator
@@ -146,7 +147,8 @@ class MultimodalDatasetWithMissing(Dataset):
 
         self.imputer = None
         if self.apply_missing and self.imputation_method == "knn":
-            self.imputer = KNNModalityImputer(base_dataset=self.base_dataset, k=knn_k)
+            reference_base = knn_reference_base_dataset if knn_reference_base_dataset is not None else self.base_dataset
+            self.imputer = KNNModalityImputer(base_dataset=reference_base, k=knn_k)
 
         self.fixed_present_masks = None
         if self.apply_missing:
@@ -200,6 +202,7 @@ class MultimodalDatasetWithMissing(Dataset):
                     modalities=Xs_missing,
                     present_mask=present_mask,
                     sample_index=idx,
+                    sample_id=pid,
                 )
         else:
             # Validation/test path: keep all modalities as present.
@@ -344,6 +347,7 @@ def build_loaders(
     model_name="mlp",
     loader_seed=0,
     id_col="patient",
+    knn_reference_base_dataset=None,
 ):
     train_base = MultimodalBaseDataset(
         dfs=dfs_train_scaled,
@@ -364,6 +368,7 @@ def build_loaders(
         apply_missing=train_missing,
         imputation_method=imputation_method,
         missing_pattern_seed=missing_pattern_seed,
+        knn_reference_base_dataset=knn_reference_base_dataset,
     )
     val_ds = MultimodalDatasetWithMissing(
         base_dataset=val_base,
@@ -371,6 +376,7 @@ def build_loaders(
         apply_missing=val_missing,
         imputation_method=imputation_method,
         missing_pattern_seed=missing_pattern_seed,
+        knn_reference_base_dataset=knn_reference_base_dataset,
     )
 
     model_name_l = str(model_name).strip().lower()

@@ -1,0 +1,146 @@
+_wandb:
+    value:
+        cli_version: 0.25.0
+        e:
+            mzjmks7fv3yauy5pjr04x0kca0ipxw6c:
+                args:
+                    - --model
+                    - HealNet
+                    - --dataset
+                    - MIMM
+                    - --odir
+                    - /Users/marcalbesa/Desktop/TFM/git_exp/methods/results
+                    - --dataset_dir
+                    - /Users/marcalbesa/Desktop/TFM/data/MIMM
+                    - --endpoint
+                    - OS_6
+                    - --inner_splits
+                    - "5"
+                    - --outer_splits
+                    - "5"
+                    - --epochs
+                    - "80"
+                    - --batch_size
+                    - "4"
+                    - --learning_rate
+                    - 1e-4,5e-5
+                    - --healnet_depth
+                    - "3"
+                    - --healnet_num_freq_bands
+                    - "2"
+                    - --healnet_num_latents
+                    - "128"
+                    - --healnet_latent_dim
+                    - "64"
+                    - --healnet_cross_heads
+                    - "1"
+                    - --healnet_latent_heads
+                    - "4"
+                    - --healnet_cross_dim_head
+                    - "64"
+                    - --healnet_latent_dim_head
+                    - "64"
+                    - --healnet_attn_dropout
+                    - "0.0"
+                    - --healnet_ff_dropout
+                    - "0.0"
+                    - --healnet_self_per_cross_attn
+                    - "0"
+                    - --train_missing_prob
+                    - 0.0,0.2,0.4,0.6,0.8
+                    - --train_missing_location
+                    - global, path, radio, clin, blood, radio_report
+                    - --test_missing_prob
+                    - 0.0,0.2,0.4,0.6,0.8
+                    - --test_missing_location
+                    - global, path, radio, clin, blood, radio_report
+                    - --seeds
+                    - 22,2002,4,18473,55602
+                    - --missing_pattern_seed
+                    - "2026"
+                    - --wandb
+                    - --wandb_project
+                    - HealNet
+                    - --wandb_mode
+                    - online
+                codePath: methods/main.py
+                email: albesa.marc@gmail.com
+                executable: /opt/miniconda3/envs/TFM/bin/python
+                git:
+                    commit: 33ae5c8e1cff7b3cf81deef78b092348e2679a49
+                    remote: https://github.com/marcalvi/TFM.git
+                host: MacBook-Pro-de-Marc-4.local
+                os: macOS-26.2-arm64-arm-64bit
+                program: /Users/marcalbesa/Desktop/TFM/git_exp/methods/main.py
+                python: CPython 3.9.23
+                root: /Users/marcalbesa/Desktop/TFM/git_exp/methods/runs/MIMM
+                startedAt: "2026-03-05T16:46:53.685526Z"
+                writerId: mzjmks7fv3yauy5pjr04x0kca0ipxw6c
+        m: []
+        python_version: 3.9.23
+        t:
+            "1":
+                - 1
+                - 5
+                - 53
+            "2":
+                - 1
+                - 5
+                - 53
+            "3":
+                - 2
+                - 13
+                - 16
+                - 61
+            "4": 3.9.23
+            "5": 0.25.0
+            "12": 0.25.0
+            "13": darwin-arm64
+dataset:
+    value: MIMM
+endpoint:
+    value: OS_6
+epochs:
+    value: 80
+hp_grid_size:
+    value: 2
+imputation_method:
+    value: zero
+inner_splits:
+    value: 5
+missing_pattern_seed:
+    value: 2026
+modalities:
+    value:
+        - path
+        - radio
+        - clin
+        - blood
+        - radio_report
+model:
+    value: HealNet
+outer_fold:
+    value: 1
+outer_splits:
+    value: 5
+phase:
+    value: avg_inner_curve_best_per_fold
+seed:
+    value: 22
+selected_inner_hp_names:
+    value:
+        - lr5e-05_bs4_depth3_lat128_ldim64_xh1_lh4_selfx0_trmiss0_trlocglobal
+        - lr5e-05_bs4_depth3_lat128_ldim64_xh1_lh4_selfx0_trmiss0_trlocglobal
+        - lr1e-04_bs4_depth3_lat128_ldim64_xh1_lh4_selfx0_trmiss0_trlocglobal
+        - lr1e-04_bs4_depth3_lat128_ldim64_xh1_lh4_selfx0_trmiss0_trlocglobal
+        - lr5e-05_bs4_depth3_lat128_ldim64_xh1_lh4_selfx0_trmiss0_trlocglobal
+test_eval_combinations:
+    value: 30
+test_missing_locations_grid:
+    value: global,path,radio,clin,blood,radio_report
+test_missing_probs_grid:
+    value: 0.0,0.2,0.4,0.6,0.8
+train_missing_location:
+    value: global
+train_missing_prob:
+    value: 0

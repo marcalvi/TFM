@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from einops import rearrange, repeat, einsum
+from einops import rearrange, repeat
 from einops.layers.torch import Reduce
 
 class HealNet(nn.Module):
@@ -404,7 +404,7 @@ class Attention(nn.Module):
 
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h = h), (q, k, v))
 
-        sim = einsum('b i d, b j d -> b i j', q, k) * self.scale
+        sim = torch.einsum('b i d, b j d -> b i j', q, k) * self.scale
 
         if exists(mask):
             mask = rearrange(mask, 'b ... -> b (...)')
@@ -419,7 +419,7 @@ class Attention(nn.Module):
         attn = self.dropout(attn)
 
 
-        out = einsum('b i j, b j d -> b i d', attn, v)
+        out = torch.einsum('b i j, b j d -> b i d', attn, v)
         out = rearrange(out, '(b h) n d -> b n (h d)', h = h)
         return self.to_out(out)
 

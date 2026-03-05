@@ -28,20 +28,19 @@ GPU_MEMORY_FRACTION="0.6"
 
 # Shared optimization
 BATCH_SIZE_GRID="4"
-LR_GRID="1e-4,5e-5"
+LR_GRID="2e-5,5e-5"
 
 # HealNet-specific
-HEALNET_DEPTH_GRID="3"
+HEALNET_DEPTH_GRID="2"
 HEALNET_NUM_FREQ_BANDS_GRID="2"
-HEALNET_NUM_LATENTS_GRID="128"
+HEALNET_NUM_LATENTS_GRID="16,32"
 HEALNET_LATENT_DIM_GRID="64"
 HEALNET_CROSS_HEADS_GRID="1"
 HEALNET_LATENT_HEADS_GRID="4"
 HEALNET_CROSS_DIM_HEAD_GRID="64"
 HEALNET_LATENT_DIM_HEAD_GRID="64"
-HEALNET_ATTN_DROPOUT_GRID="0.0"
-HEALNET_FF_DROPOUT_GRID="0.0"
-HEALNET_SELF_PER_CROSS_ATTN_GRID="0"
+HEALNET_DROPOUT_GRID="0.1,0.2"
+HEALNET_SELF_PER_CROSS_ATTN_GRID="1"
 
 # Missingness experiments
 TRAIN_MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
@@ -68,8 +67,8 @@ python "${PROJECT_ROOT}/main.py" \
   --healnet_latent_heads "${HEALNET_LATENT_HEADS_GRID}" \
   --healnet_cross_dim_head "${HEALNET_CROSS_DIM_HEAD_GRID}" \
   --healnet_latent_dim_head "${HEALNET_LATENT_DIM_HEAD_GRID}" \
-  --healnet_attn_dropout "${HEALNET_ATTN_DROPOUT_GRID}" \
-  --healnet_ff_dropout "${HEALNET_FF_DROPOUT_GRID}" \
+  --healnet_attn_dropout "${HEALNET_DROPOUT_GRID}" \
+  --healnet_ff_dropout "${HEALNET_DROPOUT_GRID}" \
   --healnet_self_per_cross_attn "${HEALNET_SELF_PER_CROSS_ATTN_GRID}" \
   --train_missing_prob "${TRAIN_MISSING_PROB_GRID}" \
   --train_missing_location "${TRAIN_MISSING_LOCATION_GRID}" \
