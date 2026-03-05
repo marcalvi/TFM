@@ -26,7 +26,8 @@ RESULTS_ROOT="${PROJECT_ROOT}/results"
 ENDPOINT="OS_6"
 
 # Proposed tuning grid
-SEEDS="22,4"
+SEEDS="22,2002,4,18473,55602"
+MISSING_PATTERN_SEED=2026
 
 INNER_SPLITS=5
 OUTER_SPLITS=5
@@ -55,6 +56,7 @@ python "${PROJECT_ROOT}/main.py" \
   --endpoint "${ENDPOINT}" \
   --model "MLP" \
   --inst_data "${DATA_ROOT}/patients_mimm.csv" \
+  --patient_ids_col "patient" \
   --patho_data "${DATA_ROOT}/pathology_mimm.csv" \
   --radio_data "${DATA_ROOT}/radiology_mimm.csv" \
   --clin_data "${DATA_ROOT}/clinical_mimm.csv" \
@@ -76,6 +78,7 @@ python "${PROJECT_ROOT}/main.py" \
   --test_missing_prob "${TEST_MISSING_PROB_GRID}" \
   --test_missing_location "${TEST_MISSING_LOCATION_GRID}" \
   --seeds "${SEEDS}" \
+  --missing_pattern_seed "${MISSING_PATTERN_SEED}" \
   --wandb \
   --wandb_project "ZI_MLPs" \
   --wandb_mode "online"

@@ -12,14 +12,19 @@ class KNNModalityImputer:
     """
 
     def __init__(self, base_dataset, k=5):
-        if not hasattr(base_dataset, "indexed") or not hasattr(base_dataset, "patients"):
-            raise ValueError("base_dataset must expose 'indexed' and 'patients'.")
+        if not hasattr(base_dataset, "indexed"):
+            raise ValueError("base_dataset must expose 'indexed'.")
 
         self.k = int(k)
         if self.k < 1:
             raise ValueError("k must be >= 1")
 
-        self.patient_ids = list(base_dataset.patients)
+        # Primary dataset API in this repo is `patient_ids`.
+        # Keep fallback to `patients` for backward compatibility.
+        if hasattr(base_dataset, "patient_ids"):
+            self.patient_ids = list(base_dataset.patient_ids)
+        else:
+            raise ValueError("base_dataset must expose 'patient_ids' (or legacy 'patients').")
         self.n_samples = len(self.patient_ids)
 
         self.modality_arrays = []

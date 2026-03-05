@@ -16,10 +16,23 @@ def get_args():
 
     # Required arguments
     parser.add_argument("--odir", type=str, required=True, help="Output directory")
-    parser.add_argument("--model",type=str, required=True, choices=["MLP", "DyAM"])
+    parser.add_argument("--model",type=str, required=True, choices=["MLP", "DyAM", "HealNet"])
     parser.add_argument("--dataset", type=str, required=True, help="Dataset name suffix")
     parser.add_argument("--endpoint", type=str, required=True, help="Endpoint base name")
     parser.add_argument("--inst_data", type=str, required=True, help="CSV with patient and label")
+    parser.add_argument(
+        "--patient_ids_col",
+        dest="patient_ids_col",
+        type=str,
+        default="patient",
+        help="Column name with patient IDs in all modality/label CSVs.",
+    )
+    parser.add_argument(
+        "--patient_id_col",
+        dest="patient_ids_col",
+        type=str,
+        help=argparse.SUPPRESS,
+    )
 
     # Multimodal data arguments
     parser.add_argument("--patho_data", type=str, default=None)
@@ -36,6 +49,12 @@ def get_args():
     parser.add_argument("--learning_rate", type=str, default="5e-5") # Supports scalar or comma-separated list for tuning
     parser.add_argument("--seeds", type=str, default="123") # Supports scalar or comma-separated list for tuning
     parser.add_argument(
+        "--missing_pattern_seed",
+        type=int,
+        default=0,
+        help="Deterministic seed used only for missing-modality mask simulation.",
+    )
+    parser.add_argument(
         "--gpu_memory_fraction",
         type=float,
         default=1.0,
@@ -51,6 +70,19 @@ def get_args():
     # DyAM architecture hyperparameters
     parser.add_argument("--dyam_dropout", type=str, default="0.4")  # scalar or comma-separated list
     parser.add_argument("--dyam_temperature", type=str, default="2.0")  # scalar or comma-separated list
+
+    # HealNet architecture hyperparameters
+    parser.add_argument("--healnet_depth", type=str, default="3")
+    parser.add_argument("--healnet_num_freq_bands", type=str, default="2")
+    parser.add_argument("--healnet_num_latents", type=str, default="128")
+    parser.add_argument("--healnet_latent_dim", type=str, default="128")
+    parser.add_argument("--healnet_cross_heads", type=str, default="1")
+    parser.add_argument("--healnet_latent_heads", type=str, default="4")
+    parser.add_argument("--healnet_cross_dim_head", type=str, default="64")
+    parser.add_argument("--healnet_latent_dim_head", type=str, default="64")
+    parser.add_argument("--healnet_attn_dropout", type=str, default="0.0")
+    parser.add_argument("--healnet_ff_dropout", type=str, default="0.0")
+    parser.add_argument("--healnet_self_per_cross_attn", type=str, default="0")
 
     # Missing-modality setup
     parser.add_argument(
@@ -103,43 +135,42 @@ def _find_label_column(inst_df, endpoint):
     raise ValueError(f"Label column not found. Tried '{preferred}' and '{endpoint}'.")
 
 # Modality-specific loading functions
-def _load_patho_df(patho_dir, inst_df):
+def _load_patho_df(patho_dir, inst_df, id_col):
     path_df = pd.read_csv(patho_dir)
     path_df = path_df.rename(columns=lambda x: x.replace("embedding_", "patho_"))
-    path_df = pd.merge(path_df, inst_df[["patient"]], on="patient", how = "inner")
-    keep = ["patient"] + [c for c in path_df.columns if c.startswith("patho_")]
+    path_df = pd.merge(path_df, inst_df[[id_col]], on=id_col, how = "inner")
+    keep = [id_col] + [c for c in path_df.columns if c.startswith("patho_")]
     return path_df[keep]
 
-def _load_prefixed_df(csv_path, inst_df, prefix):
+def _load_prefixed_df(csv_path, inst_df, prefix, id_col):
     df = pd.read_csv(csv_path)
-    df = df.rename(columns=lambda x: f"{prefix}_{x}" if x != "patient" else x)
-    return pd.merge(df, inst_df[["patient"]], on="patient")
+    df = df.rename(columns=lambda x: f"{prefix}_{x}" if x != id_col else x)
+    return pd.merge(df, inst_df[[id_col]], on=id_col)
 
-def _load_radio_df(radio_dir, inst_df):
+def _load_radio_df(radio_dir, inst_df, id_col):
     rad_df = pd.read_csv(radio_dir).rename(columns=lambda x: x.replace("pred_", "radio_"))
     rad_df = rad_df.drop(columns=["image_path", "lesion_tag"], errors="ignore")
-    rad_df = pd.merge(rad_df, inst_df[["patient"]], on="patient")
-    keep = ["patient"] + [c for c in rad_df.columns if c.startswith("radio_")]
+    rad_df = pd.merge(rad_df, inst_df[[id_col]], on=id_col)
+    keep = [id_col] + [c for c in rad_df.columns if c.startswith("radio_")]
     return rad_df[keep]
 
 # Collapse duplicated rows by mean for each modality
-def _check_and_collapse_modality_rows(dfs):
+def _check_and_collapse_modality_rows(dfs, id_col):
     """Ensure one row per patient in each modality dataframe."""
     cleaned = {}
     for mod_name, df in dfs.items():
-        if "patient" not in df.columns:
-            raise ValueError(f"Modality '{mod_name}' does not contain a 'patient' column.")
+        if id_col not in df.columns:
+            raise ValueError(f"Modality '{mod_name}' does not contain the id column '{id_col}'.")
 
         work_df = df.copy()
-        work_df["patient"] = work_df["patient"].astype(int)
-        patient_counts = work_df["patient"].value_counts()
+        patient_counts = work_df[id_col].value_counts()
         duplicated = patient_counts[patient_counts > 1]
 
         if duplicated.empty:
             cleaned[mod_name] = work_df
             continue
 
-        dup_ids = duplicated.index.astype(int).tolist()
+        dup_ids = duplicated.index.tolist()
         preview = dup_ids[:25]
         preview_txt = ", ".join(str(x) for x in preview)
         suffix = " ..." if len(dup_ids) > 25 else ""
@@ -148,12 +179,12 @@ def _check_and_collapse_modality_rows(dfs):
             f"Collapsing by mean. Patient IDs: {preview_txt}{suffix}"
         )
 
-        feature_cols = [c for c in work_df.columns if c != "patient"]
+        feature_cols = [c for c in work_df.columns if c != id_col]
 
         # Build a dense temporary frame to avoid pandas fragmentation warnings.
         numeric_features = work_df[feature_cols].apply(pd.to_numeric, errors="coerce")
-        dense_df = pd.concat([work_df[["patient"]], numeric_features], axis=1).copy()
-        collapsed = dense_df.groupby("patient", as_index=False)[feature_cols].mean()
+        dense_df = pd.concat([work_df[[id_col]], numeric_features], axis=1).copy()
+        collapsed = dense_df.groupby(id_col, as_index=False)[feature_cols].mean()
         cleaned[mod_name] = collapsed
 
     return cleaned
@@ -244,38 +275,40 @@ def main():
 
     # Read labels dataframe and resolve label column name
     inst_df = pd.read_csv(args.inst_data)
+    if args.patient_ids_col not in inst_df.columns:
+        raise ValueError(
+            f"ID column '{args.patient_ids_col}' not found in --inst_data."
+        )
     label_col = _find_label_column(inst_df, args.endpoint)
-    inst_df = inst_df[["patient", label_col]].copy()
+    inst_df = inst_df[[args.patient_ids_col, label_col]].copy()
 
     # Read modality dataframes and keep only patients from inst_df
     dfs = {}
     if args.patho_data:
-        dfs["path"] = _load_patho_df(args.patho_data, inst_df)
+        dfs["path"] = _load_patho_df(args.patho_data, inst_df, args.patient_ids_col)
     if args.radio_data:
-        dfs["radio"] = _load_radio_df(args.radio_data, inst_df)
+        dfs["radio"] = _load_radio_df(args.radio_data, inst_df, args.patient_ids_col)
     if args.clin_data:
-        dfs["clin"] = _load_prefixed_df(args.clin_data, inst_df, "clin")
+        dfs["clin"] = _load_prefixed_df(args.clin_data, inst_df, "clin", args.patient_ids_col)
     if args.blood_data:
-        dfs["blood"] = _load_prefixed_df(args.blood_data, inst_df, "blood")
+        dfs["blood"] = _load_prefixed_df(args.blood_data, inst_df, "blood", args.patient_ids_col)
     if args.radio_report_data:
-        dfs["radio_report"] = _load_prefixed_df(args.radio_report_data, inst_df, "radio_report")
+        dfs["radio_report"] = _load_prefixed_df(args.radio_report_data, inst_df, "radio_report", args.patient_ids_col)
 
     # Ensure at least one modality is selected
     if not dfs:
         raise ValueError("No modality provided. At least one modality CSV is required.")
 
     # Verify one row per patient in each modality and collapse duplicates by mean when needed.
-    dfs = _check_and_collapse_modality_rows(dfs)
+    dfs = _check_and_collapse_modality_rows(dfs, args.patient_ids_col)
     modality_names = list(dfs.keys())
     num_modalities = len(modality_names)
 
-    # Force patient IDs to int and set as index WITHOUT dropping the column
+    # Set index by patient id WITHOUT dropping the column
     for mod in modality_names:
-        dfs[mod]["patient"] = dfs[mod]["patient"].astype(int)
-        dfs[mod] = dfs[mod].set_index("patient", drop=False)
+        dfs[mod] = dfs[mod].set_index(args.patient_ids_col, drop=False)
 
-    inst_df["patient"] = inst_df["patient"].astype(int)
-    inst_df = inst_df.set_index("patient", drop=False)
+    inst_df = inst_df.set_index(args.patient_ids_col, drop=False)
 
     print(f"Dataframes read. Starting {args.model} training.")
      
@@ -380,6 +413,7 @@ def main():
                     f"{seed}, train_missing_location={train_missing_location}, "
                     f"train_missing_prob={train_missing_prob}"
                 )
+                print(f"Missing pattern seed: {int(args.missing_pattern_seed)}")
                 print(f"Output directory: {odir}")
                 print(f"Hyperparameter combinations to evaluate: {len(hp_configs)}")
                 print(f"Test missingness combinations to evaluate: {len(test_eval_setups)}")
@@ -395,6 +429,7 @@ def main():
                     "outer_splits": args.outer_splits,
                     "train_missing_prob": float(train_missing_prob),
                     "train_missing_location": str(train_missing_location).lower(),
+                    "missing_pattern_seed": int(args.missing_pattern_seed),
                     "imputation_method": args.imputation_method,
                     "test_eval_combinations": len(test_eval_setups),
                     "test_missing_probs_grid": ",".join(str(float(p)) for p in test_missing_probs),
@@ -414,6 +449,8 @@ def main():
                     inner_splits=args.inner_splits,
                     outer_splits=args.outer_splits,
                     gpu_memory_fraction=float(args.gpu_memory_fraction),
+                    missing_pattern_seed=int(args.missing_pattern_seed),
+                    patient_id_col=args.patient_ids_col,
                     wandb_enabled=wandb_enabled_flag,
                     wandb_project=wandb_project_name,
                     wandb_mode=args.wandb_mode,
