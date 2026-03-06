@@ -3,11 +3,25 @@ import torch
 import pandas as pd
 import random
 from itertools import product
-from models import MultimodalMLP, DyAM, HealNetBinaryWrapper
+from models import MultimodalMLP, DyAM, DistillDyAM, HealNetBinaryWrapper
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import average_precision_score, roc_auc_score
 
 # ------------------------ 0. CONFIGURATION --------------------------
+
+def normalize_model_name(model_name):
+    """Map CLI model names/aliases to a canonical lowercase identifier."""
+    name = str(model_name).strip().lower()
+    compact = name.replace("_", "").replace("-", "")
+    if compact == "mlp":
+        return "mlp"
+    if compact == "dyam":
+        return "dyam"
+    if compact in {"distilldyam"}:
+        return "distill_dyam"
+    if compact == "healnet":
+        return "healnet"
+    return name
 
 # Function to select device (CUDA, MPS, or CPU)
 def select_device():
@@ -92,7 +106,7 @@ def parse_value_or_list(raw_value, dtype, to_lower=None):
 
 # Format hp_name for runs' names
 def _format_hp_name(cfg, train_missing_pct, train_missing_location, model_name):
-    model_name = str(model_name).strip().lower()
+    model_name = normalize_model_name(model_name)
     lr_str = f"{cfg['learning_rate']:.0e}"
     bs_str = str(cfg["batch_size"])
     if model_name in {"dyam"}:
@@ -103,6 +117,21 @@ def _format_hp_name(cfg, train_missing_pct, train_missing_location, model_name):
             f"bs{bs_str}_"
             f"drop{dropout_str}_"
             f"temp{temp_str}_"
+            f"trmiss{train_missing_pct}_"
+            f"trloc{train_missing_location}"
+        )
+    if model_name in {"distill_dyam"}:
+        dropout_str = str(cfg["dyam_dropout"]).replace(".", "p")
+        temp_str = str(cfg["dyam_temperature"]).replace(".", "p")
+        alpha_str = str(cfg["distill_alpha"]).replace(".", "p")
+        beta_str = str(cfg["distill_beta"]).replace(".", "p")
+        return (
+            f"lr{lr_str}_"
+            f"bs{bs_str}_"
+            f"drop{dropout_str}_"
+            f"temp{temp_str}_"
+            f"a{alpha_str}_"
+            f"b{beta_str}_"
             f"trmiss{train_missing_pct}_"
             f"trloc{train_missing_location}"
         )
@@ -146,8 +175,7 @@ def build_hyperparameter_grid(args, train_missing_prob, train_missing_location):
     # Train missingness config (used in run naming for reproducibility).
     train_missing_pct = f"{float(train_missing_prob) * 100:g}"
     train_missing_location = str(train_missing_location).strip().lower()
-
-    model_name = str(args.model).strip().lower()
+    model_name = normalize_model_name(args.model)
 
     # hp configs
     batch_sizes = parse_value_or_list(args.batch_size, int)
@@ -177,6 +205,43 @@ def build_hyperparameter_grid(args, train_missing_prob, train_missing_location):
                 cfg["learning_rate"],
                 cfg["dyam_dropout"],
                 cfg["dyam_temperature"],
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            cfg["name"] = _format_hp_name(
+                cfg, train_missing_pct, train_missing_location, model_name=model_name
+            )
+            hp_configs.append(cfg)
+    if model_name in {"distill_dyam"}:
+        dyam_dropouts = parse_value_or_list(args.dyam_dropout, float)
+        temperatures = parse_value_or_list(args.dyam_temperature, float)
+        distill_alphas = parse_value_or_list(args.distill_alpha, float)
+        distill_betas = parse_value_or_list(args.distill_beta, float)
+
+        for bs, lr, dropout, temp, alpha, beta in product(
+            batch_sizes,
+            learning_rates,
+            dyam_dropouts,
+            temperatures,
+            distill_alphas,
+            distill_betas,
+        ):
+            cfg = {
+                "batch_size": int(bs),
+                "learning_rate": float(lr),
+                "dyam_dropout": float(dropout),
+                "dyam_temperature": float(temp),
+                "distill_alpha": float(alpha),
+                "distill_beta": float(beta),
+            }
+            key = (
+                cfg["batch_size"],
+                cfg["learning_rate"],
+                cfg["dyam_dropout"],
+                cfg["dyam_temperature"],
+                cfg["distill_alpha"],
+                cfg["distill_beta"],
             )
             if key in seen:
                 continue
@@ -311,14 +376,16 @@ def build_hyperparameter_grid(args, train_missing_prob, train_missing_location):
 
 # Helper function to build model based on name and input dimensions
 def build_model(model_name, input_dims, model_kwargs):
-    name = str(model_name).strip().lower()
-    if name in {"mlp"}:
+    model_name = normalize_model_name(model_name)
+    if model_name in {"mlp"}:
         return MultimodalMLP(input_dims, **model_kwargs)
-    if name in {"dyam"}:
+    if model_name in {"dyam"}:
         return DyAM(input_dims, **model_kwargs)
-    if name in {"healnet"}:
+    if model_name in {"distill_dyam"}:
+        return DistillDyAM(input_dims, **model_kwargs)
+    if model_name in {"healnet"}:
         return HealNetBinaryWrapper(input_dims, **model_kwargs)
-    raise ValueError(f"Unsupported model '{model_name}'. Supported: mlp, dyam, healnet")
+    raise ValueError(f"Unsupported model '{model_name}'. Supported: mlp, dyam, distill_dyam, healnet")
 
 # -------------------------- 5. EVALUATION ----------------------------
 

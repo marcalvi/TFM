@@ -19,6 +19,7 @@ from utils import (
     filter_by_patients,
     fit_and_transform_modalities,
     set_global_seed,
+    normalize_model_name,
 )
 try:
     import wandb
@@ -48,7 +49,7 @@ def _transform_modalities_with_fitted_scalers(dfs_raw, scalers, patient_id_col="
 
     return dfs_scaled
 
-
+# Function to build KNN reference pool dataset in the current scaler space
 def _build_knn_reference_base_dataset(
     dfs_raw_full,
     scalers,
@@ -82,7 +83,7 @@ def _predict_model_probabilities(
     y_true = []
     y_prob = []
     pids = []
-    model_name_l = str(model_name).strip().lower()
+    model_name_l = normalize_model_name(model_name)
     bypass_mask = (
         model_name_l == "mlp"
         and str(imputation_method).strip().lower() == "knn"
@@ -103,6 +104,47 @@ def _predict_model_probabilities(
 
     return np.asarray(y_true), np.asarray(y_prob), list(pids)
 
+# Function to build a complete-modality batch for teacher input in distillation
+def _build_full_batch_from_patient_ids(base_dataset, pid_batch, device):
+    """Build a complete-modality batch (teacher input) from patient IDs."""
+    xs_rows = []
+    ys = []
+    for pid in pid_batch:
+        xs_i, y_i, _ = base_dataset.get_by_patient_id(pid)
+        xs_rows.append(xs_i)
+        ys.append(y_i)
+
+    n_modalities = len(xs_rows[0])
+    xs_full = []
+    for m_idx in range(n_modalities):
+        xs_full.append(torch.stack([row[m_idx] for row in xs_rows], dim=0).to(device))
+    y_full = torch.stack(ys, dim=0).to(dtype=torch.float32, device=device)
+    full_mask = torch.ones((len(pid_batch), n_modalities), dtype=torch.bool, device=device)
+    return xs_full, full_mask, y_full
+
+# Functions to compute losses for supervised and distillation cases
+def _compute_supervised_bce_loss(logits, targets, bce_criterion):
+    return bce_criterion(logits, targets)
+
+# For distillation, we combine the student's supervised loss with weighted representation and feature matching losses against the teacher
+def _compute_distill_student_loss(
+    student_logits,
+    student_repr,
+    teacher_logits,
+    teacher_repr,
+    targets,
+    bce_criterion,
+    repr_criterion,
+    feat_criterion,
+    alpha_repr,
+    beta_feat,
+):
+    loss_survival = bce_criterion(student_logits, targets)
+    loss_repr = repr_criterion(student_repr, teacher_repr)
+    loss_feature = feat_criterion(student_logits, teacher_logits)
+    total = loss_survival + (alpha_repr * loss_repr) + (beta_feat * loss_feature)
+    return total, loss_survival, loss_repr, loss_feature
+
 
 # ---------------------------- TRAIN FUNCTION -------------------------------
 
@@ -119,7 +161,7 @@ def train_model_with_validation(
     model_kwargs=None,
 ):
     model_kwargs = model_kwargs or {}
-    model_name_l = str(model_name).strip().lower()
+    model_name_l = normalize_model_name(model_name)
 
     # For MLP with KNN imputation, we do not use masking since KNN already imputes missing modalities
     bypass_mask = (
@@ -127,17 +169,37 @@ def train_model_with_validation(
         and str(imputation_method).strip().lower() == "knn"
     )
 
-    model = build_model(model_name, input_dims, model_kwargs).to(device)
-    weight_decay = 1e-3 if model_name_l == "healnet" else 1e-4
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-    scheduler_patience = 3 if model_name_l == "healnet" else 5
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        mode="min",
-        factor=0.5,
-        patience=scheduler_patience,
-    )
     criterion = nn.BCEWithLogitsLoss()
+
+    if model_name_l in {"distill_dyam"}:
+        dyam_kwargs = {k: v for k, v in model_kwargs.items() if k not in {"distill_alpha", "distill_beta"}}
+        distill_alpha = float(model_kwargs.get("distill_alpha", 1.0))
+        distill_beta = float(model_kwargs.get("distill_beta", 0.3))
+
+        teacher_model = build_model("distill_dyam", input_dims, dyam_kwargs).to(device)
+        student_model = build_model("distill_dyam", input_dims, dyam_kwargs).to(device)
+        teacher_optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=1e-4)
+        student_optimizer = optim.Adam(student_model.parameters(), lr=lr, weight_decay=1e-4)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            student_optimizer,
+            mode="min",
+            factor=0.5,
+            patience=5,
+        )
+        repr_criterion = nn.MSELoss()
+        feat_criterion = nn.MSELoss()
+        teacher_base_dataset = train_loader.dataset.base_dataset
+    else:
+        model = build_model(model_name, input_dims, model_kwargs).to(device)
+        weight_decay = 1e-3 if model_name_l == "healnet" else 1e-4
+        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        scheduler_patience = 3 if model_name_l == "healnet" else 5
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode="min",
+            factor=0.5,
+            patience=scheduler_patience,
+        )
 
     # Align epoch selection with inner-fold HP selection:
     # maximize AUC, break ties with lower validation loss.
@@ -153,32 +215,87 @@ def train_model_with_validation(
     history = []
 
     for epoch in range(1, epochs + 1):
-        model.train()
+        if model_name_l in {"distill_dyam"}:
+            teacher_model.train()
+            student_model.train()
+        else:
+            model.train()
         train_loss = 0.0
         train_steps = 0
+        train_teacher_loss = 0.0
+        train_student_survival = 0.0
+        train_student_repr = 0.0
+        train_student_feature = 0.0
 
-        for Xs, present_mask, y, _ in train_loader:
+        for Xs, present_mask, y, pids in train_loader:
             Xs = [x.to(device) for x in Xs]
             present_mask = present_mask.to(device)
             y = y.to(device)
 
-            model_mask = None if bypass_mask else present_mask
+            if model_name_l in {"distill_dyam"}:
+                Xs_teacher, teacher_mask, y_teacher = _build_full_batch_from_patient_ids(
+                    teacher_base_dataset,
+                    pids,
+                    device=device,
+                )
 
-            optimizer.zero_grad()
-            logits_out = model(Xs, model_mask)
-            if logits_out is None:
-                continue
-            logits = logits_out.squeeze(1)
-            loss = criterion(logits, y)
-            loss.backward()
-            optimizer.step()
+                teacher_optimizer.zero_grad()
+                teacher_out = teacher_model(Xs_teacher, teacher_mask, return_aux=True)
+                teacher_logits = teacher_out[0].squeeze(1)
+                teacher_repr = teacher_out[4]
+                teacher_loss = _compute_supervised_bce_loss(teacher_logits, y_teacher, criterion)
+                teacher_loss.backward()
+                teacher_optimizer.step()
 
-            train_loss += loss.item()
-            train_steps += 1
+                student_optimizer.zero_grad()
+                student_out = student_model(Xs, present_mask, return_aux=True)
+                student_logits = student_out[0].squeeze(1)
+                student_repr = student_out[4]
+                student_loss, student_survival, student_repr_loss, student_feature_loss = _compute_distill_student_loss(
+                    student_logits=student_logits,
+                    student_repr=student_repr,
+                    teacher_logits=teacher_logits.detach(),
+                    teacher_repr=teacher_repr.detach(),
+                    targets=y,
+                    bce_criterion=criterion,
+                    repr_criterion=repr_criterion,
+                    feat_criterion=feat_criterion,
+                    alpha_repr=distill_alpha,
+                    beta_feat=distill_beta,
+                )
+                student_loss.backward()
+                student_optimizer.step()
+
+                train_loss += student_loss.item()
+                train_teacher_loss += teacher_loss.item()
+                train_student_survival += student_survival.item()
+                train_student_repr += student_repr_loss.item()
+                train_student_feature += student_feature_loss.item()
+                train_steps += 1
+            else:
+                model_mask = None if bypass_mask else present_mask
+                optimizer.zero_grad()
+                logits_out = model(Xs, model_mask)
+                if logits_out is None:
+                    continue
+                logits = logits_out.squeeze(1)
+                loss = _compute_supervised_bce_loss(logits, y, criterion)
+                loss.backward()
+                optimizer.step()
+
+                train_loss += loss.item()
+                train_steps += 1
 
         avg_train_loss = train_loss / max(train_steps, 1)
+        avg_teacher_loss = train_teacher_loss / max(train_steps, 1)
+        avg_student_survival = train_student_survival / max(train_steps, 1)
+        avg_student_repr = train_student_repr / max(train_steps, 1)
+        avg_student_feature = train_student_feature / max(train_steps, 1)
 
-        model.eval()
+        if model_name_l in {"distill_dyam"}:
+            student_model.eval()
+        else:
+            model.eval()
         val_loss = 0.0
         val_targets = []
         val_probs = []
@@ -189,9 +306,12 @@ def train_model_with_validation(
                 present_mask = present_mask.to(device)
                 y = y.to(device)
 
-                model_mask = None if bypass_mask else present_mask
-                logits = model(Xs, model_mask).squeeze(1)
-                loss = criterion(logits, y)
+                if model_name_l in {"distill_dyam"}:
+                    logits = student_model(Xs, present_mask).squeeze(1)
+                else:
+                    model_mask = None if bypass_mask else present_mask
+                    logits = model(Xs, model_mask).squeeze(1)
+                loss = _compute_supervised_bce_loss(logits, y, criterion)
 
                 val_loss += loss.item()
                 val_probs.extend(torch.sigmoid(logits).cpu().numpy().tolist())
@@ -209,6 +329,10 @@ def train_model_with_validation(
                 "val_auc": float(val_metrics_epoch["AUC"]),
                 "val_aucpr": float(val_metrics_epoch["AUCPR"]),
                 "val_acc": float(val_metrics_epoch["ACC"]),
+                "teacher_loss": float(avg_teacher_loss),
+                "student_survival_loss": float(avg_student_survival),
+                "student_repr_loss": float(avg_student_repr),
+                "student_feature_loss": float(avg_student_feature),
             }
         )
 
@@ -216,7 +340,10 @@ def train_model_with_validation(
         if epoch_score > best_epoch_score:
             best_epoch_score = epoch_score
             best_epoch = epoch
-            best_model_state = copy.deepcopy(model.state_dict())
+            if model_name_l in {"distill_dyam"}:
+                best_model_state = copy.deepcopy(student_model.state_dict())
+            else:
+                best_model_state = copy.deepcopy(model.state_dict())
             best_val_targets = np.asarray(val_targets)
             best_val_probs = np.asarray(val_probs)
             early_stop = 0
@@ -226,11 +353,16 @@ def train_model_with_validation(
                 break
 
     if best_model_state is not None:
-        model.load_state_dict(best_model_state)
+        if model_name_l in {"distill_dyam"}:
+            student_model.load_state_dict(best_model_state)
+        else:
+            model.load_state_dict(best_model_state)
 
     best_metrics = safe_binary_metrics(best_val_targets, best_val_probs)
     best_metrics["best_epoch"] = int(best_epoch)
 
+    if model_name_l in {"distill_dyam"}:
+        return student_model, history, best_metrics
     return model, history, best_metrics
 
 
@@ -264,7 +396,7 @@ def nested_cv(
 
     # Train missingness is applied on both inner-train and inner-validation.
     apply_missing_train = float(getattr(train_missing_simulator, "missing_prob", 0.0)) > 0.0
-    model_name_l = str(model_name).strip().lower()
+    model_name_l = normalize_model_name(model_name)
     set_global_seed(seed, deterministic=True)
 
     # Test-time evaluation setups:
@@ -426,6 +558,14 @@ def nested_cv(
                         "dropout_p": hp_cfg["dyam_dropout"],
                         "temperature": hp_cfg["dyam_temperature"],
                     }
+                elif model_name_l in {"distill_dyam"}:
+                    model_kwargs = {
+                        "dropout_p": hp_cfg["dyam_dropout"],
+                        "temperature": hp_cfg["dyam_temperature"],
+                        "concat_masks_input": True,
+                        "distill_alpha": hp_cfg["distill_alpha"],
+                        "distill_beta": hp_cfg["distill_beta"],
+                    }
                 elif model_name_l in {"healnet"}:
                     model_kwargs = {
                         "depth": hp_cfg["healnet_depth"],
@@ -442,7 +582,8 @@ def nested_cv(
                     }
                 else:
                     raise ValueError(
-                        f"Unsupported model '{model_name}'. Supported: mlp, dyam, healnet"
+                        "Unsupported model "
+                        f"'{model_name}'. Supported: mlp, dyam, distill_dyam, healnet"
                     )
 
                 # Train the model and evaluate on inner-val fold

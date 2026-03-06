@@ -8,6 +8,7 @@ from train_ncv import nested_cv
 from utils import (
     build_hyperparameter_grid,
     parse_value_or_list,
+    normalize_model_name,
 )
 
 def get_args():
@@ -15,7 +16,12 @@ def get_args():
 
     # Required arguments
     parser.add_argument("--odir", type=str, required=True, help="Output directory")
-    parser.add_argument("--model",type=str, required=True, choices=["MLP", "DyAM", "HealNet"])
+    parser.add_argument(
+        "--model",
+        type=str,
+        required=True,
+        choices=["MLP", "DyAM", "HealNet", "Distill_DyAM"],
+    )
     parser.add_argument("--dataset", type=str, required=True, help="Dataset name suffix")
     parser.add_argument("--endpoint", type=str, required=True, help="Endpoint base name")
     parser.add_argument(
@@ -75,6 +81,18 @@ def get_args():
     # DyAM architecture hyperparameters
     parser.add_argument("--dyam_dropout", type=str, default="0.4")  # scalar or comma-separated list
     parser.add_argument("--dyam_temperature", type=str, default="2.0")  # scalar or comma-separated list
+    parser.add_argument(
+        "--distill_alpha",
+        type=str,
+        default="1.0",
+        help="Weight a for representation distillation loss in Distill-DyAM. Supports scalar or comma-separated list.",
+    )
+    parser.add_argument(
+        "--distill_beta",
+        type=str,
+        default="0.3",
+        help="Weight b for feature/logit distillation loss in Distill-DyAM. Supports scalar or comma-separated list.",
+    )
 
     # HealNet architecture hyperparameters
     parser.add_argument("--healnet_depth", type=str, default="3")
@@ -206,6 +224,7 @@ def main():
     args = get_args()
     start_time = time.time()
     print("Running")
+    model_name_norm = normalize_model_name(args.model)
 
     if not (0.0 < float(args.gpu_memory_fraction) <= 1.0):
         raise ValueError("--gpu_memory_fraction must be in (0, 1].")
@@ -263,7 +282,7 @@ def main():
     # Construct base output labels
     model_label = (
         f"{str(args.imputation_method).strip().upper()}_"
-        f"{str(args.model).strip().upper().replace('_', '-')}"
+        f"{model_name_norm.upper().replace('_', '-')}"
     )
     dataset_label = str(args.dataset).strip().upper()
     combo_count = len(seeds_list) * len(train_missing_locations) * len(train_missing_probs)
@@ -326,7 +345,7 @@ def main():
 
                 wandb_base_config = {
                     "endpoint": args.endpoint,
-                    "model": args.model,
+                    "model": model_name_norm,
                     "dataset": args.dataset,
                     "modalities": modality_names,
                     "hp_grid_size": len(hp_configs),

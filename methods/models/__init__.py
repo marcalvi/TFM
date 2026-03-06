@@ -1,5 +1,6 @@
 from .mlp import MultimodalMLP
 from .dyam import DyAM
+from .distill_dyam import DistillDyAM
 _HEALNET_IMPORT_ERROR = None
 try:
     from .healnet import HealNet, HealNetBinaryWrapper
@@ -17,6 +18,7 @@ except Exception as _healnet_import_error:
 __all__ = [
     "MultimodalMLP",
     "DyAM",
+    "DistillDyAM",
     "HealNet",
     "HealNetBinaryWrapper",
 ]

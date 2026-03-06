@@ -3,10 +3,22 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class DyAM(nn.Module):
-    """Dynamic Attention over Modalities for binary classification."""
+class DistillDyAM(nn.Module):
+    """DyAM variant for distillation.
 
-    def __init__(self, input_dims, bottleneck_dim=16, dropout_p=0.4, temperature=2.0):
+    Differences vs plain DyAM:
+    - Can concatenate present-mask to each modality branch input.
+    - Exposes fused representation for representation distillation.
+    """
+
+    def __init__(
+        self,
+        input_dims,
+        bottleneck_dim=16,
+        dropout_p=0.4,
+        temperature=2.0,
+        concat_masks_input=True,
+    ):
         super().__init__()
 
         if not input_dims:
@@ -14,14 +26,16 @@ class DyAM(nn.Module):
 
         self.input_dims = list(input_dims)
         self.n_modalities = len(self.input_dims)
+        self.bottleneck_dim = int(bottleneck_dim)
         self.T = float(temperature)
+        self.concat_masks_input = bool(concat_masks_input)
         if self.T <= 0:
             raise ValueError("temperature must be > 0")
 
         self.projections = nn.ModuleList(
             [
                 nn.Sequential(
-                    nn.Linear(d, bottleneck_dim),
+                    nn.Linear(d + (self.n_modalities if self.concat_masks_input else 0), bottleneck_dim),
                     nn.BatchNorm1d(bottleneck_dim),
                     nn.ReLU(),
                     nn.Dropout(p=dropout_p),
@@ -38,7 +52,6 @@ class DyAM(nn.Module):
         )
 
     def _infer_mask_from_input(self, Xs):
-        """Infer present mask from non-zero modality vectors when mask is not provided."""
         batch_size = Xs[0].shape[0]
         device = Xs[0].device
         masks = torch.zeros((batch_size, self.n_modalities), device=device, dtype=torch.float32)
@@ -46,7 +59,6 @@ class DyAM(nn.Module):
         for i, Xi in enumerate(Xs):
             if Xi is None:
                 continue
-            # A modality is considered present if any feature differs from zero.
             present = (Xi != 0).any(dim=1).float()
             masks[:, i] = present
         return masks
@@ -63,6 +75,7 @@ class DyAM(nn.Module):
         device = first_valid.device
         risk_scores = []
         attn_logits = []
+        modality_feats = []
 
         if present_mask is None:
             masks = self._infer_mask_from_input(Xs)
@@ -74,31 +87,32 @@ class DyAM(nn.Module):
             if Xi is None:
                 risk_scores.append(torch.zeros(batch_size, 1, device=device))
                 attn_logits.append(torch.full((batch_size, 1), -1e9, device=device))
+                modality_feats.append(torch.zeros(batch_size, self.bottleneck_dim, device=device))
                 continue
 
+            if self.concat_masks_input:
+                Xi = torch.cat([Xi, masks], dim=1)
+
             feat = self.projections[i](Xi)
+            modality_feats.append(feat)
             risk_scores.append(self.risk_layers[i](feat))
             attn_logits.append(self.attn_layers[i](feat))
 
-        # Concatenate modality-wise scores and attention logits
         R = torch.cat(risk_scores, dim=1)
         A_logits = torch.cat(attn_logits, dim=1)
 
-        # Apply softplus and temperature scaling to attention logits
         A_softplus = F.softplus(A_logits) / self.T
-
-        # Masking: Zero out logits for missing modalities
         masked_scores = A_softplus * masks
         R_masked = R * masks
-
-        # Normalize masked logits to get attention weights
         attn_weights = masked_scores / (masked_scores.sum(dim=1, keepdim=True) + 1e-9)
         output = (attn_weights * R_masked).sum(dim=1, keepdim=True)
 
+        feat_stack = torch.stack(modality_feats, dim=1)  # [B, M, D]
+        fused_repr = (attn_weights.unsqueeze(-1) * feat_stack).sum(dim=1)  # [B, D]
+
         if return_aux:
-            # Count number of active modalities for each patient
             num_active = masks.sum(dim=1, keepdim=True)
-            # Get the attention share for each modality relative to the number of active modalities
             alpha = attn_weights * num_active
-            return output, attn_weights, alpha, R_masked
+            return output, attn_weights, alpha, R_masked, fused_repr
         return output
+
