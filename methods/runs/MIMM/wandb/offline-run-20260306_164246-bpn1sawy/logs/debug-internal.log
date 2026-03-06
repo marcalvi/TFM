@@ -1,0 +1,13 @@
+{"time":"2026-03-06T16:42:46.172158919+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-06T16:42:46.27698961+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-06T16:42:46.27702668+01:00","level":"INFO","msg":"stream: created new stream","id":"bpn1sawy"}
+{"time":"2026-03-06T16:42:46.277058901+01:00","level":"INFO","msg":"handler: started","stream_id":"bpn1sawy"}
+{"time":"2026-03-06T16:42:46.28021462+01:00","level":"INFO","msg":"stream: started","id":"bpn1sawy"}
+{"time":"2026-03-06T16:42:46.280244276+01:00","level":"INFO","msg":"sender: started","stream_id":"bpn1sawy"}
+{"time":"2026-03-06T16:42:46.280242222+01:00","level":"INFO","msg":"writer: started","stream_id":"bpn1sawy"}
+{"time":"2026-03-06T16:42:46.280402294+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-06T16:42:46.331408678+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-06T16:42:46.332937521+01:00","level":"INFO","msg":"stream: closing","id":"bpn1sawy"}
+{"time":"2026-03-06T16:42:46.332942821+01:00","level":"INFO","msg":"handler: closed","stream_id":"bpn1sawy"}
+{"time":"2026-03-06T16:42:46.333390104+01:00","level":"INFO","msg":"sender: closed","stream_id":"bpn1sawy"}
+{"time":"2026-03-06T16:42:46.333394622+01:00","level":"INFO","msg":"stream: closed","id":"bpn1sawy"}

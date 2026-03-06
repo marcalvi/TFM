@@ -68,4 +68,4 @@ python "${PROJECT_ROOT}/main.py" \
   --missing_pattern_seed "${MISSING_PATTERN_SEED}" \
   --wandb \
   --wandb_project "ZI_MLP" \
-  --wandb_mode "online"
+  --wandb_mode "offline"

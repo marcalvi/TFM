@@ -1,0 +1,13 @@
+{"time":"2026-03-06T06:22:03.925490192+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-06T06:22:04.030663123+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-06T06:22:04.030695985+01:00","level":"INFO","msg":"stream: created new stream","id":"mooudcwl"}
+{"time":"2026-03-06T06:22:04.030717686+01:00","level":"INFO","msg":"handler: started","stream_id":"mooudcwl"}
+{"time":"2026-03-06T06:22:04.034529134+01:00","level":"INFO","msg":"stream: started","id":"mooudcwl"}
+{"time":"2026-03-06T06:22:04.034555614+01:00","level":"INFO","msg":"sender: started","stream_id":"mooudcwl"}
+{"time":"2026-03-06T06:22:04.034556406+01:00","level":"INFO","msg":"writer: started","stream_id":"mooudcwl"}
+{"time":"2026-03-06T06:22:04.03474429+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-06T06:22:04.097870328+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-06T06:22:04.099229412+01:00","level":"INFO","msg":"stream: closing","id":"mooudcwl"}
+{"time":"2026-03-06T06:22:04.099233549+01:00","level":"INFO","msg":"handler: closed","stream_id":"mooudcwl"}
+{"time":"2026-03-06T06:22:04.099752298+01:00","level":"INFO","msg":"sender: closed","stream_id":"mooudcwl"}
+{"time":"2026-03-06T06:22:04.099755674+01:00","level":"INFO","msg":"stream: closed","id":"mooudcwl"}

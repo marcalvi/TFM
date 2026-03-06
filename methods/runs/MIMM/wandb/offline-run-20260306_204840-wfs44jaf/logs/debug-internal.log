@@ -1,0 +1,13 @@
+{"time":"2026-03-06T20:48:40.969942438+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-06T20:48:41.074565639+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-06T20:48:41.074601156+01:00","level":"INFO","msg":"stream: created new stream","id":"wfs44jaf"}
+{"time":"2026-03-06T20:48:41.07463479+01:00","level":"INFO","msg":"handler: started","stream_id":"wfs44jaf"}
+{"time":"2026-03-06T20:48:41.078462092+01:00","level":"INFO","msg":"stream: started","id":"wfs44jaf"}
+{"time":"2026-03-06T20:48:41.078511335+01:00","level":"INFO","msg":"writer: started","stream_id":"wfs44jaf"}
+{"time":"2026-03-06T20:48:41.078518047+01:00","level":"INFO","msg":"sender: started","stream_id":"wfs44jaf"}
+{"time":"2026-03-06T20:48:41.078642131+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-06T20:48:41.128031363+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-06T20:48:41.129315165+01:00","level":"INFO","msg":"stream: closing","id":"wfs44jaf"}
+{"time":"2026-03-06T20:48:41.129319854+01:00","level":"INFO","msg":"handler: closed","stream_id":"wfs44jaf"}
+{"time":"2026-03-06T20:48:41.129748983+01:00","level":"INFO","msg":"sender: closed","stream_id":"wfs44jaf"}
+{"time":"2026-03-06T20:48:41.129752049+01:00","level":"INFO","msg":"stream: closed","id":"wfs44jaf"}

@@ -1,0 +1,12 @@
+{"time":"2026-03-06T14:02:44.147538133+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-06T14:02:44.407775897+01:00","level":"INFO","msg":"stream: created new stream","id":"oasql0kk"}
+{"time":"2026-03-06T14:02:44.407813137+01:00","level":"INFO","msg":"handler: started","stream_id":"oasql0kk"}
+{"time":"2026-03-06T14:02:44.411327379+01:00","level":"INFO","msg":"stream: started","id":"oasql0kk"}
+{"time":"2026-03-06T14:02:44.41135475+01:00","level":"INFO","msg":"writer: started","stream_id":"oasql0kk"}
+{"time":"2026-03-06T14:02:44.411360571+01:00","level":"INFO","msg":"sender: started","stream_id":"oasql0kk"}
+{"time":"2026-03-06T14:02:46.015395228+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-06T14:02:46.393207055+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-06T14:02:46.394668433+01:00","level":"INFO","msg":"stream: closing","id":"oasql0kk"}
+{"time":"2026-03-06T14:02:46.394678311+01:00","level":"INFO","msg":"handler: closed","stream_id":"oasql0kk"}
+{"time":"2026-03-06T14:02:46.395019345+01:00","level":"INFO","msg":"sender: closed","stream_id":"oasql0kk"}
+{"time":"2026-03-06T14:02:46.395029053+01:00","level":"INFO","msg":"stream: closed","id":"oasql0kk"}

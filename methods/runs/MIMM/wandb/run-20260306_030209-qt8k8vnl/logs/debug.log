@@ -1,0 +1,21 @@
+2026-03-06 03:02:09,907 INFO    MainThread:114782 [wandb_init.py:setup_run_log_directory():717] Logging user logs to /home/osiris-user/Desktop/TFM/methods/runs/MIMM/wandb/run-20260306_030209-qt8k8vnl/logs/debug.log
+2026-03-06 03:02:09,907 INFO    MainThread:114782 [wandb_init.py:setup_run_log_directory():718] Logging internal logs to /home/osiris-user/Desktop/TFM/methods/runs/MIMM/wandb/run-20260306_030209-qt8k8vnl/logs/debug-internal.log
+2026-03-06 03:02:09,907 INFO    MainThread:114782 [wandb_init.py:init():844] calling init triggers
+2026-03-06 03:02:09,907 INFO    MainThread:114782 [wandb_init.py:init():849] wandb.init called with sweep_config: {}
+config: {'endpoint': 'OS_6', 'model': 'DyAM', 'dataset': 'MIMM', 'modalities': ['path', 'radio', 'clin', 'blood', 'radio_report'], 'hp_grid_size': 16, 'epochs': 80, 'inner_splits': 5, 'outer_splits': 5, 'train_missing_prob': 0.2, 'train_missing_location': 'blood', 'missing_pattern_seed': 2026, 'imputation_method': 'zero', 'test_eval_combinations': 30, 'test_missing_probs_grid': '0.0,0.2,0.4,0.6,0.8', 'test_missing_locations_grid': 'global,path,radio,clin,blood,radio_report', 'seed': 22, 'outer_fold': 3, 'phase': 'avg_inner_curve_best_per_fold', 'selected_inner_hp_names': ['lr1e-04_bs32_drop0p4_temp2p0_trmiss20_trlocblood', 'lr5e-05_bs16_drop0p4_temp1p0_trmiss20_trlocblood', 'lr1e-04_bs32_drop0p4_temp2p0_trmiss20_trlocblood', 'lr5e-05_bs16_drop0p2_temp2p0_trmiss20_trlocblood', 'lr5e-05_bs32_drop0p4_temp1p0_trmiss20_trlocblood'], '_wandb': {}}
+2026-03-06 03:02:09,908 INFO    MainThread:114782 [wandb_init.py:init():892] starting backend
+2026-03-06 03:02:09,908 INFO    MainThread:114782 [wandb_init.py:init():895] sending inform_init request
+2026-03-06 03:02:09,908 INFO    MainThread:114782 [wandb_init.py:init():903] backend started and connected
+2026-03-06 03:02:09,909 INFO    MainThread:114782 [wandb_init.py:init():973] updated telemetry
+2026-03-06 03:02:09,951 INFO    MainThread:114782 [wandb_init.py:init():997] communicating run to backend with 90.0 second timeout
+2026-03-06 03:02:11,105 INFO    MainThread:114782 [wandb_init.py:init():1042] starting run threads in backend
+2026-03-06 03:02:11,152 INFO    MainThread:114782 [wandb_run.py:_console_start():2524] atexit reg
+2026-03-06 03:02:11,152 INFO    MainThread:114782 [wandb_run.py:_redirect():2373] redirect: wrap_raw
+2026-03-06 03:02:11,152 INFO    MainThread:114782 [wandb_run.py:_redirect():2442] Wrapping output streams.
+2026-03-06 03:02:11,152 INFO    MainThread:114782 [wandb_run.py:_redirect():2465] Redirects installed.
+2026-03-06 03:02:11,153 INFO    MainThread:114782 [wandb_init.py:init():1082] run started, returning control to user process
+2026-03-06 03:02:11,159 INFO    MainThread:114782 [wandb_run.py:_finish():2291] finishing run marc_albesa/DyAM_MIMM/qt8k8vnl
+2026-03-06 03:02:11,159 INFO    MainThread:114782 [wandb_run.py:_atexit_cleanup():2490] got exitcode: 0
+2026-03-06 03:02:11,159 INFO    MainThread:114782 [wandb_run.py:_restore():2472] restore
+2026-03-06 03:02:11,159 INFO    MainThread:114782 [wandb_run.py:_restore():2478] restore done
+2026-03-06 03:02:12,806 INFO    MainThread:114782 [wandb_run.py:_footer_sync_info():3868] logging synced files

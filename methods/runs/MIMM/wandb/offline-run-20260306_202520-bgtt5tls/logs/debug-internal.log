@@ -1,0 +1,13 @@
+{"time":"2026-03-06T20:25:20.928672099+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-06T20:25:21.033248394+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-06T20:25:21.033275946+01:00","level":"INFO","msg":"stream: created new stream","id":"bgtt5tls"}
+{"time":"2026-03-06T20:25:21.033291685+01:00","level":"INFO","msg":"handler: started","stream_id":"bgtt5tls"}
+{"time":"2026-03-06T20:25:21.037052716+01:00","level":"INFO","msg":"stream: started","id":"bgtt5tls"}
+{"time":"2026-03-06T20:25:21.037062404+01:00","level":"INFO","msg":"writer: started","stream_id":"bgtt5tls"}
+{"time":"2026-03-06T20:25:21.037074166+01:00","level":"INFO","msg":"sender: started","stream_id":"bgtt5tls"}
+{"time":"2026-03-06T20:25:21.037266719+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-06T20:25:21.099492632+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-06T20:25:21.101140559+01:00","level":"INFO","msg":"stream: closing","id":"bgtt5tls"}
+{"time":"2026-03-06T20:25:21.101145538+01:00","level":"INFO","msg":"handler: closed","stream_id":"bgtt5tls"}
+{"time":"2026-03-06T20:25:21.102046356+01:00","level":"INFO","msg":"sender: closed","stream_id":"bgtt5tls"}
+{"time":"2026-03-06T20:25:21.102051326+01:00","level":"INFO","msg":"stream: closed","id":"bgtt5tls"}

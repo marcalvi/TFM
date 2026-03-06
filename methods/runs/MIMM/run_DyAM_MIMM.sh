@@ -65,4 +65,4 @@ python "${PROJECT_ROOT}/main.py" \
   --missing_pattern_seed "${MISSING_PATTERN_SEED}" \
   --wandb \
   --wandb_project "DyAM" \
-  --wandb_mode "offline"
+  --wandb_mode "online"

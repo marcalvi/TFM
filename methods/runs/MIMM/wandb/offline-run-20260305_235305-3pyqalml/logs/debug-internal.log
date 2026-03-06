@@ -1,0 +1,13 @@
+{"time":"2026-03-05T23:53:05.024748863+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-05T23:53:05.129668061+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-05T23:53:05.129694501+01:00","level":"INFO","msg":"stream: created new stream","id":"3pyqalml"}
+{"time":"2026-03-05T23:53:05.129767539+01:00","level":"INFO","msg":"handler: started","stream_id":"3pyqalml"}
+{"time":"2026-03-05T23:53:05.132550817+01:00","level":"INFO","msg":"stream: started","id":"3pyqalml"}
+{"time":"2026-03-05T23:53:05.132578159+01:00","level":"INFO","msg":"sender: started","stream_id":"3pyqalml"}
+{"time":"2026-03-05T23:53:05.132580172+01:00","level":"INFO","msg":"writer: started","stream_id":"3pyqalml"}
+{"time":"2026-03-05T23:53:05.132786461+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-05T23:53:05.182942316+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-05T23:53:05.184181303+01:00","level":"INFO","msg":"stream: closing","id":"3pyqalml"}
+{"time":"2026-03-05T23:53:05.184185631+01:00","level":"INFO","msg":"handler: closed","stream_id":"3pyqalml"}
+{"time":"2026-03-05T23:53:05.184518058+01:00","level":"INFO","msg":"sender: closed","stream_id":"3pyqalml"}
+{"time":"2026-03-05T23:53:05.184521955+01:00","level":"INFO","msg":"stream: closed","id":"3pyqalml"}

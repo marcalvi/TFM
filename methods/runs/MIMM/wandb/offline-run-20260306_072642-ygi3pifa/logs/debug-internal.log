@@ -1,0 +1,13 @@
+{"time":"2026-03-06T07:26:42.848545787+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-06T07:26:42.953092265+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-06T07:26:42.953115889+01:00","level":"INFO","msg":"stream: created new stream","id":"ygi3pifa"}
+{"time":"2026-03-06T07:26:42.953130036+01:00","level":"INFO","msg":"handler: started","stream_id":"ygi3pifa"}
+{"time":"2026-03-06T07:26:42.957491803+01:00","level":"INFO","msg":"stream: started","id":"ygi3pifa"}
+{"time":"2026-03-06T07:26:42.957498786+01:00","level":"INFO","msg":"writer: started","stream_id":"ygi3pifa"}
+{"time":"2026-03-06T07:26:42.957511931+01:00","level":"INFO","msg":"sender: started","stream_id":"ygi3pifa"}
+{"time":"2026-03-06T07:26:42.957687482+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-06T07:26:43.014383046+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-06T07:26:43.015833492+01:00","level":"INFO","msg":"stream: closing","id":"ygi3pifa"}
+{"time":"2026-03-06T07:26:43.015839133+01:00","level":"INFO","msg":"handler: closed","stream_id":"ygi3pifa"}
+{"time":"2026-03-06T07:26:43.016308859+01:00","level":"INFO","msg":"sender: closed","stream_id":"ygi3pifa"}
+{"time":"2026-03-06T07:26:43.016314069+01:00","level":"INFO","msg":"stream: closed","id":"ygi3pifa"}
