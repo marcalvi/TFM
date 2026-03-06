@@ -1,0 +1,13 @@
+{"time":"2026-03-06T16:50:50.590791849+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-06T16:50:50.695745014+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-06T16:50:50.695771804+01:00","level":"INFO","msg":"stream: created new stream","id":"ttya2wf6"}
+{"time":"2026-03-06T16:50:50.695799657+01:00","level":"INFO","msg":"handler: started","stream_id":"ttya2wf6"}
+{"time":"2026-03-06T16:50:50.699196599+01:00","level":"INFO","msg":"stream: started","id":"ttya2wf6"}
+{"time":"2026-03-06T16:50:50.699243868+01:00","level":"INFO","msg":"writer: started","stream_id":"ttya2wf6"}
+{"time":"2026-03-06T16:50:50.699258105+01:00","level":"INFO","msg":"sender: started","stream_id":"ttya2wf6"}
+{"time":"2026-03-06T16:50:50.699391486+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-06T16:50:50.770521402+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-06T16:50:50.77198832+01:00","level":"INFO","msg":"stream: closing","id":"ttya2wf6"}
+{"time":"2026-03-06T16:50:50.771993109+01:00","level":"INFO","msg":"handler: closed","stream_id":"ttya2wf6"}
+{"time":"2026-03-06T16:50:50.772414184+01:00","level":"INFO","msg":"sender: closed","stream_id":"ttya2wf6"}
+{"time":"2026-03-06T16:50:50.772418082+01:00","level":"INFO","msg":"stream: closed","id":"ttya2wf6"}

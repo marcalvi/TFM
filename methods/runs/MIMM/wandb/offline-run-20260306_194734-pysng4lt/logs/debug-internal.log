@@ -1,0 +1,13 @@
+{"time":"2026-03-06T19:47:35.082624502+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-06T19:47:35.187307258+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-06T19:47:35.187334931+01:00","level":"INFO","msg":"stream: created new stream","id":"pysng4lt"}
+{"time":"2026-03-06T19:47:35.187350871+01:00","level":"INFO","msg":"handler: started","stream_id":"pysng4lt"}
+{"time":"2026-03-06T19:47:35.189998844+01:00","level":"INFO","msg":"stream: started","id":"pysng4lt"}
+{"time":"2026-03-06T19:47:35.190008232+01:00","level":"INFO","msg":"writer: started","stream_id":"pysng4lt"}
+{"time":"2026-03-06T19:47:35.190013252+01:00","level":"INFO","msg":"sender: started","stream_id":"pysng4lt"}
+{"time":"2026-03-06T19:47:35.190181819+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-06T19:47:35.240663441+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-06T19:47:35.242058762+01:00","level":"INFO","msg":"stream: closing","id":"pysng4lt"}
+{"time":"2026-03-06T19:47:35.242063731+01:00","level":"INFO","msg":"handler: closed","stream_id":"pysng4lt"}
+{"time":"2026-03-06T19:47:35.242393283+01:00","level":"INFO","msg":"sender: closed","stream_id":"pysng4lt"}
+{"time":"2026-03-06T19:47:35.24239701+01:00","level":"INFO","msg":"stream: closed","id":"pysng4lt"}

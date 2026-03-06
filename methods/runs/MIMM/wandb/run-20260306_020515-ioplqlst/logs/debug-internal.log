@@ -1,0 +1,12 @@
+{"time":"2026-03-06T02:05:15.172814343+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-06T02:05:15.431298403+01:00","level":"INFO","msg":"stream: created new stream","id":"ioplqlst"}
+{"time":"2026-03-06T02:05:15.431351823+01:00","level":"INFO","msg":"handler: started","stream_id":"ioplqlst"}
+{"time":"2026-03-06T02:05:15.435340476+01:00","level":"INFO","msg":"stream: started","id":"ioplqlst"}
+{"time":"2026-03-06T02:05:15.435358961+01:00","level":"INFO","msg":"sender: started","stream_id":"ioplqlst"}
+{"time":"2026-03-06T02:05:15.435359001+01:00","level":"INFO","msg":"writer: started","stream_id":"ioplqlst"}
+{"time":"2026-03-06T02:05:17.42690401+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-06T02:05:19.172119523+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-06T02:05:19.173662233+01:00","level":"INFO","msg":"stream: closing","id":"ioplqlst"}
+{"time":"2026-03-06T02:05:19.173669747+01:00","level":"INFO","msg":"handler: closed","stream_id":"ioplqlst"}
+{"time":"2026-03-06T02:05:19.174006903+01:00","level":"INFO","msg":"sender: closed","stream_id":"ioplqlst"}
+{"time":"2026-03-06T02:05:19.174012403+01:00","level":"INFO","msg":"stream: closed","id":"ioplqlst"}

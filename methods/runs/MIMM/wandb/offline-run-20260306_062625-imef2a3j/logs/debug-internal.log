@@ -1,0 +1,13 @@
+{"time":"2026-03-06T06:26:25.629670056+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-06T06:26:25.756889486+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-06T06:26:25.756938991+01:00","level":"INFO","msg":"stream: created new stream","id":"imef2a3j"}
+{"time":"2026-03-06T06:26:25.757006339+01:00","level":"INFO","msg":"handler: started","stream_id":"imef2a3j"}
+{"time":"2026-03-06T06:26:25.760974268+01:00","level":"INFO","msg":"stream: started","id":"imef2a3j"}
+{"time":"2026-03-06T06:26:25.761044371+01:00","level":"INFO","msg":"writer: started","stream_id":"imef2a3j"}
+{"time":"2026-03-06T06:26:25.761082113+01:00","level":"INFO","msg":"sender: started","stream_id":"imef2a3j"}
+{"time":"2026-03-06T06:26:25.76142701+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-06T06:26:25.92384855+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-06T06:26:25.927777705+01:00","level":"INFO","msg":"stream: closing","id":"imef2a3j"}
+{"time":"2026-03-06T06:26:25.927794277+01:00","level":"INFO","msg":"handler: closed","stream_id":"imef2a3j"}
+{"time":"2026-03-06T06:26:25.928461047+01:00","level":"INFO","msg":"sender: closed","stream_id":"imef2a3j"}
+{"time":"2026-03-06T06:26:25.928476687+01:00","level":"INFO","msg":"stream: closed","id":"imef2a3j"}

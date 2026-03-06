@@ -1,0 +1,13 @@
+{"time":"2026-03-06T07:11:12.514756098+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-06T07:11:12.618839059+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-06T07:11:12.618863204+01:00","level":"INFO","msg":"stream: created new stream","id":"tg905tiz"}
+{"time":"2026-03-06T07:11:12.618880347+01:00","level":"INFO","msg":"handler: started","stream_id":"tg905tiz"}
+{"time":"2026-03-06T07:11:12.64251006+01:00","level":"INFO","msg":"stream: started","id":"tg905tiz"}
+{"time":"2026-03-06T07:11:12.642537151+01:00","level":"INFO","msg":"writer: started","stream_id":"tg905tiz"}
+{"time":"2026-03-06T07:11:12.642549023+01:00","level":"INFO","msg":"sender: started","stream_id":"tg905tiz"}
+{"time":"2026-03-06T07:11:12.642735235+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-06T07:11:12.691099084+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-06T07:11:12.6924374+01:00","level":"INFO","msg":"stream: closing","id":"tg905tiz"}
+{"time":"2026-03-06T07:11:12.69244236+01:00","level":"INFO","msg":"handler: closed","stream_id":"tg905tiz"}
+{"time":"2026-03-06T07:11:12.692877901+01:00","level":"INFO","msg":"sender: closed","stream_id":"tg905tiz"}
+{"time":"2026-03-06T07:11:12.692881448+01:00","level":"INFO","msg":"stream: closed","id":"tg905tiz"}
