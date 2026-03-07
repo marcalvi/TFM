@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader, Sampler
-from imputation_methods import KNNModalityImputer
+from imputation_methods import build_imputer
 import zlib
 
 # ------------------------ MM SIMULATOR --------------------------
@@ -141,20 +141,24 @@ class MultimodalDatasetWithMissing(Dataset):
         imputation_method="zero",
         knn_k=5,
         missing_pattern_seed=0,
-        knn_reference_base_dataset=None,
+        prefit_imputer=None,
+        imputer_kwargs=None,
+        imputer_device=None,
+        imputer_seed=0,
     ):
         self.base_dataset = base_dataset
         self.simulator = simulator
         self.apply_missing = apply_missing
         self.imputation_method = str(imputation_method).strip().lower()
         self.missing_pattern_seed = int(missing_pattern_seed)
-        if self.imputation_method not in {"zero", "knn"}:
-            raise ValueError("imputation_method must be one of: zero, knn")
+        if self.imputation_method not in {"zero", "knn", "vae"}:
+            raise ValueError("imputation_method must be one of: zero, knn, vae")
+        self.knn_k = int(knn_k)
+        self.imputer_kwargs = dict(imputer_kwargs or {})
+        self.imputer_device = imputer_device
+        self.imputer_seed = int(imputer_seed)
 
-        self.imputer = None
-        if self.apply_missing and self.imputation_method == "knn":
-            reference_base = knn_reference_base_dataset if knn_reference_base_dataset is not None else self.base_dataset
-            self.imputer = KNNModalityImputer(base_dataset=reference_base, k=knn_k)
+        self.imputer = prefit_imputer
 
         self.fixed_present_masks = None
         if self.apply_missing:
@@ -188,6 +192,14 @@ class MultimodalDatasetWithMissing(Dataset):
             masks.append(mask)
         return masks
 
+    def set_imputer(self, imputer, imputation_method=None):
+        if imputation_method is not None:
+            method = str(imputation_method).strip().lower()
+            if method not in {"zero", "knn", "vae"}:
+                raise ValueError("imputation_method must be one of: zero, knn, vae")
+            self.imputation_method = method
+        self.imputer = imputer
+
     def __getitem__(self, idx):
         Xs, label, pid = self.base_dataset[idx]
         if len(Xs) != self.simulator.num_modalities:
@@ -203,7 +215,11 @@ class MultimodalDatasetWithMissing(Dataset):
                     if not bool(present):
                         Xs_missing[i] = torch.zeros_like(Xs_missing[i])
             else:
-                # Replace missing modalities with KNN mean imputation.
+                if self.imputer is None:
+                    raise RuntimeError(
+                        f"Imputer for method '{self.imputation_method}' has not been initialized."
+                    )
+                # Replace missing modalities with the selected fitted imputer.
                 Xs_missing = self.imputer.impute_modalities(
                     modalities=Xs_missing,
                     present_mask=present_mask,
@@ -353,7 +369,8 @@ def build_loaders(
     model_name="mlp",
     loader_seed=0,
     id_col="patient",
-    knn_reference_base_dataset=None,
+    prefit_imputer=None,
+    imputer_kwargs=None,
 ):
     train_base = MultimodalBaseDataset(
         dfs=dfs_train_scaled,
@@ -368,22 +385,44 @@ def build_loaders(
         id_col=id_col,
     )
 
+    method_l = str(imputation_method).strip().lower()
+    defer_imputer_fit = prefit_imputer is None and method_l != "zero" and (train_missing or val_missing)
+    dataset_init_method = "zero" if defer_imputer_fit else method_l
+
     train_ds = MultimodalDatasetWithMissing(
         base_dataset=train_base,
         simulator=missing_simulator,
         apply_missing=train_missing,
-        imputation_method=imputation_method,
+        imputation_method=dataset_init_method,
         missing_pattern_seed=missing_pattern_seed,
-        knn_reference_base_dataset=knn_reference_base_dataset,
+        prefit_imputer=prefit_imputer,
+        imputer_kwargs=imputer_kwargs,
+        imputer_seed=loader_seed,
     )
     val_ds = MultimodalDatasetWithMissing(
         base_dataset=val_base,
         simulator=missing_simulator,
         apply_missing=val_missing,
-        imputation_method=imputation_method,
+        imputation_method=dataset_init_method,
         missing_pattern_seed=missing_pattern_seed,
-        knn_reference_base_dataset=knn_reference_base_dataset,
+        prefit_imputer=prefit_imputer,
+        imputer_kwargs=imputer_kwargs,
+        imputer_seed=loader_seed,
     )
+
+    shared_imputer = prefit_imputer
+    if defer_imputer_fit:
+        reference_masks = train_ds.fixed_present_masks if train_missing else None
+        shared_imputer = build_imputer(
+            imputation_method=method_l,
+            reference_base_dataset=train_base,
+            reference_present_masks=reference_masks,
+            knn_k=5,
+            vae_kwargs=imputer_kwargs,
+            imputer_seed=loader_seed,
+        )
+        train_ds.set_imputer(shared_imputer, method_l)
+        val_ds.set_imputer(shared_imputer, method_l)
 
     model_name_l = str(model_name).strip().lower()
     train_batch_size = int(batch_size)
@@ -426,4 +465,4 @@ def build_loaders(
         drop_last=False,
     )
 
-    return train_loader, val_loader
+    return train_loader, val_loader, shared_imputer
