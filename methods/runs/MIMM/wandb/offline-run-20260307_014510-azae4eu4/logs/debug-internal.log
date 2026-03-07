@@ -1,0 +1,13 @@
+{"time":"2026-03-07T01:45:10.789931091+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-07T01:45:10.916665958+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-07T01:45:10.916737515+01:00","level":"INFO","msg":"stream: created new stream","id":"azae4eu4"}
+{"time":"2026-03-07T01:45:10.916779464+01:00","level":"INFO","msg":"handler: started","stream_id":"azae4eu4"}
+{"time":"2026-03-07T01:45:10.921719326+01:00","level":"INFO","msg":"stream: started","id":"azae4eu4"}
+{"time":"2026-03-07T01:45:10.921780152+01:00","level":"INFO","msg":"writer: started","stream_id":"azae4eu4"}
+{"time":"2026-03-07T01:45:10.921810931+01:00","level":"INFO","msg":"sender: started","stream_id":"azae4eu4"}
+{"time":"2026-03-07T01:45:10.922244156+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-07T01:45:11.097956914+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-07T01:45:11.101945723+01:00","level":"INFO","msg":"stream: closing","id":"azae4eu4"}
+{"time":"2026-03-07T01:45:11.101960061+01:00","level":"INFO","msg":"handler: closed","stream_id":"azae4eu4"}
+{"time":"2026-03-07T01:45:11.102727653+01:00","level":"INFO","msg":"sender: closed","stream_id":"azae4eu4"}
+{"time":"2026-03-07T01:45:11.102740828+01:00","level":"INFO","msg":"stream: closed","id":"azae4eu4"}

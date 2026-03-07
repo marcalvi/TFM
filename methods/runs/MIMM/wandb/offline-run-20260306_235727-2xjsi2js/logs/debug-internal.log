@@ -1,0 +1,13 @@
+{"time":"2026-03-06T23:57:27.267811923+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-06T23:57:27.392256036+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-06T23:57:27.392309047+01:00","level":"INFO","msg":"stream: created new stream","id":"2xjsi2js"}
+{"time":"2026-03-06T23:57:27.392366116+01:00","level":"INFO","msg":"handler: started","stream_id":"2xjsi2js"}
+{"time":"2026-03-06T23:57:27.395995438+01:00","level":"INFO","msg":"stream: started","id":"2xjsi2js"}
+{"time":"2026-03-06T23:57:27.396062035+01:00","level":"INFO","msg":"writer: started","stream_id":"2xjsi2js"}
+{"time":"2026-03-06T23:57:27.396083035+01:00","level":"INFO","msg":"sender: started","stream_id":"2xjsi2js"}
+{"time":"2026-03-06T23:57:27.39641136+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-06T23:57:27.536425749+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-06T23:57:27.540182093+01:00","level":"INFO","msg":"stream: closing","id":"2xjsi2js"}
+{"time":"2026-03-06T23:57:27.540196751+01:00","level":"INFO","msg":"handler: closed","stream_id":"2xjsi2js"}
+{"time":"2026-03-06T23:57:27.540701252+01:00","level":"INFO","msg":"sender: closed","stream_id":"2xjsi2js"}
+{"time":"2026-03-06T23:57:27.540713706+01:00","level":"INFO","msg":"stream: closed","id":"2xjsi2js"}

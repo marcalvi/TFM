@@ -1,0 +1,13 @@
+{"time":"2026-03-06T23:49:16.783936668+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-06T23:49:16.909659145+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-06T23:49:16.909697508+01:00","level":"INFO","msg":"stream: created new stream","id":"otcaa6er"}
+{"time":"2026-03-06T23:49:16.909741712+01:00","level":"INFO","msg":"handler: started","stream_id":"otcaa6er"}
+{"time":"2026-03-06T23:49:16.912829962+01:00","level":"INFO","msg":"stream: started","id":"otcaa6er"}
+{"time":"2026-03-06T23:49:16.912859669+01:00","level":"INFO","msg":"writer: started","stream_id":"otcaa6er"}
+{"time":"2026-03-06T23:49:16.912892622+01:00","level":"INFO","msg":"sender: started","stream_id":"otcaa6er"}
+{"time":"2026-03-06T23:49:16.913282404+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-06T23:49:17.066502333+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-06T23:49:17.070775289+01:00","level":"INFO","msg":"stream: closing","id":"otcaa6er"}
+{"time":"2026-03-06T23:49:17.070788495+01:00","level":"INFO","msg":"handler: closed","stream_id":"otcaa6er"}
+{"time":"2026-03-06T23:49:17.071411301+01:00","level":"INFO","msg":"sender: closed","stream_id":"otcaa6er"}
+{"time":"2026-03-06T23:49:17.071423444+01:00","level":"INFO","msg":"stream: closed","id":"otcaa6er"}
