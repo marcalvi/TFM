@@ -42,11 +42,6 @@ def load_preprocessed_dataset(args):
             )
         return None
 
-    if getattr(args, "patient_ids_col", "patient") != "patient":
-        raise ValueError(
-            "MIMM preprocessing expects patient ID column 'patient'. "
-            "Do not override --patient_ids_col for MIMM."
-        )
     id_col = "patient"
     dataset_dir = getattr(args, "dataset_dir", None)
     if not dataset_dir:

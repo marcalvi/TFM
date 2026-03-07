@@ -30,27 +30,6 @@ def get_args():
         default=None,
         help="Directory containing all CSV files for the selected dataset.",
     )
-    parser.add_argument("--inst_data", type=str, default=None, help="CSV with patient and label")
-    parser.add_argument(
-        "--patient_ids_col",
-        dest="patient_ids_col",
-        type=str,
-        default="patient",
-        help="Column name with patient IDs in all modality/label CSVs.",
-    )
-    parser.add_argument(
-        "--patient_id_col",
-        dest="patient_ids_col",
-        type=str,
-        help=argparse.SUPPRESS,
-    )
-
-    # Multimodal data arguments
-    parser.add_argument("--patho_data", type=str, default=None)
-    parser.add_argument("--clin_data", type=str, default=None)
-    parser.add_argument("--blood_data", type=str, default=None)
-    parser.add_argument("--radio_data", type=str, default=None)
-    parser.add_argument("--radio_report_data", type=str, default=None)
 
     # Cross-validation and optimization hyperparameters
     parser.add_argument("--inner_splits", type=int, default=5)
@@ -65,13 +44,6 @@ def get_args():
         default=0,
         help="Deterministic seed used only for missing-modality mask simulation.",
     )
-    parser.add_argument(
-        "--gpu_memory_fraction",
-        type=float,
-        default=1.0,
-        help="Fraction of total GPU memory this process can use (CUDA only, in (0, 1]).",
-    )
-
     # MLP architecture hyperparameters
     parser.add_argument("--fusion_hidden_dim", type=str, default="32") # Supports scalar or comma-separated list for tuning
     parser.add_argument("--fusion_hidden_layers", type=str, default="1") # Supports scalar or comma-separated list for tuning
@@ -136,8 +108,44 @@ def get_args():
         "--imputation_method",
         type=str,
         default="zero",
-        choices=["zero", "knn"],
-        help="Imputation method for missing modalities: zero or knn.",
+        choices=["zero", "knn", "vae"],
+        help="Imputation method for missing modalities: zero, knn, or vae.",
+    )
+    parser.add_argument(
+        "--vae_imputer_latent_dim",
+        type=int,
+        default=16,
+        help="Latent size for the tabular VAE imputer.",
+    )
+    parser.add_argument(
+        "--vae_imputer_hidden_dim",
+        type=int,
+        default=128,
+        help="Hidden size for the tabular VAE imputer.",
+    )
+    parser.add_argument(
+        "--vae_imputer_epochs",
+        type=int,
+        default=30,
+        help="Training epochs for the tabular VAE imputer.",
+    )
+    parser.add_argument(
+        "--vae_imputer_batch_size",
+        type=int,
+        default=64,
+        help="Batch size for the tabular VAE imputer.",
+    )
+    parser.add_argument(
+        "--vae_imputer_lr",
+        type=float,
+        default=1e-3,
+        help="Learning rate for the tabular VAE imputer.",
+    )
+    parser.add_argument(
+        "--vae_imputer_beta",
+        type=float,
+        default=1e-3,
+        help="KL weight for the tabular VAE imputer.",
     )
 
     # Weights & Biases logging
@@ -225,9 +233,12 @@ def main():
     start_time = time.time()
     print("Running")
     model_name_norm = normalize_model_name(args.model)
+    patient_id_col = "patient"
 
-    if not (0.0 < float(args.gpu_memory_fraction) <= 1.0):
-        raise ValueError("--gpu_memory_fraction must be in (0, 1].")
+    if str(args.imputation_method).strip().lower() != "zero" and model_name_norm != "mlp":
+        raise ValueError(
+            "imputation_method='knn' or 'vae' is currently supported only with model='MLP'."
+        )
 
     # Load dataset-specific preprocessed bundle if available (`dataset/<dataset>.py`);
     # otherwise use the generic preprocessing pipeline.
@@ -280,10 +291,13 @@ def main():
         )
 
     # Construct base output labels
-    model_label = (
-        f"{str(args.imputation_method).strip().upper()}_"
-        f"{model_name_norm.upper().replace('_', '-')}"
-    )
+    if model_name_norm == "mlp":
+        model_label = (
+            f"{str(args.imputation_method).strip().upper()}_"
+            f"{model_name_norm.upper().replace('_', '-')}"
+        )
+    else:
+        model_label = model_name_norm.upper().replace("_", "-")
     dataset_label = str(args.dataset).strip().upper()
     combo_count = len(seeds_list) * len(train_missing_locations) * len(train_missing_probs)
     test_eval_count = len(test_missing_locations) * len(test_missing_probs)
@@ -360,6 +374,17 @@ def main():
                     "test_missing_probs_grid": ",".join(str(float(p)) for p in test_missing_probs),
                     "test_missing_locations_grid": ",".join(str(loc).lower() for loc in test_missing_locations),
                 }
+                if str(args.imputation_method).strip().lower() == "vae":
+                    wandb_base_config.update(
+                        {
+                            "vae_imputer_latent_dim": int(args.vae_imputer_latent_dim),
+                            "vae_imputer_hidden_dim": int(args.vae_imputer_hidden_dim),
+                            "vae_imputer_epochs": int(args.vae_imputer_epochs),
+                            "vae_imputer_batch_size": int(args.vae_imputer_batch_size),
+                            "vae_imputer_lr": float(args.vae_imputer_lr),
+                            "vae_imputer_beta": float(args.vae_imputer_beta),
+                        }
+                    )
 
                 inner_df, outer_df, history_df, split_df = nested_cv(
                     dfs=dfs,
@@ -373,14 +398,21 @@ def main():
                     imputation_method=args.imputation_method,
                     inner_splits=args.inner_splits,
                     outer_splits=args.outer_splits,
-                    gpu_memory_fraction=float(args.gpu_memory_fraction),
                     missing_pattern_seed=int(args.missing_pattern_seed),
-                    patient_id_col=args.patient_ids_col,
+                    patient_id_col=patient_id_col,
                     wandb_enabled=wandb_enabled_flag,
                     wandb_project=wandb_project_name,
                     wandb_mode=args.wandb_mode,
                     wandb_base_config=wandb_base_config,
                     test_eval_setups=test_eval_setups,
+                    imputer_kwargs={
+                        "latent_dim": int(args.vae_imputer_latent_dim),
+                        "hidden_dim": int(args.vae_imputer_hidden_dim),
+                        "epochs": int(args.vae_imputer_epochs),
+                        "batch_size": int(args.vae_imputer_batch_size),
+                        "lr": float(args.vae_imputer_lr),
+                        "beta": float(args.vae_imputer_beta),
+                    },
                 )
 
                 _save_run_outputs(

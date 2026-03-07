@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader
+from imputation_methods import build_imputer
 from dataset import (
     MultimodalBaseDataset,
     MultimodalDatasetWithMissing,
@@ -49,25 +50,34 @@ def _transform_modalities_with_fitted_scalers(dfs_raw, scalers, patient_id_col="
 
     return dfs_scaled
 
-# Function to build KNN reference pool dataset in the current scaler space
-def _build_knn_reference_base_dataset(
-    dfs_raw_full,
-    scalers,
-    inst_df_full,
-    label_col,
-    patient_id_col="patient",
+def _fit_split_imputer(
+    reference_base_dataset,
+    missing_simulator,
+    apply_missing_reference,
+    imputation_method,
+    missing_pattern_seed,
+    imputer_seed,
+    imputer_kwargs=None,
 ):
-    """Build full-dataset KNN reference pool in the current scaler space."""
-    dfs_knn_ref_scaled = _transform_modalities_with_fitted_scalers(
-        dfs_raw_full,
-        scalers,
-        patient_id_col=patient_id_col,
+    method_l = str(imputation_method).strip().lower()
+    if method_l == "zero":
+        return None
+
+    reference_dataset = MultimodalDatasetWithMissing(
+        base_dataset=reference_base_dataset,
+        simulator=missing_simulator,
+        apply_missing=apply_missing_reference,
+        imputation_method="zero",
+        missing_pattern_seed=missing_pattern_seed,
     )
-    return MultimodalBaseDataset(
-        dfs=dfs_knn_ref_scaled,
-        label_df=inst_df_full,
-        label_col=label_col,
-        id_col=patient_id_col,
+    reference_masks = reference_dataset.fixed_present_masks if apply_missing_reference else None
+    return build_imputer(
+        imputation_method=method_l,
+        reference_base_dataset=reference_base_dataset,
+        reference_present_masks=reference_masks,
+        knn_k=5,
+        vae_kwargs=imputer_kwargs,
+        imputer_seed=imputer_seed,
     )
 
 # Function to predict on outer fold for each inner fold model
@@ -75,19 +85,13 @@ def _predict_model_probabilities(
     model,
     data_loader,
     device,
-    model_name,
-    imputation_method="zero",
+    bypass_mask=False,
 ):
     """Run one model on a loader and return y_true / probabilities."""
     model.eval()
     y_true = []
     y_prob = []
     pids = []
-    model_name_l = normalize_model_name(model_name)
-    bypass_mask = (
-        model_name_l == "mlp"
-        and str(imputation_method).strip().lower() == "knn"
-    )
 
     with torch.no_grad():
         for Xs, present_mask, y, pid_batch in data_loader:
@@ -163,10 +167,10 @@ def train_model_with_validation(
     model_kwargs = model_kwargs or {}
     model_name_l = normalize_model_name(model_name)
 
-    # For MLP with KNN imputation, we do not use masking since KNN already imputes missing modalities
+    # For MLP with learned/external imputation, do not re-mask imputed modalities.
     bypass_mask = (
         model_name_l == "mlp"
-        and str(imputation_method).strip().lower() == "knn"
+        and str(imputation_method).strip().lower() in {"knn", "vae"}
     )
 
     criterion = nn.BCEWithLogitsLoss()
@@ -381,7 +385,6 @@ def nested_cv(
     imputation_method="zero",
     inner_splits=5,
     outer_splits=5,
-    gpu_memory_fraction=1.0,
     missing_pattern_seed=0,
     patient_id_col="patient",
     wandb_enabled=False,
@@ -389,6 +392,7 @@ def nested_cv(
     wandb_mode="online",
     wandb_base_config=None,
     test_eval_setups=None,
+    imputer_kwargs=None,
 ):
     wandb_active = bool(wandb_enabled and wandb is not None)
     if wandb_enabled and wandb is None:
@@ -397,6 +401,10 @@ def nested_cv(
     # Train missingness is applied on both inner-train and inner-validation.
     apply_missing_train = float(getattr(train_missing_simulator, "missing_prob", 0.0)) > 0.0
     model_name_l = normalize_model_name(model_name)
+    predict_bypass_mask = (
+        model_name_l == "mlp"
+        and str(imputation_method).strip().lower() in {"knn", "vae"}
+    )
     set_global_seed(seed, deterministic=True)
 
     # Test-time evaluation setups:
@@ -426,14 +434,8 @@ def nested_cv(
     input_dims = [df.shape[1] - 1 for df in dfs.values()]
     device = select_device()
     if device.type == "cuda":
-        # Optionally cap per-process CUDA memory usage.
-        fraction = float(gpu_memory_fraction)
-        if not (0.0 < fraction <= 1.0):
-            raise ValueError("gpu_memory_fraction must be in (0, 1].")
-        gpu_idx = device.index if device.index is not None else 0
-        torch.cuda.set_per_process_memory_fraction(fraction, gpu_idx)
         gpu_name = torch.cuda.get_device_name(device)
-        print(f"Using device: cuda ({gpu_name}) | memory_fraction={fraction}")
+        print(f"Using device: cuda ({gpu_name})")
     elif device.type == "mps":
         print("Using device: mps (Apple Metal)")
     else:
@@ -502,17 +504,21 @@ def nested_cv(
                 id_col=patient_id_col,
             )
 
-            # For KNN imputation, use a reference pool built from the full dataset
-            # transformed with the current inner-fold scalers (split-independent pool).
-            knn_reference_base_inner = None
-            if str(imputation_method).strip().lower() == "knn":
-                knn_reference_base_inner = _build_knn_reference_base_dataset(
-                    dfs_raw_full=dfs,
-                    scalers=scalers_inner,
-                    inst_df_full=inst_df,
-                    label_col=label_col,
-                    patient_id_col=patient_id_col,
-                )
+            train_base_inner = MultimodalBaseDataset(
+                dfs=dfs_train_inner_scaled,
+                label_df=inst_df_train_inner,
+                label_col=label_col,
+                id_col=patient_id_col,
+            )
+            prefit_inner_imputer = _fit_split_imputer(
+                reference_base_dataset=train_base_inner,
+                missing_simulator=train_missing_simulator,
+                apply_missing_reference=apply_missing_train,
+                imputation_method=imputation_method,
+                missing_pattern_seed=missing_pattern_seed,
+                imputer_seed=int(seed + outer_fold_idx * 10_000 + inner_fold_idx * 100),
+                imputer_kwargs=imputer_kwargs,
+            )
 
             # Keep track of the best model and HP config for this inner fold
             best_inner_model = None
@@ -527,7 +533,7 @@ def nested_cv(
                 hp_name = hp_cfg["name"]
 
                 # Inner validation belongs to outer-train, so it follows train missingness.
-                train_loader, val_loader = build_loaders(
+                train_loader, val_loader, _ = build_loaders(
                     inst_df_train=inst_df_train_inner,
                     inst_df_eval=inst_df_val_inner,
                     dfs_train_scaled=dfs_train_inner_scaled,
@@ -542,7 +548,8 @@ def nested_cv(
                     model_name=model_name,
                     loader_seed=int(seed + outer_fold_idx * 10_000 + inner_fold_idx * 100 + hp_idx),
                     id_col=patient_id_col,
-                    knn_reference_base_dataset=knn_reference_base_inner,
+                    prefit_imputer=prefit_inner_imputer,
+                    imputer_kwargs=imputer_kwargs,
                 )
 
                 # Get model kwargs from this HP config
@@ -653,6 +660,7 @@ def nested_cv(
                 {
                     "model": best_inner_model,
                     "scalers": best_inner_scalers,
+                    "imputer": prefit_inner_imputer,
                 }
             )
             selected_inner_rows.append(
@@ -745,21 +753,11 @@ def nested_cv(
                 id_col=patient_id_col,
             )
 
-            knn_reference_base_outer = None
-            if str(imputation_method).strip().lower() == "knn":
-                knn_reference_base_outer = _build_knn_reference_base_dataset(
-                    dfs_raw_full=dfs,
-                    scalers=scalers,
-                    inst_df_full=inst_df,
-                    label_col=label_col,
-                    patient_id_col=patient_id_col,
-                )
-
             outer_member_contexts.append(
                 {
                     "model": model,
                     "outer_eval_base": outer_eval_base,
-                    "knn_reference_base": knn_reference_base_outer,
+                    "imputer": member.get("imputer"),
                 }
             )
 
@@ -781,7 +779,8 @@ def nested_cv(
                     apply_missing=apply_missing_eval,
                     imputation_method=imputation_method,
                     missing_pattern_seed=missing_pattern_seed,
-                    knn_reference_base_dataset=member_ctx["knn_reference_base"],
+                    prefit_imputer=member_ctx["imputer"],
+                    imputer_kwargs=imputer_kwargs,
                 )
                 ensemble_eval_loader = DataLoader(
                     ensemble_eval_ds,
@@ -795,8 +794,7 @@ def nested_cv(
                     model=model,
                     data_loader=ensemble_eval_loader,
                     device=device,
-                    model_name=model_name,
-                    imputation_method=imputation_method,
+                    bypass_mask=predict_bypass_mask,
                 )
                 if y_true_outer is None:
                     y_true_outer = y_true_i
