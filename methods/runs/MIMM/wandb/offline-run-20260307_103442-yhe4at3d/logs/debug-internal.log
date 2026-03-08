@@ -1,0 +1,13 @@
+{"time":"2026-03-07T10:34:43.011502599+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-07T10:34:43.137722308+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-07T10:34:43.137766141+01:00","level":"INFO","msg":"stream: created new stream","id":"yhe4at3d"}
+{"time":"2026-03-07T10:34:43.137837006+01:00","level":"INFO","msg":"handler: started","stream_id":"yhe4at3d"}
+{"time":"2026-03-07T10:34:43.141107549+01:00","level":"INFO","msg":"stream: started","id":"yhe4at3d"}
+{"time":"2026-03-07T10:34:43.14116073+01:00","level":"INFO","msg":"writer: started","stream_id":"yhe4at3d"}
+{"time":"2026-03-07T10:34:43.141201188+01:00","level":"INFO","msg":"sender: started","stream_id":"yhe4at3d"}
+{"time":"2026-03-07T10:34:43.14150677+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-07T10:34:43.295825307+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-07T10:34:43.299767069+01:00","level":"INFO","msg":"stream: closing","id":"yhe4at3d"}
+{"time":"2026-03-07T10:34:43.299782167+01:00","level":"INFO","msg":"handler: closed","stream_id":"yhe4at3d"}
+{"time":"2026-03-07T10:34:43.300308581+01:00","level":"INFO","msg":"sender: closed","stream_id":"yhe4at3d"}
+{"time":"2026-03-07T10:34:43.300321125+01:00","level":"INFO","msg":"stream: closed","id":"yhe4at3d"}

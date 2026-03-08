@@ -1,0 +1,132 @@
+_wandb:
+    value:
+        cli_version: 0.25.0
+        e:
+            imp2w77r3hnr1riyglrfphdwxmjitb4q:
+                args:
+                    - --model
+                    - Distill_DyAM
+                    - --dataset
+                    - MIMM
+                    - --odir
+                    - /home/osiris-user/Desktop/TFM/methods/results
+                    - --dataset_dir
+                    - /nfs/rnas/projects/M3BENCH/data/inputs/MIMM/
+                    - --endpoint
+                    - OS_6
+                    - --inner_splits
+                    - "5"
+                    - --outer_splits
+                    - "5"
+                    - --epochs
+                    - "80"
+                    - --batch_size
+                    - 16,32
+                    - --learning_rate
+                    - 5e-5,1e-4
+                    - --dyam_dropout
+                    - 0.2,0.4
+                    - --dyam_temperature
+                    - 1.0,2.0
+                    - --distill_alpha
+                    - 1.0,2.0
+                    - --distill_beta
+                    - 0.1,0.3
+                    - --train_missing_prob
+                    - 0.0,0.2,0.4,0.6,0.8
+                    - --train_missing_location
+                    - global, path, radio, clin, blood, radio_report
+                    - --test_missing_prob
+                    - 0.0,0.2,0.4,0.6,0.8
+                    - --test_missing_location
+                    - global, path, radio, clin, blood, radio_report
+                    - --seeds
+                    - 22,2002,4,18473,55602
+                    - --missing_pattern_seed
+                    - "2026"
+                    - --wandb
+                    - --wandb_project
+                    - Distill_DyAM
+                    - --wandb_mode
+                    - online
+                codePath: methods/main.py
+                email: albesa.marc@gmail.com
+                executable: /home/osiris-user/anaconda3/envs/TFM/bin/python
+                git:
+                    commit: 29a3a9058399fd5bd8d9c2c323a781956331cb53
+                    remote: git@github.com:marcalvi/TFM.git
+                host: dd8fc34a3737
+                os: Linux-6.8.0-90-generic-x86_64-with-glibc2.35
+                program: /home/osiris-user/Desktop/TFM/methods/main.py
+                python: CPython 3.9.23
+                root: /home/osiris-user/Desktop/TFM/methods/runs/MIMM
+                startedAt: "2026-03-07T04:08:08.784221Z"
+                writerId: imp2w77r3hnr1riyglrfphdwxmjitb4q
+        m: []
+        python_version: 3.9.23
+        t:
+            "1":
+                - 1
+                - 5
+                - 53
+            "2":
+                - 1
+                - 5
+                - 53
+            "3":
+                - 2
+                - 13
+                - 16
+                - 61
+            "4": 3.9.23
+            "5": 0.25.0
+            "12": 0.25.0
+            "13": linux-x86_64
+dataset:
+    value: MIMM
+endpoint:
+    value: OS_6
+epochs:
+    value: 80
+hp_grid_size:
+    value: 64
+imputation_method:
+    value: zero
+inner_splits:
+    value: 5
+missing_pattern_seed:
+    value: 2026
+modalities:
+    value:
+        - path
+        - radio
+        - clin
+        - blood
+        - radio_report
+model:
+    value: distill_dyam
+outer_fold:
+    value: 3
+outer_splits:
+    value: 5
+phase:
+    value: avg_inner_curve_best_per_fold
+seed:
+    value: 22
+selected_inner_hp_names:
+    value:
+        - lr1e-04_bs32_drop0p2_temp1p0_a2p0_b0p1_trmiss80_trlocglobal
+        - lr5e-05_bs16_drop0p2_temp2p0_a2p0_b0p3_trmiss80_trlocglobal
+        - lr1e-04_bs16_drop0p2_temp1p0_a1p0_b0p3_trmiss80_trlocglobal
+        - lr5e-05_bs16_drop0p4_temp2p0_a1p0_b0p3_trmiss80_trlocglobal
+        - lr5e-05_bs16_drop0p4_temp1p0_a2p0_b0p1_trmiss80_trlocglobal
+test_eval_combinations:
+    value: 30
+test_missing_locations_grid:
+    value: global,path,radio,clin,blood,radio_report
+test_missing_probs_grid:
+    value: 0.0,0.2,0.4,0.6,0.8
+train_missing_location:
+    value: global
+train_missing_prob:
+    value: 0.8

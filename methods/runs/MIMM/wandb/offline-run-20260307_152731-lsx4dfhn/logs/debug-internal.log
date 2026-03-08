@@ -1,0 +1,13 @@
+{"time":"2026-03-07T15:27:31.843885457+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-07T15:27:31.948425327+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-07T15:27:31.948459862+01:00","level":"INFO","msg":"stream: created new stream","id":"lsx4dfhn"}
+{"time":"2026-03-07T15:27:31.948479159+01:00","level":"INFO","msg":"handler: started","stream_id":"lsx4dfhn"}
+{"time":"2026-03-07T15:27:31.951986232+01:00","level":"INFO","msg":"stream: started","id":"lsx4dfhn"}
+{"time":"2026-03-07T15:27:31.952014225+01:00","level":"INFO","msg":"sender: started","stream_id":"lsx4dfhn"}
+{"time":"2026-03-07T15:27:31.952014876+01:00","level":"INFO","msg":"writer: started","stream_id":"lsx4dfhn"}
+{"time":"2026-03-07T15:27:31.952162805+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-07T15:27:31.998296649+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-07T15:27:31.999721997+01:00","level":"INFO","msg":"stream: closing","id":"lsx4dfhn"}
+{"time":"2026-03-07T15:27:31.999726235+01:00","level":"INFO","msg":"handler: closed","stream_id":"lsx4dfhn"}
+{"time":"2026-03-07T15:27:32.000003377+01:00","level":"INFO","msg":"sender: closed","stream_id":"lsx4dfhn"}
+{"time":"2026-03-07T15:27:32.000006183+01:00","level":"INFO","msg":"stream: closed","id":"lsx4dfhn"}

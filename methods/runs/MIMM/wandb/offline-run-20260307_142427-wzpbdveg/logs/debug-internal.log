@@ -1,0 +1,13 @@
+{"time":"2026-03-07T14:24:27.943109705+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-07T14:24:28.069256784+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-07T14:24:28.069304566+01:00","level":"INFO","msg":"stream: created new stream","id":"wzpbdveg"}
+{"time":"2026-03-07T14:24:28.069360232+01:00","level":"INFO","msg":"handler: started","stream_id":"wzpbdveg"}
+{"time":"2026-03-07T14:24:28.072766331+01:00","level":"INFO","msg":"stream: started","id":"wzpbdveg"}
+{"time":"2026-03-07T14:24:28.07281867+01:00","level":"INFO","msg":"writer: started","stream_id":"wzpbdveg"}
+{"time":"2026-03-07T14:24:28.072858717+01:00","level":"INFO","msg":"sender: started","stream_id":"wzpbdveg"}
+{"time":"2026-03-07T14:24:28.073247257+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-07T14:24:28.218731797+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-07T14:24:28.222557596+01:00","level":"INFO","msg":"stream: closing","id":"wzpbdveg"}
+{"time":"2026-03-07T14:24:28.222569529+01:00","level":"INFO","msg":"handler: closed","stream_id":"wzpbdveg"}
+{"time":"2026-03-07T14:24:28.223087135+01:00","level":"INFO","msg":"sender: closed","stream_id":"wzpbdveg"}
+{"time":"2026-03-07T14:24:28.223097525+01:00","level":"INFO","msg":"stream: closed","id":"wzpbdveg"}
