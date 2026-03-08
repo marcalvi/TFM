@@ -65,5 +65,5 @@ python "${PROJECT_ROOT}/main.py" \
   --seeds "${SEEDS}" \
   --missing_pattern_seed "${MISSING_PATTERN_SEED}" \
   --wandb \
-  --wandb_project "KNN_MLP" \
+  --wandb_project "KNN_MLP_bo" \
   --wandb_mode "offline"
