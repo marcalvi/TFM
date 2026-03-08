@@ -70,11 +70,9 @@ def _fit_split_imputer(
         imputation_method="zero",
         missing_pattern_seed=missing_pattern_seed,
     )
-    reference_masks = reference_dataset.fixed_present_masks if apply_missing_reference else None
     return build_imputer(
         imputation_method=method_l,
-        reference_base_dataset=reference_base_dataset,
-        reference_present_masks=reference_masks,
+        reference_dataset=reference_dataset,
         knn_k=5,
         vae_kwargs=imputer_kwargs,
         imputer_seed=imputer_seed,

@@ -412,11 +412,9 @@ def build_loaders(
 
     shared_imputer = prefit_imputer
     if defer_imputer_fit:
-        reference_masks = train_ds.fixed_present_masks if train_missing else None
         shared_imputer = build_imputer(
             imputation_method=method_l,
-            reference_base_dataset=train_base,
-            reference_present_masks=reference_masks,
+            reference_dataset=train_ds,
             knn_k=5,
             vae_kwargs=imputer_kwargs,
             imputer_seed=loader_seed,
