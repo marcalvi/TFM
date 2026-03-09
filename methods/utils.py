@@ -3,7 +3,7 @@ import torch
 import pandas as pd
 import random
 from itertools import product
-from models import MultimodalMLP, DyAM, DistillDyAM, HealNetBinaryWrapper
+from models import MultimodalMLP, DyAM, DistillDyAM, SMILE, HealNetBinaryWrapper
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import average_precision_score, roc_auc_score
 
@@ -19,6 +19,8 @@ def normalize_model_name(model_name):
         return "dyam"
     if compact in {"distilldyam"}:
         return "distill_dyam"
+    if compact in {"smile", "smilee", "smilextended"}:
+        return "smil_e"
     if compact == "healnet":
         return "healnet"
     return name
@@ -132,6 +134,25 @@ def _format_hp_name(cfg, train_missing_pct, train_missing_location, model_name):
             f"temp{temp_str}_"
             f"a{alpha_str}_"
             f"b{beta_str}_"
+            f"trmiss{train_missing_pct}_"
+            f"trloc{train_missing_location}"
+        )
+    if model_name in {"smil_e"}:
+        latent_str = str(cfg["smil_e_latent_dim"])
+        priors_str = str(cfg["smil_e_num_priors"])
+        heads_str = str(cfg["smil_e_num_heads"])
+        dropout_str = str(cfg["smil_e_dropout"]).replace(".", "p")
+        alpha_str = str(cfg["smil_e_alpha"]).replace(".", "p")
+        beta_str = str(cfg["smil_e_beta"]).replace(".", "p")
+        return (
+            f"lr{lr_str}_"
+            f"bs{bs_str}_"
+            f"lat{latent_str}_"
+            f"pri{priors_str}_"
+            f"heads{heads_str}_"
+            f"drop{dropout_str}_"
+            f"alpha{alpha_str}_"
+            f"beta{beta_str}_"
             f"trmiss{train_missing_pct}_"
             f"trloc{train_missing_location}"
         )
@@ -287,6 +308,53 @@ def build_hyperparameter_grid(args, train_missing_prob, train_missing_location):
                 cfg, train_missing_pct, train_missing_location, model_name=model_name
             )
             hp_configs.append(cfg)
+    if model_name in {"smil_e"}:
+        smil_e_latent_dims = parse_value_or_list(args.smil_e_latent_dim, int)
+        smil_e_num_priors = parse_value_or_list(args.smil_e_num_priors, int)
+        smil_e_num_heads = parse_value_or_list(args.smil_e_num_heads, int)
+        smil_e_dropouts = parse_value_or_list(args.smil_e_dropout, float)
+        smil_e_alphas = parse_value_or_list(args.smil_e_alpha, float)
+        smil_e_betas = parse_value_or_list(args.smil_e_beta, float)
+
+        for bs, lr, latent_dim, num_priors, num_heads, dropout, alpha, beta in product(
+            batch_sizes,
+            learning_rates,
+            smil_e_latent_dims,
+            smil_e_num_priors,
+            smil_e_num_heads,
+            smil_e_dropouts,
+            smil_e_alphas,
+            smil_e_betas,
+        ):
+            if int(latent_dim) % int(num_heads) != 0:
+                continue
+            cfg = {
+                "batch_size": int(bs),
+                "learning_rate": float(lr),
+                "smil_e_latent_dim": int(latent_dim),
+                "smil_e_num_priors": int(num_priors),
+                "smil_e_num_heads": int(num_heads),
+                "smil_e_dropout": float(dropout),
+                "smil_e_alpha": float(alpha),
+                "smil_e_beta": float(beta),
+            }
+            key = (
+                cfg["batch_size"],
+                cfg["learning_rate"],
+                cfg["smil_e_latent_dim"],
+                cfg["smil_e_num_priors"],
+                cfg["smil_e_num_heads"],
+                cfg["smil_e_dropout"],
+                cfg["smil_e_alpha"],
+                cfg["smil_e_beta"],
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            cfg["name"] = _format_hp_name(
+                cfg, train_missing_pct, train_missing_location, model_name=model_name
+            )
+            hp_configs.append(cfg)
     if model_name in {"healnet"}:
         healnet_depths = parse_value_or_list(args.healnet_depth, int)
         healnet_num_freq_bands = parse_value_or_list(args.healnet_num_freq_bands, int)
@@ -383,9 +451,13 @@ def build_model(model_name, input_dims, model_kwargs):
         return DyAM(input_dims, **model_kwargs)
     if model_name in {"distill_dyam"}:
         return DistillDyAM(input_dims, **model_kwargs)
+    if model_name in {"smil_e"}:
+        return SMILE(input_dims, **model_kwargs)
     if model_name in {"healnet"}:
         return HealNetBinaryWrapper(input_dims, **model_kwargs)
-    raise ValueError(f"Unsupported model '{model_name}'. Supported: mlp, dyam, distill_dyam, healnet")
+    raise ValueError(
+        f"Unsupported model '{model_name}'. Supported: mlp, dyam, distill_dyam, smil_e, healnet"
+    )
 
 # -------------------------- 5. EVALUATION ----------------------------
 

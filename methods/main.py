@@ -11,19 +11,21 @@ from utils import (
     normalize_model_name,
 )
 
+# ------------------------ HELPER FUNCTIONS --------------------------
+
 def get_args():
     parser = argparse.ArgumentParser()
 
     # Required arguments
     parser.add_argument("--odir", type=str, required=True, help="Output directory")
+    parser.add_argument("--dataset", type=str, required=True, help="Dataset name suffix")
+    parser.add_argument("--endpoint", type=str, required=True, help="Endpoint base name")
     parser.add_argument(
         "--model",
         type=str,
         required=True,
-        choices=["MLP", "DyAM", "HealNet", "Distill_DyAM"],
+        choices=["MLP", "DyAM", "HealNet", "Distill_DyAM", "SMIL_E"],
     )
-    parser.add_argument("--dataset", type=str, required=True, help="Dataset name suffix")
-    parser.add_argument("--endpoint", type=str, required=True, help="Endpoint base name")
     parser.add_argument(
         "--dataset_dir",
         type=str,
@@ -65,6 +67,14 @@ def get_args():
         default="0.3",
         help="Weight b for feature/logit distillation loss in Distill-DyAM. Supports scalar or comma-separated list.",
     )
+
+    # SMIL-E architecture hyperparameters
+    parser.add_argument("--smil_e_latent_dim", type=str, default="64")
+    parser.add_argument("--smil_e_num_priors", type=str, default="64")
+    parser.add_argument("--smil_e_num_heads", type=str, default="4")
+    parser.add_argument("--smil_e_dropout", type=str, default="0.1")
+    parser.add_argument("--smil_e_alpha", type=str, default="1e-2")
+    parser.add_argument("--smil_e_beta", type=str, default="1e-2")
 
     # HealNet architecture hyperparameters
     parser.add_argument("--healnet_depth", type=str, default="3")
@@ -156,7 +166,15 @@ def get_args():
     return parser.parse_args()
 
 # Function to build output directory path
-def _build_output_dir(base_odir, model_label, dataset_label, train_missing_location, train_missing_prob, seed):
+def _build_output_dir(
+    base_odir,
+    model_name,
+    imputation_method,
+    dataset_name,
+    train_missing_location,
+    train_missing_prob,
+    seed,
+):
     mapping = {
         "global": "GLOBAL",
         "radio": "RADIO",
@@ -165,6 +183,15 @@ def _build_output_dir(base_odir, model_label, dataset_label, train_missing_locat
         "radio_report": "RADIO_REPORT",
         "blood": "BLOOD",
     }
+    model_name_norm = normalize_model_name(model_name)
+    if model_name_norm == "mlp":
+        model_label = (
+            f"{str(imputation_method).strip().upper()}_"
+            f"{model_name_norm.upper().replace('_', '-')}"
+        )
+    else:
+        model_label = model_name_norm.upper().replace("_", "-")
+    dataset_label = str(dataset_name).strip().upper()
     key = str(train_missing_location).strip().lower()
     missing_modality_label = mapping.get(key, key.upper())
     missing_pct = str(float(train_missing_prob) * 100.0)
@@ -227,25 +254,26 @@ def _save_run_outputs(
         summary_df = pd.DataFrame([summary])
         summary_df.to_csv(os.path.join(odir, "outer_test_summary.csv"), index=False)
 
+
+# ------------------------ MAIN FUNCTION --------------------------
+
 def main():
-    # Start timer
+    # Parse command-line arguments and start timer
     args = get_args()
     start_time = time.time()
-    print("Running")
     model_name_norm = normalize_model_name(args.model)
-    patient_id_col = "patient"
+    print("Running")
 
+    # Validate imputation_methods are not used with non-MLP models
     if str(args.imputation_method).strip().lower() != "zero" and model_name_norm != "mlp":
         raise ValueError(
             "imputation_method='knn' or 'vae' is currently supported only with model='MLP'."
         )
 
-    # Load dataset-specific preprocessed bundle if available (`dataset/<dataset>.py`);
-    # otherwise use the generic preprocessing pipeline.
-    inst_df, dfs, label_col = load_or_preprocess_dataset(args)
+    # Load dataset-specific preprocessed bundle
+    inst_df, dfs, label_col, patient_id_col = load_or_preprocess_dataset(args)
     modality_names = list(dfs.keys())
     num_modalities = len(modality_names)
-
     print(f"Dataframes read. Starting {args.model} training.")
      
     # Parse run axes (supports scalar or comma-separated list)
@@ -255,50 +283,39 @@ def main():
     test_missing_locations = parse_value_or_list(args.test_missing_location, str, to_lower=True)
     test_missing_probs = parse_value_or_list(args.test_missing_prob, float)
 
-    # Validate train/test missingness locations against available modalities.
+    # Validate train/test missingness locations and probabilities against available values
     invalid_train_locations = [
         loc for loc in train_missing_locations if loc != "global" and loc not in modality_names
     ]
+    invalid_test_locations = [
+        loc for loc in test_missing_locations if loc != "global" and loc not in modality_names
+    ]
+    invalid_test_probs = [p for p in test_missing_probs if p < 0.0 or p > 1.0]
+    invalid_train_probs = [p for p in train_missing_probs if p < 0.0 or p > 1.0]
     if invalid_train_locations:
         valid = ", ".join(["global"] + sorted(modality_names))
         raise ValueError(
             f"Invalid --train_missing_location values: {', '.join(sorted(set(invalid_train_locations)))}. "
             f"Valid values: {valid}"
         )
-
-    invalid_test_locations = [
-        loc for loc in test_missing_locations if loc != "global" and loc not in modality_names
-    ]
     if invalid_test_locations:
         valid = ", ".join(["global"] + sorted(modality_names))
         raise ValueError(
             f"Invalid --test_missing_location values: {', '.join(sorted(set(invalid_test_locations)))}. "
             f"Valid values: {valid}"
         )
-
-    invalid_train_probs = [p for p in train_missing_probs if p < 0.0 or p > 1.0]
     if invalid_train_probs:
         raise ValueError(
             f"Invalid --train_missing_prob values: {invalid_train_probs}. "
             "All values must be in [0, 1]."
         )
-
-    invalid_test_probs = [p for p in test_missing_probs if p < 0.0 or p > 1.0]
     if invalid_test_probs:
         raise ValueError(
             f"Invalid --test_missing_prob values: {invalid_test_probs}. "
             "All values must be in [0, 1]."
         )
 
-    # Construct base output labels
-    if model_name_norm == "mlp":
-        model_label = (
-            f"{str(args.imputation_method).strip().upper()}_"
-            f"{model_name_norm.upper().replace('_', '-')}"
-        )
-    else:
-        model_label = model_name_norm.upper().replace("_", "-")
-    dataset_label = str(args.dataset).strip().upper()
+    # Count total combinations to run and evaluate
     combo_count = len(seeds_list) * len(train_missing_locations) * len(train_missing_probs)
     test_eval_count = len(test_missing_locations) * len(test_missing_probs)
     print(f"Total training runs to execute: {combo_count}")
@@ -341,8 +358,9 @@ def main():
 
                 odir = _build_output_dir(
                     base_odir=args.odir,
-                    model_label=model_label,
-                    dataset_label=dataset_label,
+                    model_name=args.model,
+                    imputation_method=args.imputation_method,
+                    dataset_name=args.dataset,
                     train_missing_location=train_missing_location,
                     train_missing_prob=train_missing_prob,
                     seed=seed,

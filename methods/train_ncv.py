@@ -7,6 +7,7 @@ import torch.optim as optim
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader
 from imputation_methods import build_imputer
+from meta_learning import train_smil_e_with_meta_learning
 from dataset import (
     MultimodalBaseDataset,
     MultimodalDatasetWithMissing,
@@ -161,9 +162,22 @@ def train_model_with_validation(
     model_name,
     imputation_method="zero",
     model_kwargs=None,
+    train_seed=0,
 ):
     model_kwargs = model_kwargs or {}
     model_name_l = normalize_model_name(model_name)
+
+    if model_name_l in {"smil_e"}:
+        return train_smil_e_with_meta_learning(
+            train_loader=train_loader,
+            val_loader=val_loader,
+            device=device,
+            input_dims=input_dims,
+            epochs=epochs,
+            lr=lr,
+            model_kwargs=model_kwargs,
+            train_seed=train_seed,
+        )
 
     # For MLP with learned/external imputation, do not re-mask imputed modalities.
     bypass_mask = (
@@ -310,10 +324,11 @@ def train_model_with_validation(
 
                 if model_name_l in {"distill_dyam"}:
                     logits = student_model(Xs, present_mask).squeeze(1)
+                    loss = _compute_supervised_bce_loss(logits, y, criterion)
                 else:
                     model_mask = None if bypass_mask else present_mask
                     logits = model(Xs, model_mask).squeeze(1)
-                loss = _compute_supervised_bce_loss(logits, y, criterion)
+                    loss = _compute_supervised_bce_loss(logits, y, criterion)
 
                 val_loss += loss.item()
                 val_probs.extend(torch.sigmoid(logits).cpu().numpy().tolist())
@@ -335,6 +350,11 @@ def train_model_with_validation(
                 "student_survival_loss": float(avg_student_survival),
                 "student_repr_loss": float(avg_student_repr),
                 "student_feature_loss": float(avg_student_feature),
+                "smil_meta_train_loss": 0.0,
+                "smil_meta_val_loss": 0.0,
+                "smil_meta_val_ce": 0.0,
+                "smil_align_fusion": 0.0,
+                "smil_align_hidden": 0.0,
             }
         )
 
@@ -571,6 +591,15 @@ def nested_cv(
                         "distill_alpha": hp_cfg["distill_alpha"],
                         "distill_beta": hp_cfg["distill_beta"],
                     }
+                elif model_name_l in {"smil_e"}:
+                    model_kwargs = {
+                        "latent_dim": hp_cfg["smil_e_latent_dim"],
+                        "num_priors": hp_cfg["smil_e_num_priors"],
+                        "num_heads": hp_cfg["smil_e_num_heads"],
+                        "dropout": hp_cfg["smil_e_dropout"],
+                        "alpha": hp_cfg["smil_e_alpha"],
+                        "beta": hp_cfg["smil_e_beta"],
+                    }
                 elif model_name_l in {"healnet"}:
                     model_kwargs = {
                         "depth": hp_cfg["healnet_depth"],
@@ -588,7 +617,7 @@ def nested_cv(
                 else:
                     raise ValueError(
                         "Unsupported model "
-                        f"'{model_name}'. Supported: mlp, dyam, distill_dyam, healnet"
+                        f"'{model_name}'. Supported: mlp, dyam, distill_dyam, smil_e, healnet"
                     )
 
                 # Train the model and evaluate on inner-val fold
@@ -602,6 +631,7 @@ def nested_cv(
                     model_name=model_name,
                     imputation_method=imputation_method,
                     model_kwargs=model_kwargs,
+                    train_seed=int(seed + outer_fold_idx * 10_000 + inner_fold_idx * 100 + hp_idx),
                 )
 
                 # Save inner evaluation METRICS for this HP config and inner fold

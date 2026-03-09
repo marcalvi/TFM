@@ -110,4 +110,4 @@ def load_preprocessed_dataset(args):
         dfs[mod] = dfs[mod].set_index(id_col, drop=False)
 
     inst_df = inst_df.set_index(id_col, drop=False)
-    return inst_df, dfs, label_col
+    return inst_df, dfs, label_col, id_col
