@@ -612,7 +612,7 @@ def nested_cv(
                         "latent_dim_head": hp_cfg["healnet_latent_dim_head"],
                         "attn_dropout": hp_cfg["healnet_attn_dropout"],
                         "ff_dropout": hp_cfg["healnet_ff_dropout"],
-                        "self_per_cross_attn": hp_cfg["healnet_self_per_cross_attn"],
+                        "self_per_cross_attn": 1,
                     }
                 else:
                     raise ValueError(
