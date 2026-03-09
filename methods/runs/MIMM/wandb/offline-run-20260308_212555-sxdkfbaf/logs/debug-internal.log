@@ -1,0 +1,13 @@
+{"time":"2026-03-08T21:25:55.493137246+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-08T21:25:55.598024968+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-08T21:25:55.598062308+01:00","level":"INFO","msg":"stream: created new stream","id":"sxdkfbaf"}
+{"time":"2026-03-08T21:25:55.598081254+01:00","level":"INFO","msg":"handler: started","stream_id":"sxdkfbaf"}
+{"time":"2026-03-08T21:25:55.601125934+01:00","level":"INFO","msg":"stream: started","id":"sxdkfbaf"}
+{"time":"2026-03-08T21:25:55.601191778+01:00","level":"INFO","msg":"writer: started","stream_id":"sxdkfbaf"}
+{"time":"2026-03-08T21:25:55.601191948+01:00","level":"INFO","msg":"sender: started","stream_id":"sxdkfbaf"}
+{"time":"2026-03-08T21:25:55.60135735+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-08T21:25:55.65646038+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-08T21:25:55.657716017+01:00","level":"INFO","msg":"stream: closing","id":"sxdkfbaf"}
+{"time":"2026-03-08T21:25:55.657720536+01:00","level":"INFO","msg":"handler: closed","stream_id":"sxdkfbaf"}
+{"time":"2026-03-08T21:25:55.658063001+01:00","level":"INFO","msg":"sender: closed","stream_id":"sxdkfbaf"}
+{"time":"2026-03-08T21:25:55.658065877+01:00","level":"INFO","msg":"stream: closed","id":"sxdkfbaf"}
