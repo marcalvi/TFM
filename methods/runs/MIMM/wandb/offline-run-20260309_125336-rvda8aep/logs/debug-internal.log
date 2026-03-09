@@ -1,0 +1,13 @@
+{"time":"2026-03-09T12:53:37.139245643+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-09T12:53:37.265432993+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-09T12:53:37.265480092+01:00","level":"INFO","msg":"stream: created new stream","id":"rvda8aep"}
+{"time":"2026-03-09T12:53:37.265530037+01:00","level":"INFO","msg":"handler: started","stream_id":"rvda8aep"}
+{"time":"2026-03-09T12:53:37.26887022+01:00","level":"INFO","msg":"stream: started","id":"rvda8aep"}
+{"time":"2026-03-09T12:53:37.268924063+01:00","level":"INFO","msg":"writer: started","stream_id":"rvda8aep"}
+{"time":"2026-03-09T12:53:37.268934813+01:00","level":"INFO","msg":"sender: started","stream_id":"rvda8aep"}
+{"time":"2026-03-09T12:53:37.269344233+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-09T12:53:37.432175949+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-09T12:53:37.436350872+01:00","level":"INFO","msg":"stream: closing","id":"rvda8aep"}
+{"time":"2026-03-09T12:53:37.436366532+01:00","level":"INFO","msg":"handler: closed","stream_id":"rvda8aep"}
+{"time":"2026-03-09T12:53:37.437370294+01:00","level":"INFO","msg":"sender: closed","stream_id":"rvda8aep"}
+{"time":"2026-03-09T12:53:37.437399089+01:00","level":"INFO","msg":"stream: closed","id":"rvda8aep"}

@@ -1,0 +1,13 @@
+{"time":"2026-03-08T16:51:53.176494472+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-08T16:51:53.281025187+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-08T16:51:53.281054232+01:00","level":"INFO","msg":"stream: created new stream","id":"klxwmm2g"}
+{"time":"2026-03-08T16:51:53.281069781+01:00","level":"INFO","msg":"handler: started","stream_id":"klxwmm2g"}
+{"time":"2026-03-08T16:51:53.285160416+01:00","level":"INFO","msg":"stream: started","id":"klxwmm2g"}
+{"time":"2026-03-08T16:51:53.28518935+01:00","level":"INFO","msg":"sender: started","stream_id":"klxwmm2g"}
+{"time":"2026-03-08T16:51:53.285189461+01:00","level":"INFO","msg":"writer: started","stream_id":"klxwmm2g"}
+{"time":"2026-03-08T16:51:53.285356526+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-08T16:51:53.339453993+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-08T16:51:53.34074582+01:00","level":"INFO","msg":"stream: closing","id":"klxwmm2g"}
+{"time":"2026-03-08T16:51:53.340750679+01:00","level":"INFO","msg":"handler: closed","stream_id":"klxwmm2g"}
+{"time":"2026-03-08T16:51:53.341352724+01:00","level":"INFO","msg":"sender: closed","stream_id":"klxwmm2g"}
+{"time":"2026-03-08T16:51:53.341356421+01:00","level":"INFO","msg":"stream: closed","id":"klxwmm2g"}
