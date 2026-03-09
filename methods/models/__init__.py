@@ -1,6 +1,7 @@
 from .mlp import MultimodalMLP
 from .dyam import DyAM
 from .distill_dyam import DistillDyAM
+from .smil_e import SMILE, learn_priors, smile_alignment_loss, meta_train_step
 _HEALNET_IMPORT_ERROR = None
 try:
     from .healnet import HealNet, HealNetBinaryWrapper
@@ -19,6 +20,10 @@ __all__ = [
     "MultimodalMLP",
     "DyAM",
     "DistillDyAM",
+    "SMILE",
+    "learn_priors",
+    "smile_alignment_loss",
+    "meta_train_step",
     "HealNet",
     "HealNetBinaryWrapper",
 ]

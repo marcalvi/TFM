@@ -56,9 +56,9 @@ def load_or_preprocess_dataset(args):
             "load_preprocessed_dataset(args)."
         )
     bundle = loader_fn(args)
-    if not isinstance(bundle, tuple) or len(bundle) != 3:
+    if not isinstance(bundle, tuple) or len(bundle) != 4:
         raise ValueError(
             f"Dataset module '{module_name}' must return "
-            "(inst_df, dfs, label_col)."
+            "(inst_df, dfs, label_col, patient_id_col)."
         )
     return bundle
