@@ -158,19 +158,29 @@ def _format_hp_name(cfg, train_missing_pct, train_missing_location, model_name):
         )
     if model_name in {"healnet"}:
         depth_str = str(cfg["healnet_depth"])
+        nfb_str = str(cfg["healnet_num_freq_bands"])
         lat_str = str(cfg["healnet_num_latents"])
         ldim_str = str(cfg["healnet_latent_dim"])
         xh_str = str(cfg["healnet_cross_heads"])
         lh_str = str(cfg["healnet_latent_heads"])
+        cdh_str = str(cfg["healnet_cross_dim_head"])
+        ldh_str = str(cfg["healnet_latent_dim_head"])
+        adrop_str = str(cfg["healnet_attn_dropout"]).replace(".", "p")
+        fdrop_str = str(cfg["healnet_ff_dropout"]).replace(".", "p")
         selfx_str = str(cfg["healnet_self_per_cross_attn"])
         return (
             f"lr{lr_str}_"
             f"bs{bs_str}_"
             f"depth{depth_str}_"
+            f"nfb{nfb_str}_"
             f"lat{lat_str}_"
             f"ldim{ldim_str}_"
             f"xh{xh_str}_"
             f"lh{lh_str}_"
+            f"cdh{cdh_str}_"
+            f"ldh{ldh_str}_"
+            f"adrop{adrop_str}_"
+            f"fdrop{fdrop_str}_"
             f"selfx{selfx_str}_"
             f"trmiss{train_missing_pct}_"
             f"trloc{train_missing_location}"
