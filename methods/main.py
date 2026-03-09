@@ -87,6 +87,7 @@ def get_args():
     parser.add_argument("--healnet_latent_dim_head", type=str, default="64")
     parser.add_argument("--healnet_attn_dropout", type=str, default="0.0")
     parser.add_argument("--healnet_ff_dropout", type=str, default="0.0")
+    parser.add_argument("--healnet_self_per_cross_attn", type=str, default="1")
 
     # Missing-modality setup
     parser.add_argument(

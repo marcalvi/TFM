@@ -35,6 +35,7 @@ HEALNET_LATENT_HEADS_GRID="4"
 HEALNET_CROSS_DIM_HEAD_GRID="64"
 HEALNET_LATENT_DIM_HEAD_GRID="64"
 HEALNET_DROPOUT_GRID="0.1,0.2"
+HEALNET_SELF_PER_CROSS_ATTN_GRID="0,1"
 
 # Missingness experiments
 TRAIN_MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
@@ -63,6 +64,7 @@ python "${PROJECT_ROOT}/main.py" \
   --healnet_latent_dim_head "${HEALNET_LATENT_DIM_HEAD_GRID}" \
   --healnet_attn_dropout "${HEALNET_DROPOUT_GRID}" \
   --healnet_ff_dropout "${HEALNET_DROPOUT_GRID}" \
+  --healnet_self_per_cross_attn "${HEALNET_SELF_PER_CROSS_ATTN_GRID}" \
   --train_missing_prob "${TRAIN_MISSING_PROB_GRID}" \
   --train_missing_location "${TRAIN_MISSING_LOCATION_GRID}" \
   --test_missing_prob "${TEST_MISSING_PROB_GRID}" \

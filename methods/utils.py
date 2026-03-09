@@ -162,6 +162,7 @@ def _format_hp_name(cfg, train_missing_pct, train_missing_location, model_name):
         ldim_str = str(cfg["healnet_latent_dim"])
         xh_str = str(cfg["healnet_cross_heads"])
         lh_str = str(cfg["healnet_latent_heads"])
+        selfx_str = str(cfg["healnet_self_per_cross_attn"])
         return (
             f"lr{lr_str}_"
             f"bs{bs_str}_"
@@ -170,6 +171,7 @@ def _format_hp_name(cfg, train_missing_pct, train_missing_location, model_name):
             f"ldim{ldim_str}_"
             f"xh{xh_str}_"
             f"lh{lh_str}_"
+            f"selfx{selfx_str}_"
             f"trmiss{train_missing_pct}_"
             f"trloc{train_missing_location}"
         )
@@ -364,6 +366,7 @@ def build_hyperparameter_grid(args, train_missing_prob, train_missing_location):
         healnet_latent_dim_head = parse_value_or_list(args.healnet_latent_dim_head, int)
         healnet_attn_dropout = parse_value_or_list(args.healnet_attn_dropout, float)
         healnet_ff_dropout = parse_value_or_list(args.healnet_ff_dropout, float)
+        healnet_self_per_cross_attn = parse_value_or_list(args.healnet_self_per_cross_attn, int)
 
         for (
             bs,
@@ -378,6 +381,7 @@ def build_hyperparameter_grid(args, train_missing_prob, train_missing_location):
             latent_dim_head,
             attn_dropout,
             ff_dropout,
+            self_per_cross_attn,
         ) in product(
             batch_sizes,
             learning_rates,
@@ -391,6 +395,7 @@ def build_hyperparameter_grid(args, train_missing_prob, train_missing_location):
             healnet_latent_dim_head,
             healnet_attn_dropout,
             healnet_ff_dropout,
+            healnet_self_per_cross_attn,
         ):
             cfg = {
                 "batch_size": int(bs),
@@ -405,6 +410,7 @@ def build_hyperparameter_grid(args, train_missing_prob, train_missing_location):
                 "healnet_latent_dim_head": int(latent_dim_head),
                 "healnet_attn_dropout": float(attn_dropout),
                 "healnet_ff_dropout": float(ff_dropout),
+                "healnet_self_per_cross_attn": int(self_per_cross_attn),
             }
             key = (
                 cfg["batch_size"],
@@ -419,6 +425,7 @@ def build_hyperparameter_grid(args, train_missing_prob, train_missing_location):
                 cfg["healnet_latent_dim_head"],
                 cfg["healnet_attn_dropout"],
                 cfg["healnet_ff_dropout"],
+                cfg["healnet_self_per_cross_attn"],
             )
             if key in seen:
                 continue
