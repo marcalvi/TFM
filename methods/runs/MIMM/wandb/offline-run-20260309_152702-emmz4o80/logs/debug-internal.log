@@ -1,0 +1,13 @@
+{"time":"2026-03-09T15:27:02.76188311+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-09T15:27:02.866164188+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-09T15:27:02.866194295+01:00","level":"INFO","msg":"stream: created new stream","id":"emmz4o80"}
+{"time":"2026-03-09T15:27:02.866210105+01:00","level":"INFO","msg":"handler: started","stream_id":"emmz4o80"}
+{"time":"2026-03-09T15:27:02.869882962+01:00","level":"INFO","msg":"stream: started","id":"emmz4o80"}
+{"time":"2026-03-09T15:27:02.869897128+01:00","level":"INFO","msg":"writer: started","stream_id":"emmz4o80"}
+{"time":"2026-03-09T15:27:02.86989828+01:00","level":"INFO","msg":"sender: started","stream_id":"emmz4o80"}
+{"time":"2026-03-09T15:27:02.870067229+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-09T15:27:02.927424116+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-09T15:27:02.928881464+01:00","level":"INFO","msg":"stream: closing","id":"emmz4o80"}
+{"time":"2026-03-09T15:27:02.928885612+01:00","level":"INFO","msg":"handler: closed","stream_id":"emmz4o80"}
+{"time":"2026-03-09T15:27:02.929534055+01:00","level":"INFO","msg":"sender: closed","stream_id":"emmz4o80"}
+{"time":"2026-03-09T15:27:02.929537331+01:00","level":"INFO","msg":"stream: closed","id":"emmz4o80"}

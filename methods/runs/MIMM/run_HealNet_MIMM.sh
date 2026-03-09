@@ -4,7 +4,7 @@ set -euo pipefail
 # Activate conda environment
 #source /opt/miniconda3/etc/profile.d/conda.sh
 source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-conda activate TFM
+conda activate TFM_5090
 
 # Optional WandB login from environment variable
 wandb login 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
@@ -71,5 +71,5 @@ python "${PROJECT_ROOT}/main.py" \
   --seeds "${SEEDS}" \
   --missing_pattern_seed "${MISSING_PATTERN_SEED}" \
   --wandb \
-  --wandb_project "HEALNet" \
+  --wandb_project "HealNet" \
   --wandb_mode "online"
