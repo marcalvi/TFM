@@ -207,7 +207,7 @@ def train_model_with_validation(
         teacher_base_dataset = train_loader.dataset.base_dataset
     else:
         model = build_model(model_name, input_dims, model_kwargs).to(device)
-        weight_decay = 1e-3 if model_name_l == "healnet" else 1e-4
+        weight_decay = 1e-4
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
         scheduler_patience = 3 if model_name_l == "healnet" else 5
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -226,7 +226,7 @@ def train_model_with_validation(
     best_val_probs = None
 
     early_stop = 0
-    patience = 8 if model_name_l == "healnet" else 20
+    patience = 10 if model_name_l == "healnet" else 20
 
     history = []
 
