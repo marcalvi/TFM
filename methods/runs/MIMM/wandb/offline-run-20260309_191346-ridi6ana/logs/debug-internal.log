@@ -1,0 +1,13 @@
+{"time":"2026-03-09T19:13:46.106219406+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-09T19:13:46.212769443+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-09T19:13:46.212805281+01:00","level":"INFO","msg":"stream: created new stream","id":"ridi6ana"}
+{"time":"2026-03-09T19:13:46.212834265+01:00","level":"INFO","msg":"handler: started","stream_id":"ridi6ana"}
+{"time":"2026-03-09T19:13:46.216441417+01:00","level":"INFO","msg":"stream: started","id":"ridi6ana"}
+{"time":"2026-03-09T19:13:46.216461385+01:00","level":"INFO","msg":"writer: started","stream_id":"ridi6ana"}
+{"time":"2026-03-09T19:13:46.216468819+01:00","level":"INFO","msg":"sender: started","stream_id":"ridi6ana"}
+{"time":"2026-03-09T19:13:46.216626777+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-09T19:13:46.290216923+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-09T19:13:46.291555537+01:00","level":"INFO","msg":"stream: closing","id":"ridi6ana"}
+{"time":"2026-03-09T19:13:46.291569373+01:00","level":"INFO","msg":"handler: closed","stream_id":"ridi6ana"}
+{"time":"2026-03-09T19:13:46.291943379+01:00","level":"INFO","msg":"sender: closed","stream_id":"ridi6ana"}
+{"time":"2026-03-09T19:13:46.291947697+01:00","level":"INFO","msg":"stream: closed","id":"ridi6ana"}
