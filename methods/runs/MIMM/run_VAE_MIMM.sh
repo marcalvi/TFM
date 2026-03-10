@@ -21,7 +21,7 @@ RESULTS_ROOT="${PROJECT_ROOT}/results"
 ENDPOINT="OS_6"
 
 # Proposed tuning grid
-SEEDS="2002"
+SEEDS="4,18473,55602"
 #SEEDS="2002,4,18473,55602"
 MISSING_PATTERN_SEED=2026
 INNER_SPLITS=5
@@ -45,7 +45,7 @@ VAE_IMPUTER_LR=1e-3
 VAE_IMPUTER_BETA=1e-3
 
 # Missingness experiments
-TRAIN_MISSING_LOCATION_GRID="clin, blood, radio_report"
+TRAIN_MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
 TEST_MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
 TRAIN_MISSING_PROB_GRID="0.0,0.2,0.4,0.6,0.8"
 TEST_MISSING_PROB_GRID="0.0,0.2,0.4,0.6,0.8"
