@@ -38,10 +38,9 @@ HEALNET_DROPOUT_GRID="0.2,0.3"
 HEALNET_SELF_PER_CROSS_ATTN_GRID="0,1"
 
 # Missingness experiments
-TRAIN_MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
-TRAIN_MISSING_PROB_GRID="0.0,0.2,0.4,0.6,0.8"
-TEST_MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
-TEST_MISSING_PROB_GRID="0.0,0.2,0.4,0.6,0.8"
+MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
+TRAIN_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
+TEST_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
 
 python "${PROJECT_ROOT}/main.py" \
   --model "HealNet" \
@@ -65,10 +64,9 @@ python "${PROJECT_ROOT}/main.py" \
   --healnet_attn_dropout "${HEALNET_DROPOUT_GRID}" \
   --healnet_ff_dropout "${HEALNET_DROPOUT_GRID}" \
   --healnet_self_per_cross_attn "${HEALNET_SELF_PER_CROSS_ATTN_GRID}" \
-  --train_missing_prob "${TRAIN_MISSING_PROB_GRID}" \
-  --train_missing_location "${TRAIN_MISSING_LOCATION_GRID}" \
-  --test_missing_prob "${TEST_MISSING_PROB_GRID}" \
-  --test_missing_location "${TEST_MISSING_LOCATION_GRID}" \
+  --train_missing_prop "${TRAIN_MISSING_PROP_GRID}" \
+  --missing_location "${MISSING_LOCATION_GRID}" \
+  --test_missing_prop "${TEST_MISSING_PROP_GRID}" \
   --seeds "${SEEDS}" \
   --missing_pattern_seed "${MISSING_PATTERN_SEED}" \
   --wandb \

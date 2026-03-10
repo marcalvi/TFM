@@ -33,10 +33,9 @@ SMIL_E_ALPHA_GRID="1e-2"
 SMIL_E_BETA_GRID="1e-2"
 
 # Missingness experiments
-TRAIN_MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
-TRAIN_MISSING_PROB_GRID="0.0,0.2,0.4,0.6,0.8"
-TEST_MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
-TEST_MISSING_PROB_GRID="0.0,0.2,0.4,0.6,0.8"
+MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
+TRAIN_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8,0.9"
+TEST_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8,0.9"
 
 python "${PROJECT_ROOT}/main.py" \
   --model "SMIL_E" \
@@ -55,10 +54,9 @@ python "${PROJECT_ROOT}/main.py" \
   --smil_e_dropout "${SMIL_E_DROPOUT_GRID}" \
   --smil_e_alpha "${SMIL_E_ALPHA_GRID}" \
   --smil_e_beta "${SMIL_E_BETA_GRID}" \
-  --train_missing_prob "${TRAIN_MISSING_PROB_GRID}" \
-  --train_missing_location "${TRAIN_MISSING_LOCATION_GRID}" \
-  --test_missing_prob "${TEST_MISSING_PROB_GRID}" \
-  --test_missing_location "${TEST_MISSING_LOCATION_GRID}" \
+  --train_missing_prop "${TRAIN_MISSING_PROP_GRID}" \
+  --missing_location "${MISSING_LOCATION_GRID}" \
+  --test_missing_prop "${TEST_MISSING_PROP_GRID}" \
   --seeds "${SEEDS}" \
   --missing_pattern_seed "${MISSING_PATTERN_SEED}" \
   --wandb \
