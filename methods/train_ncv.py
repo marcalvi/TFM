@@ -86,9 +86,10 @@ def _predict_model_probabilities(
     device,
     bypass_mask=False,
 ):
-    """Run one model on a loader and return y_true / probabilities."""
+    """Run one model on a loader and return y_true / logits / probabilities / pids."""
     model.eval()
     y_true = []
+    y_logits = []
     y_prob = []
     pids = []
 
@@ -99,13 +100,15 @@ def _predict_model_probabilities(
 
             model_mask = None if bypass_mask else present_mask
             logits = model(Xs, model_mask).squeeze(1)
+            logits_np = logits.detach().cpu().numpy().reshape(-1)
             probs = torch.sigmoid(logits).cpu().numpy().reshape(-1)
 
+            y_logits.extend(logits_np.tolist())
             y_prob.extend(probs.tolist())
             y_true.extend(y.cpu().numpy().tolist())
             pids.extend(pid_batch)
 
-    return np.asarray(y_true), np.asarray(y_prob), list(pids)
+    return np.asarray(y_true), np.asarray(y_logits), np.asarray(y_prob), list(pids)
 
 # Function to build a complete-modality batch for teacher input in distillation
 def _build_full_batch_from_patient_ids(base_dataset, pid_batch, device):
@@ -417,7 +420,7 @@ def nested_cv(
         print("wandb is not installed. Continuing without wandb logging.")
 
     # Train missingness is applied on both inner-train and inner-validation.
-    apply_missing_train = float(getattr(train_missing_simulator, "missing_prob", 0.0)) > 0.0
+    apply_missing_train = float(getattr(train_missing_simulator, "missing_prop", 0.0)) > 0.0
     model_name_l = normalize_model_name(model_name)
     predict_bypass_mask = (
         model_name_l == "mlp"
@@ -428,11 +431,11 @@ def nested_cv(
     # Test-time evaluation setups:
     # by default evaluate once with the provided train simulator.
     if test_eval_setups is None:
-        eval_missing_prob = float(getattr(train_missing_simulator, "missing_prob", 0.0))
+        eval_missing_prop = float(getattr(train_missing_simulator, "missing_prop", 0.0))
         eval_missing_location = str(getattr(train_missing_simulator, "missing_location", "global")).lower()
         test_eval_setups = [
             {
-                "missing_prob": eval_missing_prob,
+                "missing_prop": eval_missing_prop,
                 "missing_location": eval_missing_location,
                 "simulator": train_missing_simulator,
             }
@@ -706,11 +709,11 @@ def nested_cv(
         inner_curve_run = None
         if wandb_active and selected_inner_histories:
             selected_hp_names = [row["hp_name"] for row in selected_inner_rows]
-            train_missing_location = str((wandb_base_config or {}).get("train_missing_location", "na")).strip().lower()
-            train_missing_prob = float((wandb_base_config or {}).get("train_missing_prob", 0.0))
+            missing_location = str((wandb_base_config or {}).get("missing_location", "na")).strip().lower()
+            train_missing_prop = float((wandb_base_config or {}).get("train_missing_prop", 0.0))
             run_name = (
-                f"trainloc{train_missing_location}_"
-                f"trainprob{train_missing_prob:g}_"
+                f"loc{missing_location}_"
+                f"trainprop{train_missing_prop:g}_"
                 f"seed{seed}_"
                 f"outer{outer_fold_idx}"
             )
@@ -792,9 +795,10 @@ def nested_cv(
         for eval_setup in test_eval_setups:
             eval_simulator = eval_setup["simulator"]
             eval_missing_location = str(eval_setup["missing_location"]).lower()
-            eval_missing_prob = float(eval_setup["missing_prob"])
-            apply_missing_eval = eval_missing_prob > 0.0
+            eval_missing_prop = float(eval_setup["missing_prop"])
+            apply_missing_eval = eval_missing_prop > 0.0
 
+            model_logits = []
             model_probs = []
             y_true_outer = None
             pids_outer = None
@@ -818,7 +822,7 @@ def nested_cv(
                     drop_last=False,
                 )
 
-                y_true_i, y_prob_i, pids_i = _predict_model_probabilities(
+                y_true_i, y_logits_i, y_prob_i, pids_i = _predict_model_probabilities(
                     model=model,
                     data_loader=ensemble_eval_loader,
                     device=device,
@@ -832,26 +836,45 @@ def nested_cv(
                         raise ValueError(
                             f"Outer-test patient ID order mismatch across inner models "
                             f"(outer_fold={outer_fold_idx}, eval_missing_location={eval_missing_location}, "
-                            f"eval_missing_prob={eval_missing_prob}, inner_model_idx={member_idx + 1})."
+                            f"eval_missing_prop={eval_missing_prop}, inner_model_idx={member_idx + 1})."
                         )
                     if not np.array_equal(y_true_outer, y_true_i):
                         raise ValueError(
                             f"Outer-test y_true mismatch across inner models "
                             f"(outer_fold={outer_fold_idx}, eval_missing_location={eval_missing_location}, "
-                            f"eval_missing_prob={eval_missing_prob}, inner_model_idx={member_idx + 1})."
+                            f"eval_missing_prop={eval_missing_prop}, inner_model_idx={member_idx + 1})."
                         )
+                model_logits.append(y_logits_i)
                 model_probs.append(y_prob_i)
 
             # Average probabilities across inner models to get ensemble prediction
             ensemble_prob = np.mean(np.stack(model_probs, axis=0), axis=0)
             outer_metrics = safe_binary_metrics(y_true_outer, ensemble_prob)
 
+            per_patient_prediction_rows = []
+            for patient_idx, pid in enumerate(pids_outer):
+                row = {
+                    "outer_fold": outer_fold_idx,
+                    "split": "test_outer_eval",
+                    "patient": pid,
+                    "eval_missing_location": eval_missing_location,
+                    "eval_missing_prop": eval_missing_prop,
+                }
+                for inner_idx, inner_logits in enumerate(model_logits, start=1):
+                    logit_value = float(inner_logits[patient_idx])
+                    pred_label = int(logit_value >= 0.0)
+                    row[f"inner_model_{inner_idx}_logit"] = logit_value
+                    row[f"inner_model_{inner_idx}_pred_label"] = pred_label
+                per_patient_prediction_rows.append(row)
+
+            split_rows.extend(per_patient_prediction_rows)
+
             outer_results.append(
                 {
                     "outer_fold": outer_fold_idx,
                     "outer_eval_target": "test_outer",
                     "eval_missing_location": eval_missing_location,
-                    "eval_missing_prob": eval_missing_prob,
+                    "eval_missing_prop": eval_missing_prop,
                     "inner_models_count": len(selected_inner_members),
                     "selected_inner_hp_names": "|".join(r["hp_name"] for r in selected_inner_rows),
                     "selected_inner_mean_AUC": float(np.mean([r["val_best_AUC"] for r in selected_inner_rows])),

@@ -2,6 +2,7 @@ print("Importing packages")
 import argparse
 import os
 import time
+from collections import OrderedDict
 import pandas as pd
 from dataset import MissingModalitySimulator, load_or_preprocess_dataset
 from train_ncv import nested_cv
@@ -91,28 +92,22 @@ def get_args():
 
     # Missing-modality setup
     parser.add_argument(
-        "--train_missing_prob",
+        "--train_missing_prop",
         type=str,
         default="0",
-        help="Train/validation missing probability in [0, 1]. Supports scalar or comma-separated list.",
+        help="Train/validation missing proportion in [0, 1]. Supports scalar or comma-separated list.",
     )
     parser.add_argument(
-        "--train_missing_location",
+        "--missing_location",
         type=str,
         default="global",
-        help="Train/validation missing location: global or modality key (path, radio, clin, blood, radio_report). Supports scalar or comma-separated list.",
+        help="Missing location: global or modality key (path, radio, clin, blood, radio_report). Supports scalar or comma-separated list.",
     )
     parser.add_argument(
-        "--test_missing_prob",
+        "--test_missing_prop",
         type=str,
         default="0",
-        help="Test missing probability in [0, 1]. Supports scalar or comma-separated list.",
-    )
-    parser.add_argument(
-        "--test_missing_location",
-        type=str,
-        default="global",
-        help="Test missing location: global or modality key (path, radio, clin, blood, radio_report). Supports scalar or comma-separated list.",
+        help="Test missing proportion in [0, 1]. Supports scalar or comma-separated list.",
     )
     parser.add_argument(
         "--imputation_method",
@@ -171,8 +166,8 @@ def _build_output_dir(
     model_name,
     imputation_method,
     dataset_name,
-    train_missing_location,
-    train_missing_prob,
+    missing_location,
+    train_missing_prop,
     seed,
 ):
     mapping = {
@@ -192,9 +187,9 @@ def _build_output_dir(
     else:
         model_label = model_name_norm.upper().replace("_", "-")
     dataset_label = str(dataset_name).strip().upper()
-    key = str(train_missing_location).strip().lower()
+    key = str(missing_location).strip().lower()
     missing_modality_label = mapping.get(key, key.upper())
-    missing_pct = str(float(train_missing_prob) * 100.0)
+    missing_pct = str(float(train_missing_prop) * 100.0)
     return os.path.join(
         base_odir,
         model_label,
@@ -213,8 +208,8 @@ def _save_run_outputs(
     history_df,
     split_df,
     seed,
-    train_missing_location,
-    train_missing_prob,
+    missing_location,
+    train_missing_prop,
 ):
     os.makedirs(odir, exist_ok=True)
 
@@ -224,20 +219,20 @@ def _save_run_outputs(
     split_df = split_df.copy()
 
     inner_df["seed"] = seed
-    inner_df["train_missing_location"] = train_missing_location
-    inner_df["train_missing_prob"] = float(train_missing_prob)
+    inner_df["missing_location"] = missing_location
+    inner_df["train_missing_prop"] = float(train_missing_prop)
 
     outer_df["seed"] = seed
-    outer_df["train_missing_location"] = train_missing_location
-    outer_df["train_missing_prob"] = float(train_missing_prob)
+    outer_df["missing_location"] = missing_location
+    outer_df["train_missing_prop"] = float(train_missing_prop)
 
     history_df["seed"] = seed
-    history_df["train_missing_location"] = train_missing_location
-    history_df["train_missing_prob"] = float(train_missing_prob)
+    history_df["missing_location"] = missing_location
+    history_df["train_missing_prop"] = float(train_missing_prop)
 
     split_df["seed"] = seed
-    split_df["train_missing_location"] = train_missing_location
-    split_df["train_missing_prob"] = float(train_missing_prob)
+    split_df["missing_location"] = missing_location
+    split_df["train_missing_prop"] = float(train_missing_prop)
 
     inner_df.to_csv(os.path.join(odir, "inner_hp_eval.csv"), index=False)
     outer_df.to_csv(os.path.join(odir, "outer_test_metrics.csv"), index=False)
@@ -253,6 +248,38 @@ def _save_run_outputs(
             summary[f"{col}_std"] = float(outer_df[col].std())
         summary_df = pd.DataFrame([summary])
         summary_df.to_csv(os.path.join(odir, "outer_test_summary.csv"), index=False)
+
+
+def _build_test_eval_setups_for_run(
+    missing_location,
+    train_missing_prop,
+    test_missing_props,
+    num_modalities,
+    modality_names,
+):
+    missing_location = str(missing_location).strip().lower()
+    train_missing_prop = float(train_missing_prop)
+
+    if missing_location == "global":
+        eval_props = [float(p) for p in test_missing_props]
+    elif train_missing_prop == 0.0:
+        eval_props = [float(p) for p in test_missing_props]
+    else:
+        eval_props = [0.0]
+
+    setups = OrderedDict()
+    for prop in eval_props:
+        setups[float(prop)] = {
+            "missing_location": missing_location,
+            "missing_prop": float(prop),
+            "simulator": MissingModalitySimulator(
+                num_modalities=num_modalities,
+                modality_names=modality_names,
+                missing_prop=float(prop),
+                missing_location=missing_location,
+            ),
+        }
+    return list(setups.values())
 
 
 # ------------------------ MAIN FUNCTION --------------------------
@@ -278,97 +305,91 @@ def main():
      
     # Parse run axes (supports scalar or comma-separated list)
     seeds_list = parse_value_or_list(args.seeds, int)
-    train_missing_locations = parse_value_or_list(args.train_missing_location, str, to_lower=True)
-    train_missing_probs = parse_value_or_list(args.train_missing_prob, float)
-    test_missing_locations = parse_value_or_list(args.test_missing_location, str, to_lower=True)
-    test_missing_probs = parse_value_or_list(args.test_missing_prob, float)
+    missing_locations = parse_value_or_list(args.missing_location, str, to_lower=True)
+    train_missing_props = parse_value_or_list(args.train_missing_prop, float)
+    test_missing_props = parse_value_or_list(args.test_missing_prop, float)
 
     # Validate train/test missingness locations and probabilities against available values
     invalid_train_locations = [
-        loc for loc in train_missing_locations if loc != "global" and loc not in modality_names
+        loc for loc in missing_locations if loc != "global" and loc not in modality_names
     ]
-    invalid_test_locations = [
-        loc for loc in test_missing_locations if loc != "global" and loc not in modality_names
-    ]
-    invalid_test_probs = [p for p in test_missing_probs if p < 0.0 or p > 1.0]
-    invalid_train_probs = [p for p in train_missing_probs if p < 0.0 or p > 1.0]
+    invalid_test_props = [p for p in test_missing_props if p < 0.0 or p > 1.0]
+    invalid_train_props = [p for p in train_missing_props if p < 0.0 or p > 1.0]
     if invalid_train_locations:
         valid = ", ".join(["global"] + sorted(modality_names))
         raise ValueError(
-            f"Invalid --train_missing_location values: {', '.join(sorted(set(invalid_train_locations)))}. "
+            f"Invalid --missing_location values: {', '.join(sorted(set(invalid_train_locations)))}. "
             f"Valid values: {valid}"
         )
-    if invalid_test_locations:
-        valid = ", ".join(["global"] + sorted(modality_names))
+    if invalid_train_props:
         raise ValueError(
-            f"Invalid --test_missing_location values: {', '.join(sorted(set(invalid_test_locations)))}. "
-            f"Valid values: {valid}"
-        )
-    if invalid_train_probs:
-        raise ValueError(
-            f"Invalid --train_missing_prob values: {invalid_train_probs}. "
+            f"Invalid --train_missing_prop values: {invalid_train_props}. "
             "All values must be in [0, 1]."
         )
-    if invalid_test_probs:
+    if invalid_test_props:
         raise ValueError(
-            f"Invalid --test_missing_prob values: {invalid_test_probs}. "
+            f"Invalid --test_missing_prop values: {invalid_test_props}. "
             "All values must be in [0, 1]."
         )
 
     # Count total combinations to run and evaluate
-    combo_count = len(seeds_list) * len(train_missing_locations) * len(train_missing_probs)
-    test_eval_count = len(test_missing_locations) * len(test_missing_probs)
+    combo_count = len(seeds_list) * len(missing_locations) * len(train_missing_props)
+    test_eval_total = len(seeds_list) * sum(
+        len(
+            _build_test_eval_setups_for_run(
+                missing_location=loc,
+                train_missing_prop=prop,
+                test_missing_props=test_missing_props,
+                num_modalities=num_modalities,
+                modality_names=modality_names,
+            )
+        )
+        for loc in missing_locations
+        for prop in train_missing_props
+    )
     print(f"Total training runs to execute: {combo_count}")
-    print(f"Test missingness evaluations per training run: {test_eval_count}")
+    print(f"Total test missingness evaluations across all runs: {test_eval_total}")
 
     wandb_project_name = f"{args.wandb_project}_{args.dataset}"
     wandb_enabled_flag = (args.wandb and args.wandb_mode != "disabled")
 
     for seed in seeds_list:
-        for train_missing_location in train_missing_locations:
-            for train_missing_prob in train_missing_probs:
+        for missing_location in missing_locations:
+            for train_missing_prop in train_missing_props:
                 hp_configs = build_hyperparameter_grid(
                     args,
-                    train_missing_prob=train_missing_prob,
-                    train_missing_location=train_missing_location,
+                    train_missing_prop=train_missing_prop,
+                    missing_location=missing_location,
                 )
 
                 train_missing_simulator = MissingModalitySimulator(
                     num_modalities=num_modalities,
                     modality_names=modality_names,
-                    missing_prob=float(train_missing_prob),
-                    missing_location=train_missing_location,
+                    missing_prop=float(train_missing_prop),
+                    missing_location=missing_location,
                 )
 
-                test_eval_setups = []
-                for test_missing_location in test_missing_locations:
-                    for test_missing_prob in test_missing_probs:
-                        test_eval_setups.append(
-                            {
-                                "missing_location": str(test_missing_location).lower(),
-                                "missing_prob": float(test_missing_prob),
-                                "simulator": MissingModalitySimulator(
-                                    num_modalities=num_modalities,
-                                    modality_names=modality_names,
-                                    missing_prob=float(test_missing_prob),
-                                    missing_location=test_missing_location,
-                                ),
-                            }
-                        )
+                test_eval_setups = _build_test_eval_setups_for_run(
+                    missing_location=missing_location,
+                    train_missing_prop=train_missing_prop,
+                    test_missing_props=test_missing_props,
+                    num_modalities=num_modalities,
+                    modality_names=modality_names,
+                )
 
                 odir = _build_output_dir(
                     base_odir=args.odir,
                     model_name=args.model,
                     imputation_method=args.imputation_method,
                     dataset_name=args.dataset,
-                    train_missing_location=train_missing_location,
-                    train_missing_prob=train_missing_prob,
+                    missing_location=missing_location,
+                    train_missing_prop=train_missing_prop,
                     seed=seed,
                 )
                 print(
                     "Running seed="
-                    f"{seed}, train_missing_location={train_missing_location}, "
-                    f"train_missing_prob={train_missing_prob}"
+                    f"{seed}, missing_location={missing_location}, "
+                    f"train_missing_prop={train_missing_prop}"
                 )
                 print(f"Missing pattern seed: {int(args.missing_pattern_seed)}")
                 print(f"Output directory: {odir}")
@@ -384,13 +405,17 @@ def main():
                     "epochs": args.epochs,
                     "inner_splits": args.inner_splits,
                     "outer_splits": args.outer_splits,
-                    "train_missing_prob": float(train_missing_prob),
-                    "train_missing_location": str(train_missing_location).lower(),
+                    "train_missing_prop": float(train_missing_prop),
+                    "missing_location": str(missing_location).lower(),
                     "missing_pattern_seed": int(args.missing_pattern_seed),
                     "imputation_method": args.imputation_method,
                     "test_eval_combinations": len(test_eval_setups),
-                    "test_missing_probs_grid": ",".join(str(float(p)) for p in test_missing_probs),
-                    "test_missing_locations_grid": ",".join(str(loc).lower() for loc in test_missing_locations),
+                    "test_missing_props_grid": ",".join(
+                        str(float(setup["missing_prop"])) for setup in test_eval_setups
+                    ),
+                    "eval_missing_locations_grid": ",".join(
+                        str(setup["missing_location"]).lower() for setup in test_eval_setups
+                    ),
                 }
                 if str(args.imputation_method).strip().lower() == "vae":
                     wandb_base_config.update(
@@ -440,8 +465,8 @@ def main():
                     history_df=history_df,
                     split_df=split_df,
                     seed=seed,
-                    train_missing_location=train_missing_location,
-                    train_missing_prob=float(train_missing_prob),
+                    missing_location=missing_location,
+                    train_missing_prop=float(train_missing_prop),
                 )
 
                 print(f"Run finished in {time.time() - start_time:.2f} seconds.")

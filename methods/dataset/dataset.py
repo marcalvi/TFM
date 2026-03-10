@@ -11,13 +11,13 @@ class MissingModalitySimulator:
         self,
         num_modalities,
         modality_names,
-        missing_prob=0,
+        missing_prop=0,
         missing_location="global",
     ):
         if num_modalities < 1:
             raise ValueError("num_modalities must be >= 1")
-        if missing_prob < 0 or missing_prob > 1:
-            raise ValueError("missing_prob must be in [0, 1]")
+        if missing_prop < 0 or missing_prop > 1:
+            raise ValueError("missing_prop must be in [0, 1]")
 
         names = list(modality_names)
         if len(names) != num_modalities:
@@ -26,7 +26,9 @@ class MissingModalitySimulator:
         self.modality_names = names
         self.modality_name_to_idx = {str(n).lower(): i for i, n in enumerate(self.modality_names)}
         self.num_modalities = int(num_modalities)
-        self.missing_prob = float(missing_prob)
+        # Semantics: exact fraction of modality values to remove from the dataset,
+        # not an independent Bernoulli probability per value.
+        self.missing_prop = float(missing_prop)
         self.missing_location = str(missing_location).lower()
 
         if self.missing_location == "global":
@@ -39,28 +41,80 @@ class MissingModalitySimulator:
                 )
             self.specific_missing_idx = self.modality_name_to_idx[self.missing_location]
 
-    def generate_missing_pattern(self, rng=None):
-        """Generate a modality-presence mask for one sample."""
-        if rng is None:
-            rng = np.random.default_rng()
-        pattern = np.ones(self.num_modalities, dtype=bool)
+    def _stable_slot_score(self, patient_id, modality_idx, missing_pattern_seed):
+        key = (
+            f"{int(missing_pattern_seed)}|"
+            f"{self.missing_location}|"
+            f"{patient_id}|"
+            f"{int(modality_idx)}"
+        )
+        return zlib.crc32(key.encode("utf-8")) & 0xFFFFFFFF
 
-        # Modality-specific missingness: only one selected modality can be dropped.
+    def generate_dataset_missing_masks(self, patient_ids, missing_pattern_seed=0):
+        """Generate deterministic dataset-level masks with an exact missing fraction."""
+        patient_ids = list(patient_ids)
+        n_samples = len(patient_ids)
+        if n_samples == 0:
+            return np.zeros((0, self.num_modalities), dtype=bool)
+
+        masks = np.ones((n_samples, self.num_modalities), dtype=bool)
+        missing_fraction = float(self.missing_prop)
+        if missing_fraction <= 0.0:
+            return masks
+
         if self.specific_missing_idx is not None:
-            if float(rng.random()) < self.missing_prob:
-                pattern[self.specific_missing_idx] = False
-        else:
-            # Global missingness: each modality is independently removed
-            # with probability `missing_prob`.
-            missing_draw = rng.random(self.num_modalities) < self.missing_prob
-            pattern[missing_draw] = False
+            target_missing = int(round(missing_fraction * n_samples))
+            target_missing = min(max(target_missing, 0), n_samples)
+            ranked = sorted(
+                (
+                    self._stable_slot_score(pid, self.specific_missing_idx, missing_pattern_seed),
+                    sample_idx,
+                )
+                for sample_idx, pid in enumerate(patient_ids)
+            )
+            for _, sample_idx in ranked[:target_missing]:
+                masks[sample_idx, self.specific_missing_idx] = False
+            return masks
 
-        # Always keep at least one modality present.
-        if not pattern.any():
-            keep_idx = int(rng.integers(0, self.num_modalities))
-            pattern[keep_idx] = True
+        total_slots = n_samples * self.num_modalities
+        target_missing = int(round(missing_fraction * total_slots))
+        max_missing = n_samples * (self.num_modalities - 1)
+        if target_missing > max_missing:
+            raise ValueError(
+                f"Global missing fraction {missing_fraction:g} is too large for "
+                f"{self.num_modalities} modalities while keeping at least one "
+                "modality present per sample."
+            )
 
-        return pattern
+        row_missing_counts = np.zeros(n_samples, dtype=np.int64)
+        ranked_slots = sorted(
+            (
+                self._stable_slot_score(pid, modality_idx, missing_pattern_seed),
+                sample_idx,
+                modality_idx,
+            )
+            for sample_idx, pid in enumerate(patient_ids)
+            for modality_idx in range(self.num_modalities)
+        )
+
+        removed = 0
+        max_missing_per_row = self.num_modalities - 1
+        for _, sample_idx, modality_idx in ranked_slots:
+            if removed >= target_missing:
+                break
+            if row_missing_counts[sample_idx] >= max_missing_per_row:
+                continue
+            masks[sample_idx, modality_idx] = False
+            row_missing_counts[sample_idx] += 1
+            removed += 1
+
+        if removed != target_missing:
+            raise RuntimeError(
+                f"Unable to assign exact global missing fraction. "
+                f"Requested {target_missing} missing slots, assigned {removed}."
+            )
+
+        return masks
 
 # ------------------------ DATASET CLASSES --------------------------
 
@@ -167,15 +221,6 @@ class MultimodalDatasetWithMissing(Dataset):
     def __len__(self):
         return len(self.base_dataset)
 
-    def _stable_seed_for_patient(self, patient_id):
-        key = (
-            f"{self.missing_pattern_seed}|"
-            f"{self.simulator.missing_location}|"
-            f"{self.simulator.missing_prob:.12f}|"
-            f"{patient_id}"
-        )
-        return zlib.crc32(key.encode("utf-8")) & 0xFFFFFFFF
-
     def _precompute_present_masks(self):
         if hasattr(self.base_dataset, "patient_ids"):
             patient_ids = list(self.base_dataset.patient_ids)
@@ -185,12 +230,11 @@ class MultimodalDatasetWithMissing(Dataset):
                 "for deterministic missing-pattern simulation."
             )
 
-        masks = []
-        for patient_id in patient_ids:
-            rng = np.random.default_rng(self._stable_seed_for_patient(patient_id))
-            mask = torch.as_tensor(self.simulator.generate_missing_pattern(rng=rng), dtype=torch.bool)
-            masks.append(mask)
-        return masks
+        mask_array = self.simulator.generate_dataset_missing_masks(
+            patient_ids=patient_ids,
+            missing_pattern_seed=self.missing_pattern_seed,
+        )
+        return [torch.as_tensor(mask_row, dtype=torch.bool) for mask_row in mask_array]
 
     def set_imputer(self, imputer, imputation_method=None):
         if imputation_method is not None:
