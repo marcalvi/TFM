@@ -1,0 +1,28 @@
+description: 'Functional test: open ports ssh VSCode'
+executable: /bin/bash
+args:
+- -lc
+- |
+    set -euo pipefail
+    echo "MY_VAR1: $MY_VAR1"
+    echo "MY_VAR2: $MY_VAR2"
+    echo "PUBLIC_KEY: $PUBLIC_KEY"
+    echo "JUPYTER_PASSWORD: $JUPYTER_PASSWORD"
+
+    . /start.sh
+worker_type: 6000
+use_gpu: false
+max_cpus: 5.0
+max_memory_mb: 2880
+docker_image: harbor.vhio.net/geb-env-cpu:0.1.2
+openports: 
+    - external: 9999
+      internal: 22
+    - external: 8888
+      internal: 8888
+env:
+  MY_VAR1: "value1"
+  MY_VAR2: "value2"
+  JUPYTER_PASSWORD: "password123"
+  PUBLIC_KEY: "password123"
+max_runtime_minutes: 100

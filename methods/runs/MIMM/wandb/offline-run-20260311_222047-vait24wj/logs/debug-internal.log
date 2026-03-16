@@ -1,0 +1,13 @@
+{"time":"2026-03-11T22:20:47.661041116+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-11T22:20:47.765556694+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-11T22:20:47.765589174+01:00","level":"INFO","msg":"stream: created new stream","id":"vait24wj"}
+{"time":"2026-03-11T22:20:47.765617784+01:00","level":"INFO","msg":"handler: started","stream_id":"vait24wj"}
+{"time":"2026-03-11T22:20:47.769260545+01:00","level":"INFO","msg":"stream: started","id":"vait24wj"}
+{"time":"2026-03-11T22:20:47.769290195+01:00","level":"INFO","msg":"writer: started","stream_id":"vait24wj"}
+{"time":"2026-03-11T22:20:47.769292275+01:00","level":"INFO","msg":"sender: started","stream_id":"vait24wj"}
+{"time":"2026-03-11T22:20:47.769494935+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-11T22:20:47.829604817+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-11T22:20:47.830838717+01:00","level":"INFO","msg":"stream: closing","id":"vait24wj"}
+{"time":"2026-03-11T22:20:47.830848197+01:00","level":"INFO","msg":"handler: closed","stream_id":"vait24wj"}
+{"time":"2026-03-11T22:20:47.831225497+01:00","level":"INFO","msg":"sender: closed","stream_id":"vait24wj"}
+{"time":"2026-03-11T22:20:47.831231077+01:00","level":"INFO","msg":"stream: closed","id":"vait24wj"}

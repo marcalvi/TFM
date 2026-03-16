@@ -1,0 +1,13 @@
+{"time":"2026-03-11T00:12:36.08357879+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-11T00:12:36.210928932+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-11T00:12:36.210973707+01:00","level":"INFO","msg":"stream: created new stream","id":"wfs2mf35"}
+{"time":"2026-03-11T00:12:36.211042237+01:00","level":"INFO","msg":"handler: started","stream_id":"wfs2mf35"}
+{"time":"2026-03-11T00:12:36.214631824+01:00","level":"INFO","msg":"stream: started","id":"wfs2mf35"}
+{"time":"2026-03-11T00:12:36.214683853+01:00","level":"INFO","msg":"writer: started","stream_id":"wfs2mf35"}
+{"time":"2026-03-11T00:12:36.214727396+01:00","level":"INFO","msg":"sender: started","stream_id":"wfs2mf35"}
+{"time":"2026-03-11T00:12:36.215165119+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-11T00:12:36.378245917+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-11T00:12:36.382128551+01:00","level":"INFO","msg":"stream: closing","id":"wfs2mf35"}
+{"time":"2026-03-11T00:12:36.382142137+01:00","level":"INFO","msg":"handler: closed","stream_id":"wfs2mf35"}
+{"time":"2026-03-11T00:12:36.382881305+01:00","level":"INFO","msg":"sender: closed","stream_id":"wfs2mf35"}
+{"time":"2026-03-11T00:12:36.382906423+01:00","level":"INFO","msg":"stream: closed","id":"wfs2mf35"}

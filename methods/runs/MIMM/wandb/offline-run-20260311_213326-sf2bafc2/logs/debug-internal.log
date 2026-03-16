@@ -1,0 +1,13 @@
+{"time":"2026-03-11T21:33:27.021588355+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-11T21:33:27.147548408+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-11T21:33:27.147604755+01:00","level":"INFO","msg":"stream: created new stream","id":"sf2bafc2"}
+{"time":"2026-03-11T21:33:27.147656213+01:00","level":"INFO","msg":"handler: started","stream_id":"sf2bafc2"}
+{"time":"2026-03-11T21:33:27.15166758+01:00","level":"INFO","msg":"stream: started","id":"sf2bafc2"}
+{"time":"2026-03-11T21:33:27.15172045+01:00","level":"INFO","msg":"writer: started","stream_id":"sf2bafc2"}
+{"time":"2026-03-11T21:33:27.15176234+01:00","level":"INFO","msg":"sender: started","stream_id":"sf2bafc2"}
+{"time":"2026-03-11T21:33:27.15214673+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-11T21:33:27.313105466+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-11T21:33:27.316896403+01:00","level":"INFO","msg":"stream: closing","id":"sf2bafc2"}
+{"time":"2026-03-11T21:33:27.316911011+01:00","level":"INFO","msg":"handler: closed","stream_id":"sf2bafc2"}
+{"time":"2026-03-11T21:33:27.317432633+01:00","level":"INFO","msg":"sender: closed","stream_id":"sf2bafc2"}
+{"time":"2026-03-11T21:33:27.317445327+01:00","level":"INFO","msg":"stream: closed","id":"sf2bafc2"}
