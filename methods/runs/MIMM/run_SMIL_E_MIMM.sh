@@ -34,8 +34,8 @@ SMIL_E_BETA_GRID="1e-2"
 
 # Missingness experiments
 MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
-TRAIN_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8,0.9"
-TEST_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8,0.9"
+TRAIN_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
+TEST_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
 
 python "${PROJECT_ROOT}/main.py" \
   --model "SMIL_E" \
