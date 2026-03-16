@@ -1,18 +1,28 @@
 from pathlib import Path
-import importlib
-import sys
+import importlib.util
 
 import torch
 import torch.nn as nn
 
 
-_HEALNET_REPO_ROOT = Path(__file__).resolve().parent / "healnet-adoption"
-if str(_HEALNET_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_HEALNET_REPO_ROOT))
+_HEALNET_MODEL_PATH = (
+    Path(__file__).resolve().parent
+    / "healnet-adoption"
+    / "healnet"
+    / "models"
+    / "healnet.py"
+)
+_HEALNET_SPEC = importlib.util.spec_from_file_location(
+    "healnet_adoption_core",
+    _HEALNET_MODEL_PATH,
+)
+if _HEALNET_SPEC is None or _HEALNET_SPEC.loader is None:
+    raise ImportError(f"Could not load HealNet module from '{_HEALNET_MODEL_PATH}'.")
 
-_HEALNET_MODULE = importlib.import_module("healnet.models.healnet")
+_HEALNET_MODULE = importlib.util.module_from_spec(_HEALNET_SPEC)
+_HEALNET_SPEC.loader.exec_module(_HEALNET_MODULE)
 Attention = _HEALNET_MODULE.Attention
-HealNet = _HEALNET_MODULE.HealNet
+HealNet = _HEALNET_MODULE.HealNets
 
 
 class HealNetBinaryWrapper(nn.Module):
