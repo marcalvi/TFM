@@ -279,10 +279,17 @@ class MultimodalDatasetWithMissing(Dataset):
 
 
 class HealNetMaskAwareBatchSampler(Sampler):
-    """Batch sampler that groups samples by missing-pattern compatibility.
+    """Hybrid batch sampler for HealNet under sample-level missingness.
 
-    Goal: maximize batches where at least one modality is present for all
-    samples in the batch, so HealNet can perform non-skipped modality updates.
+    Strategy:
+    1. Build as many full homogeneous batches as possible from exact missing
+       patterns. These batches preserve constant batch size and maximize
+       full-batch modality updates.
+    2. Pool the leftover samples from underfilled groups into residual mixed
+       batches. Those mixed batches are ordered by mask similarity, but they do
+       not require one modality to be shared by the whole batch.
+    3. The residual batches rely on model-side subbatching so each modality is
+       updated only for the subset of samples where it is available.
     """
 
     def __init__(self, dataset, batch_size, shuffle=True, seed=0, drop_last=False):
@@ -307,11 +314,18 @@ class HealNetMaskAwareBatchSampler(Sampler):
             n_modalities = int(dataset.simulator.num_modalities)
             self.sample_masks = np.ones((n_samples, n_modalities), dtype=bool)
 
-        self.batches, self._batch_trainable = self._build_batches(self.seed)
+        self.batches, self._batch_trainable, self._batch_homogeneous = self._build_batches(self.seed)
         self.total_batches = len(self.batches)
         self.trainable_batches = int(sum(self._batch_trainable))
+        self.homogeneous_batches = int(sum(self._batch_homogeneous))
+        self.mixed_residual_batches = int(self.total_batches - self.homogeneous_batches)
         self.trainable_batch_pct = (
             float(self.trainable_batches) / float(self.total_batches)
+            if self.total_batches > 0
+            else 0.0
+        )
+        self.homogeneous_batch_pct = (
+            float(self.homogeneous_batches) / float(self.total_batches)
             if self.total_batches > 0
             else 0.0
         )
@@ -326,6 +340,7 @@ class HealNetMaskAwareBatchSampler(Sampler):
 
         batches = []
         batch_trainable = []
+        batch_homogeneous = []
         leftovers = []
 
         group_items = list(groups.items())
@@ -337,11 +352,14 @@ class HealNetMaskAwareBatchSampler(Sampler):
             if self.shuffle:
                 rng.shuffle(idxs)
 
+            # First fill exact-mask batches so HealNet sees as many fully
+            # homogeneous batches as possible before resorting to subbatching.
             n_full = len(idxs) // self.batch_size
             for b_i in range(n_full):
                 batch = idxs[b_i * self.batch_size : (b_i + 1) * self.batch_size]
                 batches.append(batch)
                 batch_trainable.append(any(mtuple))
+                batch_homogeneous.append(True)
 
             rem_start = n_full * self.batch_size
             leftovers.extend(idxs[rem_start:])
@@ -352,32 +370,48 @@ class HealNetMaskAwareBatchSampler(Sampler):
                 first = leftovers.pop(0)
                 batch = [first]
                 common = self.sample_masks[first].copy()
+                union = self.sample_masks[first].copy()
 
-                cand_i = 0
-                while len(batch) < self.batch_size and cand_i < len(leftovers):
-                    cand_idx = leftovers[cand_i]
+                # Residual mixed batches are assembled by mask similarity; the
+                # model-side subbatching will then use only the rows that are
+                # actually present for each modality inside these leftovers.
+                while len(batch) < self.batch_size and leftovers:
+                    best_pos = None
+                    best_score = None
+                    for cand_i, cand_idx in enumerate(leftovers):
+                        cand_mask = self.sample_masks[cand_idx]
+                        shared_common = int(np.logical_and(common, cand_mask).sum())
+                        shared_union = int(np.logical_and(union, cand_mask).sum())
+                        score = (
+                            shared_common,
+                            shared_union,
+                            int(cand_mask.sum()),
+                        )
+                        if best_score is None or score > best_score:
+                            best_score = score
+                            best_pos = cand_i
+
+                    cand_idx = leftovers.pop(best_pos)
                     cand_mask = self.sample_masks[cand_idx]
-                    candidate_common = np.logical_and(common, cand_mask)
-                    if candidate_common.any():
-                        batch.append(cand_idx)
-                        common = candidate_common
-                        leftovers.pop(cand_i)
-                    else:
-                        cand_i += 1
+                    batch.append(cand_idx)
+                    common = np.logical_and(common, cand_mask)
+                    union = np.logical_or(union, cand_mask)
 
                 if self.drop_last and len(batch) < self.batch_size:
                     continue
 
                 batches.append(batch)
-                batch_trainable.append(bool(common.any()))
+                batch_trainable.append(bool(union.any()))
+                batch_homogeneous.append(False)
 
         if self.shuffle and len(batches) > 1:
             order = np.arange(len(batches))
             rng.shuffle(order)
             batches = [batches[i] for i in order]
             batch_trainable = [batch_trainable[i] for i in order]
+            batch_homogeneous = [batch_homogeneous[i] for i in order]
 
-        return batches, batch_trainable
+        return batches, batch_trainable, batch_homogeneous
 
     def __iter__(self):
         if self._iter_idx == 0:
@@ -388,7 +422,7 @@ class HealNetMaskAwareBatchSampler(Sampler):
 
         iter_seed = self.seed + self._iter_idx
         self._iter_idx += 1
-        batches, _ = self._build_batches(iter_seed)
+        batches, _, _ = self._build_batches(iter_seed)
         for b in batches:
             yield b
 
