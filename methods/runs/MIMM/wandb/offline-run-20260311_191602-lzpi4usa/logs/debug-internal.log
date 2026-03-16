@@ -1,0 +1,13 @@
+{"time":"2026-03-11T19:16:02.579054321+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-11T19:16:02.683889038+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-11T19:16:02.683923438+01:00","level":"INFO","msg":"stream: created new stream","id":"lzpi4usa"}
+{"time":"2026-03-11T19:16:02.683943858+01:00","level":"INFO","msg":"handler: started","stream_id":"lzpi4usa"}
+{"time":"2026-03-11T19:16:02.687753361+01:00","level":"INFO","msg":"stream: started","id":"lzpi4usa"}
+{"time":"2026-03-11T19:16:02.687800661+01:00","level":"INFO","msg":"writer: started","stream_id":"lzpi4usa"}
+{"time":"2026-03-11T19:16:02.687807311+01:00","level":"INFO","msg":"sender: started","stream_id":"lzpi4usa"}
+{"time":"2026-03-11T19:16:02.688005711+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-11T19:16:02.751570702+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-11T19:16:02.752820473+01:00","level":"INFO","msg":"stream: closing","id":"lzpi4usa"}
+{"time":"2026-03-11T19:16:02.752827023+01:00","level":"INFO","msg":"handler: closed","stream_id":"lzpi4usa"}
+{"time":"2026-03-11T19:16:02.753161743+01:00","level":"INFO","msg":"sender: closed","stream_id":"lzpi4usa"}
+{"time":"2026-03-11T19:16:02.753169483+01:00","level":"INFO","msg":"stream: closed","id":"lzpi4usa"}

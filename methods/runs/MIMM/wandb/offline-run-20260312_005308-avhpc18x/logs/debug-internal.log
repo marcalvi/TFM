@@ -1,0 +1,13 @@
+{"time":"2026-03-12T00:53:08.227028294+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-12T00:53:08.331618663+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-12T00:53:08.331648182+01:00","level":"INFO","msg":"stream: created new stream","id":"avhpc18x"}
+{"time":"2026-03-12T00:53:08.331671062+01:00","level":"INFO","msg":"handler: started","stream_id":"avhpc18x"}
+{"time":"2026-03-12T00:53:08.335403965+01:00","level":"INFO","msg":"stream: started","id":"avhpc18x"}
+{"time":"2026-03-12T00:53:08.335433085+01:00","level":"INFO","msg":"writer: started","stream_id":"avhpc18x"}
+{"time":"2026-03-12T00:53:08.335450745+01:00","level":"INFO","msg":"sender: started","stream_id":"avhpc18x"}
+{"time":"2026-03-12T00:53:08.335573995+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-12T00:53:08.398618953+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-12T00:53:08.399904821+01:00","level":"INFO","msg":"stream: closing","id":"avhpc18x"}
+{"time":"2026-03-12T00:53:08.399910461+01:00","level":"INFO","msg":"handler: closed","stream_id":"avhpc18x"}
+{"time":"2026-03-12T00:53:08.40025769+01:00","level":"INFO","msg":"sender: closed","stream_id":"avhpc18x"}
+{"time":"2026-03-12T00:53:08.40026252+01:00","level":"INFO","msg":"stream: closed","id":"avhpc18x"}

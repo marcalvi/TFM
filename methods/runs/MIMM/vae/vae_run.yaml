@@ -1,0 +1,11 @@
+description: 'VAE + MLP for MMIMM all setups'
+executable: /bin/bash
+args: ["-c", "/nfs/rnas/workspaces/malbesa/TFM/methods/runs/MIMM/vae/run_VAE_MIMM.sh"]
+worker_type: '4090'
+use_gpu: true
+max_cpus: 8.0
+max_memory_mb: 20000
+docker_image: harbor.vhio.net/geb-env-cpu:0.1.2
+mounts: []
+max_runtime_minutes: 10000
+open_ports: []

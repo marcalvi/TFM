@@ -1,0 +1,13 @@
+{"time":"2026-03-12T03:35:04.466897733+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-12T03:35:04.571144351+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-12T03:35:04.571179181+01:00","level":"INFO","msg":"stream: created new stream","id":"hperfpda"}
+{"time":"2026-03-12T03:35:04.571197281+01:00","level":"INFO","msg":"handler: started","stream_id":"hperfpda"}
+{"time":"2026-03-12T03:35:04.576086239+01:00","level":"INFO","msg":"stream: started","id":"hperfpda"}
+{"time":"2026-03-12T03:35:04.576114889+01:00","level":"INFO","msg":"writer: started","stream_id":"hperfpda"}
+{"time":"2026-03-12T03:35:04.576134549+01:00","level":"INFO","msg":"sender: started","stream_id":"hperfpda"}
+{"time":"2026-03-12T03:35:04.576279688+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-12T03:35:04.643292407+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-12T03:35:04.644496884+01:00","level":"INFO","msg":"stream: closing","id":"hperfpda"}
+{"time":"2026-03-12T03:35:04.644503334+01:00","level":"INFO","msg":"handler: closed","stream_id":"hperfpda"}
+{"time":"2026-03-12T03:35:04.644890043+01:00","level":"INFO","msg":"sender: closed","stream_id":"hperfpda"}
+{"time":"2026-03-12T03:35:04.644894983+01:00","level":"INFO","msg":"stream: closed","id":"hperfpda"}

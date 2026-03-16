@@ -1,0 +1,13 @@
+{"time":"2026-03-11T05:44:56.828794968+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-11T05:44:56.933634777+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-11T05:44:56.933659002+01:00","level":"INFO","msg":"stream: created new stream","id":"c4dofopo"}
+{"time":"2026-03-11T05:44:56.933682627+01:00","level":"INFO","msg":"handler: started","stream_id":"c4dofopo"}
+{"time":"2026-03-11T05:44:56.937323184+01:00","level":"INFO","msg":"stream: started","id":"c4dofopo"}
+{"time":"2026-03-11T05:44:56.937351327+01:00","level":"INFO","msg":"writer: started","stream_id":"c4dofopo"}
+{"time":"2026-03-11T05:44:56.93736897+01:00","level":"INFO","msg":"sender: started","stream_id":"c4dofopo"}
+{"time":"2026-03-11T05:44:56.937506339+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-11T05:44:56.999298535+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-11T05:44:57.000489752+01:00","level":"INFO","msg":"stream: closing","id":"c4dofopo"}
+{"time":"2026-03-11T05:44:57.000499971+01:00","level":"INFO","msg":"handler: closed","stream_id":"c4dofopo"}
+{"time":"2026-03-11T05:44:57.00088632+01:00","level":"INFO","msg":"sender: closed","stream_id":"c4dofopo"}
+{"time":"2026-03-11T05:44:57.000896519+01:00","level":"INFO","msg":"stream: closed","id":"c4dofopo"}

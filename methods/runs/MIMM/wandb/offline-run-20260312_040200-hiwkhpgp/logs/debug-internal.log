@@ -1,0 +1,13 @@
+{"time":"2026-03-12T04:02:00.988820965+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-12T04:02:01.09379634+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-12T04:02:01.09382496+01:00","level":"INFO","msg":"stream: created new stream","id":"hiwkhpgp"}
+{"time":"2026-03-12T04:02:01.09384234+01:00","level":"INFO","msg":"handler: started","stream_id":"hiwkhpgp"}
+{"time":"2026-03-12T04:02:01.096959088+01:00","level":"INFO","msg":"stream: started","id":"hiwkhpgp"}
+{"time":"2026-03-12T04:02:01.096985958+01:00","level":"INFO","msg":"writer: started","stream_id":"hiwkhpgp"}
+{"time":"2026-03-12T04:02:01.097005018+01:00","level":"INFO","msg":"sender: started","stream_id":"hiwkhpgp"}
+{"time":"2026-03-12T04:02:01.097158108+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-12T04:02:01.157969094+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-12T04:02:01.159247173+01:00","level":"INFO","msg":"stream: closing","id":"hiwkhpgp"}
+{"time":"2026-03-12T04:02:01.159254203+01:00","level":"INFO","msg":"handler: closed","stream_id":"hiwkhpgp"}
+{"time":"2026-03-12T04:02:01.159631953+01:00","level":"INFO","msg":"sender: closed","stream_id":"hiwkhpgp"}
+{"time":"2026-03-12T04:02:01.159637503+01:00","level":"INFO","msg":"stream: closed","id":"hiwkhpgp"}

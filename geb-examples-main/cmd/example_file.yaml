@@ -1,0 +1,14 @@
+description: 'Functional test: run code'
+executable: /bin/bash
+args: ["-c", "/nfs/rwork/code/geb-examples/cmd/file.sh"]
+worker_type: '6000'
+use_gpu: false
+max_cpus: 5.0
+max_memory_mb: 2880
+docker_image: harbor.vhio.net/geb-env-cpu:0.1.2
+mounts: []
+env:
+  MY_VAR1: value1
+  MY_VAR2: value2
+max_runtime_minutes: 1
+open_ports: []

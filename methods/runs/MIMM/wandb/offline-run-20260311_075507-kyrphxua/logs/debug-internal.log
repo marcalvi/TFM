@@ -1,0 +1,13 @@
+{"time":"2026-03-11T07:55:07.488629776+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-11T07:55:07.612062605+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-11T07:55:07.612128721+01:00","level":"INFO","msg":"stream: created new stream","id":"kyrphxua"}
+{"time":"2026-03-11T07:55:07.612184417+01:00","level":"INFO","msg":"handler: started","stream_id":"kyrphxua"}
+{"time":"2026-03-11T07:55:07.616350059+01:00","level":"INFO","msg":"stream: started","id":"kyrphxua"}
+{"time":"2026-03-11T07:55:07.616404713+01:00","level":"INFO","msg":"writer: started","stream_id":"kyrphxua"}
+{"time":"2026-03-11T07:55:07.61641367+01:00","level":"INFO","msg":"sender: started","stream_id":"kyrphxua"}
+{"time":"2026-03-11T07:55:07.616796559+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-11T07:55:07.765316735+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-11T07:55:07.769293677+01:00","level":"INFO","msg":"stream: closing","id":"kyrphxua"}
+{"time":"2026-03-11T07:55:07.769306952+01:00","level":"INFO","msg":"handler: closed","stream_id":"kyrphxua"}
+{"time":"2026-03-11T07:55:07.770017365+01:00","level":"INFO","msg":"sender: closed","stream_id":"kyrphxua"}
+{"time":"2026-03-11T07:55:07.770036411+01:00","level":"INFO","msg":"stream: closed","id":"kyrphxua"}

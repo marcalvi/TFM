@@ -1,0 +1,13 @@
+{"time":"2026-03-11T00:23:34.626598441+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-11T00:23:34.731245518+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-11T00:23:34.731280818+01:00","level":"INFO","msg":"stream: created new stream","id":"zql5dcaf"}
+{"time":"2026-03-11T00:23:34.731306008+01:00","level":"INFO","msg":"handler: started","stream_id":"zql5dcaf"}
+{"time":"2026-03-11T00:23:34.736711885+01:00","level":"INFO","msg":"stream: started","id":"zql5dcaf"}
+{"time":"2026-03-11T00:23:34.736719995+01:00","level":"INFO","msg":"writer: started","stream_id":"zql5dcaf"}
+{"time":"2026-03-11T00:23:34.736729695+01:00","level":"INFO","msg":"sender: started","stream_id":"zql5dcaf"}
+{"time":"2026-03-11T00:23:34.736899306+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-11T00:23:34.795362533+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-11T00:23:34.796748558+01:00","level":"INFO","msg":"stream: closing","id":"zql5dcaf"}
+{"time":"2026-03-11T00:23:34.796758508+01:00","level":"INFO","msg":"handler: closed","stream_id":"zql5dcaf"}
+{"time":"2026-03-11T00:23:34.79723173+01:00","level":"INFO","msg":"sender: closed","stream_id":"zql5dcaf"}
+{"time":"2026-03-11T00:23:34.79724155+01:00","level":"INFO","msg":"stream: closed","id":"zql5dcaf"}

@@ -1,0 +1,13 @@
+{"time":"2026-03-11T13:08:45.110081048+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-11T13:08:45.237584171+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-11T13:08:45.237638325+01:00","level":"INFO","msg":"stream: created new stream","id":"zdat082b"}
+{"time":"2026-03-11T13:08:45.237699281+01:00","level":"INFO","msg":"handler: started","stream_id":"zdat082b"}
+{"time":"2026-03-11T13:08:45.241799036+01:00","level":"INFO","msg":"stream: started","id":"zdat082b"}
+{"time":"2026-03-11T13:08:45.241828663+01:00","level":"INFO","msg":"writer: started","stream_id":"zdat082b"}
+{"time":"2026-03-11T13:08:45.241873258+01:00","level":"INFO","msg":"sender: started","stream_id":"zdat082b"}
+{"time":"2026-03-11T13:08:45.24225203+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-11T13:08:45.409313672+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-11T13:08:45.41329406+01:00","level":"INFO","msg":"stream: closing","id":"zdat082b"}
+{"time":"2026-03-11T13:08:45.413308758+01:00","level":"INFO","msg":"handler: closed","stream_id":"zdat082b"}
+{"time":"2026-03-11T13:08:45.413860129+01:00","level":"INFO","msg":"sender: closed","stream_id":"zdat082b"}
+{"time":"2026-03-11T13:08:45.413878995+01:00","level":"INFO","msg":"stream: closed","id":"zdat082b"}
