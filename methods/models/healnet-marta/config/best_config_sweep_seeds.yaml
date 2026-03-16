@@ -1,0 +1,41 @@
+method: grid
+filter_overlap: False
+
+metric:
+  name: mean_val_c_index           # set your main metric
+  goal: maximize
+
+# best configuration obtained from hyperparameter sweep (sweep_grid_2.yaml)
+parameters:
+  sources:
+    value: ["clinical", "radiology", "pathology"]
+  explainer:
+    value: False
+  n_folds: 
+    value: 5
+  train_loop.epochs:
+      value: 100
+  train_loop.patience:
+      value: 5
+  train_loop.batch_size:
+    value: 16
+  model_params.l1:
+    value: 0.0001
+  model_params.depth:
+    value: 2
+  model_params.num_latents:
+    value: 32
+  model_params.latent_dim:
+    value: 32
+  model_params.cross_heads:
+    value: 32
+  model_params.cross_dim_head:
+    value: 16
+  model_params.attn_dropout:
+    value: 0.1
+  model_params.ff_dropout:
+    value: 0.4
+
+
+  seed:
+    values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]   # the seeds you want to run

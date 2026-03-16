@@ -1,0 +1,39 @@
+method: grid
+
+metric:
+  goal: maximize
+  name: mean_val_c_index
+parameters:
+  sources:
+    value: ["clinical", "radiology", "pathology"]
+  explainer:
+    value: True
+  n_folds: 
+    value: 5
+  train_loop.epochs:
+      value: 100
+  train_loop.patience:
+      value: 5
+  train_loop.batch_size:
+    value: 16
+  model_params.l1:
+    value: 0.0001
+  model_params.depth:
+    values: [2, 3, 4]
+  model_params.num_latents:
+    values: [16, 32]
+  model_params.latent_dim:
+    values: [16, 32, 64]
+  model_params.cross_heads:
+    values: [1, 16, 32]
+  model_params.cross_dim_head:
+    values: [16, 64]
+  model_params.attn_dropout:
+    value: 0.1
+  model_params.ff_dropout:
+    values: [0.0, 0.4]
+  model_params.num_freq_bands:
+    values: [2, 3, 4, 5, 6, 7, 8]
+  model_params.max_freq:
+    values: [2., 4., 6., 8.]
+program: healnet/main.py

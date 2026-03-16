@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+export WANDB_DIR=/nfs/rnas/workspaces/malbesa/TFM/methods/runs/wandb
 set -euo pipefail
 
 # Activate conda environment
@@ -6,8 +7,18 @@ set -euo pipefail
 source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
 conda activate TFM
 
-# Optional WandB login from environment variable
-wandb login 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
+# WandB login token
+WANDB_LOGIN_KEY="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"
+if [[ -n "${WANDB_LOGIN_KEY}" ]]; then
+  wandb login "${WANDB_LOGIN_KEY}"
+else
+  echo "WANDB_LOGIN_KEY not set; skipping wandb login."
+fi
+
+WANDB_ARGS=()
+if [[ -n "${WANDB_LOGIN_KEY}" ]]; then
+  WANDB_ARGS+=(--wandb --wandb_project "SMIL_E" --wandb_mode "online")
+fi
 
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/"
@@ -34,8 +45,8 @@ SMIL_E_BETA_GRID="1e-2"
 
 # Missingness experiments
 MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
-TRAIN_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8,0.9"
-TEST_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8,0.9"
+TRAIN_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
+TEST_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
 
 python "${PROJECT_ROOT}/main.py" \
   --model "SMIL_E" \
@@ -59,6 +70,4 @@ python "${PROJECT_ROOT}/main.py" \
   --test_missing_prop "${TEST_MISSING_PROP_GRID}" \
   --seeds "${SEEDS}" \
   --missing_pattern_seed "${MISSING_PATTERN_SEED}" \
-  --wandb \
-  --wandb_project "SMIL_E" \
-  --wandb_mode "online"
+  "${WANDB_ARGS[@]}"

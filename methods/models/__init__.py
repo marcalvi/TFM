@@ -4,7 +4,7 @@ from .distill_dyam import DistillDyAM
 from .smil_e import SMILE, learn_priors, smile_alignment_loss, meta_train_step
 _HEALNET_IMPORT_ERROR = None
 try:
-    from .healnet import HealNet, HealNetBinaryWrapper
+    from .healnet_wrapper import HealNet, HealNetBinaryWrapper
 except Exception as _healnet_import_error:
     _HEALNET_IMPORT_ERROR = _healnet_import_error
     HealNet = None
