@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-export WANDB_DIR=/nfs/rnas/workspaces/malbesa/TFM/methods/runs/wandb
+export WANDB_DIR=/nfs/rnas/workspaces/malbesa/TFM/methods/runs
 set -euo pipefail
 
 # Activate conda environment
