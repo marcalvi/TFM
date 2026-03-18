@@ -37,6 +37,9 @@ Reference fork reviewed: Marta Buetas-Arcas (`healnet-marta`)
   over the full latent self-attention block list. This keeps the repo correct
   when `self_per_cross_attn > 1`.
 - Added module logging instead of using `print(...)` inside the model path.
+- Replaced the in-place scatter `x[present_idx] = updated` used by the
+  subbatching path with `x = x.index_copy(0, present_idx, updated)` to keep the
+  mixed-batch update compatible with PyTorch autograd.
 
 ### 2) `healnet/tests/test_healnet.py`
 - Added a smoke test covering a mixed batch where different samples are missing
