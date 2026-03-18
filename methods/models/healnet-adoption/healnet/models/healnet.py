@@ -358,7 +358,10 @@ class HealNet(nn.Module):
 
                     updated = cross_attn(x_present, context=ctx_present, mask=mask_present) + x_present
                     updated = cross_ff(updated) + updated
-                    x[present_idx] = updated
+
+                    # Avoid in-place writes on autograd-tracked latent tensors when
+                    # only a modality-specific subbatch is updated.
+                    x = x.index_copy(0, present_idx, updated)
 
                 if self.self_per_cross_attn > 0:
                     for block in layer[-1]:
