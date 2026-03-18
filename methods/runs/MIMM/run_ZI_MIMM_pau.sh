@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-export WANDB_DIR=/nfs/rnas/workspaces/malbesa/TFM/methods/runs/wandb
+export WANDB_DIR=/nfs/rnas/workspaces/malbesa/TFM/methods/runs
 set -euo pipefail
 export MAMBA_ROOT_PREFIX=/root/.local/share/mamba
 export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256

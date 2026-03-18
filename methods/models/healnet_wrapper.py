@@ -22,7 +22,7 @@ if _HEALNET_SPEC is None or _HEALNET_SPEC.loader is None:
 _HEALNET_MODULE = importlib.util.module_from_spec(_HEALNET_SPEC)
 _HEALNET_SPEC.loader.exec_module(_HEALNET_MODULE)
 Attention = _HEALNET_MODULE.Attention
-HealNet = _HEALNET_MODULE.HealNets
+HealNet = _HEALNET_MODULE.HealNet
 
 
 class HealNetBinaryWrapper(nn.Module):
