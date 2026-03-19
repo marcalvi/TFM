@@ -207,6 +207,7 @@ def _save_run_outputs(
     outer_df,
     history_df,
     split_df,
+    test_predictions_df,
     seed,
     missing_location,
     train_missing_prop,
@@ -217,6 +218,7 @@ def _save_run_outputs(
     outer_df = outer_df.copy()
     history_df = history_df.copy()
     split_df = split_df.copy()
+    test_predictions_df = test_predictions_df.copy()
 
     inner_df["seed"] = seed
     inner_df["missing_location"] = missing_location
@@ -234,10 +236,13 @@ def _save_run_outputs(
     split_df["missing_location"] = missing_location
     split_df["train_missing_prop"] = float(train_missing_prop)
 
+    test_predictions_df["seed"] = seed
+
     inner_df.to_csv(os.path.join(odir, "inner_hp_eval.csv"), index=False)
     outer_df.to_csv(os.path.join(odir, "outer_test_metrics.csv"), index=False)
     history_df.to_csv(os.path.join(odir, "inner_epoch_history.csv"), index=False)
     split_df.to_csv(os.path.join(odir, "splits_manifest.csv"), index=False)
+    test_predictions_df.to_csv(os.path.join(odir, "test_predictions.csv"), index=False)
 
     # Create outer test summary
     metric_cols = [c for c in outer_df.columns if c.startswith("outer_test_")]
@@ -429,7 +434,7 @@ def main():
                         }
                     )
 
-                inner_df, outer_df, history_df, split_df = nested_cv(
+                inner_df, outer_df, history_df, split_df, test_predictions_df = nested_cv(
                     dfs=dfs,
                     inst_df=inst_df,
                     label_col=label_col,
@@ -464,6 +469,7 @@ def main():
                     outer_df=outer_df,
                     history_df=history_df,
                     split_df=split_df,
+                    test_predictions_df=test_predictions_df,
                     seed=seed,
                     missing_location=missing_location,
                     train_missing_prop=float(train_missing_prop),

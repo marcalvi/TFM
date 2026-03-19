@@ -115,4 +115,3 @@ class DistillDyAM(nn.Module):
             alpha = attn_weights * num_active
             return output, attn_weights, alpha, R_masked, fused_repr
         return output
-

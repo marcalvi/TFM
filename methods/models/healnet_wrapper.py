@@ -7,11 +7,15 @@ import torch.nn as nn
 
 _HEALNET_MODEL_PATH = (
     Path(__file__).resolve().parent
+    / "Repositories"
     / "healnet-adoption"
     / "healnet"
     / "models"
     / "healnet.py"
 )
+if not _HEALNET_MODEL_PATH.is_file():
+    raise ImportError(f"Could not find HealNet model file at '{_HEALNET_MODEL_PATH}'.")
+
 _HEALNET_SPEC = importlib.util.spec_from_file_location(
     "healnet_adoption_core",
     _HEALNET_MODEL_PATH,
