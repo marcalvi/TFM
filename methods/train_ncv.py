@@ -85,6 +85,8 @@ def _predict_model_probabilities(
     data_loader,
     device,
     bypass_mask=False,
+    collect_dyam_details=False,
+    model_name=None,
 ):
     """Run one model on a loader and return y_true / logits / probabilities / pids."""
     model.eval()
@@ -92,6 +94,8 @@ def _predict_model_probabilities(
     y_logits = []
     y_prob = []
     pids = []
+    dyam_alpha = []
+    dyam_r_scores = []
 
     with torch.no_grad():
         for Xs, present_mask, y, pid_batch in data_loader:
@@ -99,7 +103,18 @@ def _predict_model_probabilities(
             present_mask = present_mask.to(device)
 
             model_mask = None if bypass_mask else present_mask
-            logits = model(Xs, model_mask).squeeze(1)
+            if collect_dyam_details:
+                model_out = model(Xs, model_mask, return_aux=True)
+                logits = model_out[0].squeeze(1)
+                if model_name not in {"dyam", "distill_dyam"}:
+                    raise ValueError(
+                        "collect_dyam_details=True is only supported for model_name in "
+                        "{'dyam', 'distill_dyam'}."
+                    )
+                dyam_alpha.append(model_out[2].detach().cpu().numpy())
+                dyam_r_scores.append(model_out[3].detach().cpu().numpy())
+            else:
+                logits = model(Xs, model_mask).squeeze(1)
             logits_np = logits.detach().cpu().numpy().reshape(-1)
             probs = torch.sigmoid(logits).cpu().numpy().reshape(-1)
 
@@ -108,7 +123,14 @@ def _predict_model_probabilities(
             y_true.extend(y.cpu().numpy().tolist())
             pids.extend(pid_batch)
 
-    return np.asarray(y_true), np.asarray(y_logits), np.asarray(y_prob), list(pids)
+    dyam_details = None
+    if collect_dyam_details:
+        dyam_details = {
+            "alpha": np.concatenate(dyam_alpha, axis=0),
+            "R": np.concatenate(dyam_r_scores, axis=0),
+        }
+
+    return np.asarray(y_true), np.asarray(y_logits), np.asarray(y_prob), list(pids), dyam_details
 
 # Function to build a complete-modality batch for teacher input in distillation
 def _build_full_batch_from_patient_ids(base_dataset, pid_batch, device):
@@ -453,6 +475,7 @@ def nested_cv(
 
     # Input dims for each modality (removing patient column) and select device
     input_dims = [df.shape[1] - 1 for df in dfs.values()]
+    modality_names = [str(name) for name in dfs.keys()]
     device = select_device()
     if device.type == "cuda":
         gpu_name = torch.cuda.get_device_name(device)
@@ -466,6 +489,7 @@ def nested_cv(
     history_rows = []
     outer_results = []
     split_rows = []
+    test_prediction_rows = []
 
     for outer_fold_idx, (train_outer_idx, test_outer_idx) in enumerate(outer_cv.split(patients, y), 1):
         print(f"\nOuter fold {outer_fold_idx}")
@@ -800,6 +824,7 @@ def nested_cv(
 
             model_logits = []
             model_probs = []
+            model_dyam_details = []
             y_true_outer = None
             pids_outer = None
 
@@ -822,11 +847,13 @@ def nested_cv(
                     drop_last=False,
                 )
 
-                y_true_i, y_logits_i, y_prob_i, pids_i = _predict_model_probabilities(
+                y_true_i, y_logits_i, y_prob_i, pids_i, dyam_details_i = _predict_model_probabilities(
                     model=model,
                     data_loader=ensemble_eval_loader,
                     device=device,
                     bypass_mask=predict_bypass_mask,
+                    collect_dyam_details=model_name_l in {"dyam", "distill_dyam"},
+                    model_name=model_name_l,
                 )
                 if y_true_outer is None:
                     y_true_outer = y_true_i
@@ -846,6 +873,7 @@ def nested_cv(
                         )
                 model_logits.append(y_logits_i)
                 model_probs.append(y_prob_i)
+                model_dyam_details.append(dyam_details_i)
 
             # Average probabilities across inner models to get ensemble prediction
             ensemble_prob = np.mean(np.stack(model_probs, axis=0), axis=0)
@@ -855,19 +883,35 @@ def nested_cv(
             for patient_idx, pid in enumerate(pids_outer):
                 row = {
                     "outer_fold": outer_fold_idx,
-                    "split": "test_outer_eval",
+                    "outer_eval_target": "test_outer",
                     "patient": pid,
-                    "eval_missing_location": eval_missing_location,
-                    "eval_missing_prop": eval_missing_prop,
+                    "train_missing_location": str(getattr(train_missing_simulator, "missing_location", "global")).lower(),
+                    "train_missing_prop": float(getattr(train_missing_simulator, "missing_prop", 0.0)),
+                    "test_missing_location": eval_missing_location,
+                    "test_missing_prop": eval_missing_prop,
+                    "y_true": int(y_true_outer[patient_idx]),
+                    "ensemble_prob": float(ensemble_prob[patient_idx]),
+                    "ensemble_pred_label": int(ensemble_prob[patient_idx] >= 0.5),
                 }
-                for inner_idx, inner_logits in enumerate(model_logits, start=1):
+                for inner_idx, (inner_logits, inner_probs) in enumerate(zip(model_logits, model_probs), start=1):
                     logit_value = float(inner_logits[patient_idx])
+                    prob_value = float(inner_probs[patient_idx])
                     pred_label = int(logit_value >= 0.0)
                     row[f"inner_model_{inner_idx}_logit"] = logit_value
+                    row[f"inner_model_{inner_idx}_prob"] = prob_value
                     row[f"inner_model_{inner_idx}_pred_label"] = pred_label
+                    if model_name_l in {"dyam", "distill_dyam"}:
+                        inner_dyam_details = model_dyam_details[inner_idx - 1]
+                        for modality_idx, modality_name in enumerate(modality_names):
+                            row[f"inner_model_{inner_idx}_{modality_name}_alpha"] = float(
+                                inner_dyam_details["alpha"][patient_idx, modality_idx]
+                            )
+                            row[f"inner_model_{inner_idx}_{modality_name}_R"] = float(
+                                inner_dyam_details["R"][patient_idx, modality_idx]
+                            )
                 per_patient_prediction_rows.append(row)
 
-            split_rows.extend(per_patient_prediction_rows)
+            test_prediction_rows.extend(per_patient_prediction_rows)
 
             outer_results.append(
                 {
@@ -894,4 +938,5 @@ def nested_cv(
         pd.DataFrame(outer_results),
         pd.DataFrame(history_rows),
         pd.DataFrame(split_rows),
+        pd.DataFrame(test_prediction_rows),
     )
