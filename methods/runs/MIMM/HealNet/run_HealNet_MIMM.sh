@@ -32,17 +32,18 @@ OUTER_SPLITS=5
 EPOCHS=80
 
 # HP grid
-LR_GRID="2e-5,5e-5"
+LR_GRID="5e-6,1e-5,5e-5"
 BATCH_SIZE_GRID="4,8,16"
 HEALNET_DEPTH_GRID="1,2"
-HEALNET_NUM_LATENTS_GRID="16,32,64"
+HEALNET_NUM_LATENTS_GRID="32,64"
 HEALNET_LATENT_DIM_GRID="64"
 HEALNET_LATENT_HEADS_GRID="2"
 HEALNET_CROSS_HEADS_GRID="1"
 HEALNET_CROSS_DIM_HEAD_GRID="64"
 HEALNET_LATENT_DIM_HEAD_GRID="64"
 HEALNET_NUM_FREQ_BANDS_GRID="2"
-HEALNET_DROPOUT_GRID="0.2,0.3"
+HEALNET_ATTN_DROPOUT_GRID="0.2,0.3"
+HEALNET_FF_DROPOUT_GRID="0.2"
 HEALNET_SELF_PER_CROSS_ATTN_GRID="1"
 
 # Missingness experiments
@@ -69,8 +70,8 @@ python "${PROJECT_ROOT}/main.py" \
   --healnet_latent_heads "${HEALNET_LATENT_HEADS_GRID}" \
   --healnet_cross_dim_head "${HEALNET_CROSS_DIM_HEAD_GRID}" \
   --healnet_latent_dim_head "${HEALNET_LATENT_DIM_HEAD_GRID}" \
-  --healnet_attn_dropout "${HEALNET_DROPOUT_GRID}" \
-  --healnet_ff_dropout "${HEALNET_DROPOUT_GRID}" \
+  --healnet_attn_dropout "${HEALNET_ATTN_DROPOUT_GRID}" \
+  --healnet_ff_dropout "${HEALNET_FF_DROPOUT_GRID}" \
   --healnet_self_per_cross_attn "${HEALNET_SELF_PER_CROSS_ATTN_GRID}" \
   --train_missing_prop "${TRAIN_MISSING_PROP_GRID}" \
   --missing_location "${MISSING_LOCATION_GRID}" \

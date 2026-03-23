@@ -21,9 +21,6 @@ if [[ -n "${WANDB_LOGIN_KEY}" ]]; then
 fi
 
 # Define paths
-#PROJECT_ROOT="/Users/marcalbesa/Desktop/TFM/git_exp/methods"
-#DATA_ROOT="/Users/marcalbesa/Desktop/TFM/data/MIMM"
-
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/"
 RESULTS_ROOT="${PROJECT_ROOT}/results"
@@ -32,7 +29,7 @@ RESULTS_ROOT="${PROJECT_ROOT}/results"
 ENDPOINT="OS_6"
 
 # Proposed tuning grid
-SEEDS="18473,55602"
+SEEDS="22,2002,4,18473,55602"
 #SEEDS="2002,4,18473,55602"
 MISSING_PATTERN_SEED=2026
 

@@ -1,0 +1,12 @@
+{"time":"2026-03-20T12:26:00.233343303+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-20T12:26:00.514307213+01:00","level":"INFO","msg":"stream: created new stream","id":"wssl7qk4"}
+{"time":"2026-03-20T12:26:00.514393557+01:00","level":"INFO","msg":"handler: started","stream_id":"wssl7qk4"}
+{"time":"2026-03-20T12:26:00.519062493+01:00","level":"INFO","msg":"stream: started","id":"wssl7qk4"}
+{"time":"2026-03-20T12:26:00.519110885+01:00","level":"INFO","msg":"writer: started","stream_id":"wssl7qk4"}
+{"time":"2026-03-20T12:26:00.519148877+01:00","level":"INFO","msg":"sender: started","stream_id":"wssl7qk4"}
+{"time":"2026-03-20T12:26:02.481436674+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-20T12:26:02.87448763+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-20T12:26:02.879429295+01:00","level":"INFO","msg":"stream: closing","id":"wssl7qk4"}
+{"time":"2026-03-20T12:26:02.87944744+01:00","level":"INFO","msg":"handler: closed","stream_id":"wssl7qk4"}
+{"time":"2026-03-20T12:26:02.880325503+01:00","level":"INFO","msg":"sender: closed","stream_id":"wssl7qk4"}
+{"time":"2026-03-20T12:26:02.880343938+01:00","level":"INFO","msg":"stream: closed","id":"wssl7qk4"}

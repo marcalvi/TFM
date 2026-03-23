@@ -251,7 +251,7 @@ def train_model_with_validation(
     best_val_probs = None
 
     early_stop = 0
-    patience = 10 if model_name_l == "healnet" else 20
+    patience = 20
 
     history = []
 

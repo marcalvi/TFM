@@ -17,7 +17,7 @@ fi
 
 WANDB_ARGS=()
 if [[ -n "${WANDB_LOGIN_KEY}" ]]; then
-  WANDB_ARGS+=(--wandb --wandb_project "DyAM" --wandb_mode "online")
+  WANDB_ARGS+=(--wandb --wandb_project "pAM" --wandb_mode "online")
 fi
 
 # Define paths

@@ -1,0 +1,126 @@
+_wandb:
+    value:
+        cli_version: 0.25.0
+        e:
+            x4xitv6j6c4p3vp13qce8ol2dxwfjv5p:
+                args:
+                    - --model
+                    - Distill_DyAM
+                    - --dataset
+                    - MIMM
+                    - --odir
+                    - /home/osiris-user/Desktop/TFM/methods/results
+                    - --dataset_dir
+                    - /nfs/rnas/projects/M3BENCH/data/inputs/MIMM/
+                    - --endpoint
+                    - OS_6
+                    - --inner_splits
+                    - "5"
+                    - --outer_splits
+                    - "5"
+                    - --epochs
+                    - "80"
+                    - --batch_size
+                    - 16,32
+                    - --learning_rate
+                    - 5e-5,1e-4
+                    - --dyam_dropout
+                    - 0.2,0.4
+                    - --dyam_temperature
+                    - 1.0,2.0
+                    - --distill_alpha
+                    - 1.0,2.0
+                    - --distill_beta
+                    - 0.1,0.3
+                    - --train_missing_prop
+                    - 0.0,0.2,0.4,0.6,0.8
+                    - --missing_location
+                    - global, path, radio, clin, blood, radio_report
+                    - --test_missing_prop
+                    - 0.0,0.2,0.4,0.6,0.8
+                    - --seeds
+                    - 2002,4,18473,55602
+                    - --missing_pattern_seed
+                    - "2026"
+                    - --wandb
+                    - --wandb_project
+                    - Di-pAM
+                    - --wandb_mode
+                    - online
+                email: albesa.marc@gmail.com
+                executable: /home/osiris-user/anaconda3/envs/TFM_5090/bin/python
+                host: b8184701be89
+                os: Linux-6.13.0-061300-generic-x86_64-with-glibc2.39
+                program: /home/osiris-user/Desktop/TFM/methods/main.py
+                python: CPython 3.9.18
+                root: /nfs/rnas/workspaces/malbesa/TFM/methods/runs
+                startedAt: "2026-03-20T02:01:07.870610Z"
+                writerId: x4xitv6j6c4p3vp13qce8ol2dxwfjv5p
+        m: []
+        python_version: 3.9.18
+        t:
+            "1":
+                - 1
+                - 5
+                - 53
+            "2":
+                - 1
+                - 5
+                - 53
+            "3":
+                - 2
+                - 13
+                - 16
+                - 61
+            "4": 3.9.18
+            "5": 0.25.0
+            "12": 0.25.0
+            "13": linux-x86_64
+dataset:
+    value: MIMM
+endpoint:
+    value: OS_6
+epochs:
+    value: 80
+eval_missing_locations_grid:
+    value: path
+hp_grid_size:
+    value: 64
+imputation_method:
+    value: zero
+inner_splits:
+    value: 5
+missing_location:
+    value: path
+missing_pattern_seed:
+    value: 2026
+modalities:
+    value:
+        - path
+        - radio
+        - clin
+        - blood
+        - radio_report
+model:
+    value: distill_dyam
+outer_fold:
+    value: 4
+outer_splits:
+    value: 5
+phase:
+    value: avg_inner_curve_best_per_fold
+seed:
+    value: 2002
+selected_inner_hp_names:
+    value:
+        - lr1e-04_bs16_drop0p4_temp1p0_a1p0_b0p1_trmiss40_trlocpath
+        - lr5e-05_bs32_drop0p4_temp1p0_a1p0_b0p1_trmiss40_trlocpath
+        - lr1e-04_bs32_drop0p4_temp2p0_a2p0_b0p1_trmiss40_trlocpath
+        - lr1e-04_bs16_drop0p4_temp1p0_a1p0_b0p3_trmiss40_trlocpath
+        - lr5e-05_bs16_drop0p2_temp2p0_a2p0_b0p1_trmiss40_trlocpath
+test_eval_combinations:
+    value: 1
+test_missing_props_grid:
+    value: "0.0"
+train_missing_prop:
+    value: 0.4

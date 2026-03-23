@@ -1,0 +1,12 @@
+{"time":"2026-03-20T12:34:39.976026194+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-20T12:34:40.241043282+01:00","level":"INFO","msg":"stream: created new stream","id":"pix8arfa"}
+{"time":"2026-03-20T12:34:40.241461119+01:00","level":"INFO","msg":"handler: started","stream_id":"pix8arfa"}
+{"time":"2026-03-20T12:34:40.245407722+01:00","level":"INFO","msg":"stream: started","id":"pix8arfa"}
+{"time":"2026-03-20T12:34:40.246291479+01:00","level":"INFO","msg":"writer: started","stream_id":"pix8arfa"}
+{"time":"2026-03-20T12:34:40.246375598+01:00","level":"INFO","msg":"sender: started","stream_id":"pix8arfa"}
+{"time":"2026-03-20T12:34:42.241905687+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-20T12:34:42.762845772+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-20T12:34:42.765577484+01:00","level":"INFO","msg":"stream: closing","id":"pix8arfa"}
+{"time":"2026-03-20T12:34:42.76558576+01:00","level":"INFO","msg":"handler: closed","stream_id":"pix8arfa"}
+{"time":"2026-03-20T12:34:42.76609495+01:00","level":"INFO","msg":"sender: closed","stream_id":"pix8arfa"}
+{"time":"2026-03-20T12:34:42.766103316+01:00","level":"INFO","msg":"stream: closed","id":"pix8arfa"}
