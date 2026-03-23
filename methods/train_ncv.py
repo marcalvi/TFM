@@ -729,56 +729,61 @@ def nested_cv(
             )
             selected_inner_histories.append(best_inner_history)
 
-        # Log averaged learning curve of the selected best inner-fold models for this outer fold
-        inner_curve_run = None
+        # Log one W&B run per selected best inner-fold model for this outer fold.
         if wandb_active and selected_inner_histories:
-            selected_hp_names = [row["hp_name"] for row in selected_inner_rows]
             missing_location = str((wandb_base_config or {}).get("missing_location", "na")).strip().lower()
             train_missing_prop = float((wandb_base_config or {}).get("train_missing_prop", 0.0))
-            run_name = (
-                f"loc{missing_location}_"
-                f"trainprop{train_missing_prop:g}_"
-                f"seed{seed}_"
-                f"outer{outer_fold_idx}"
-            )
-            run_config = dict(wandb_base_config or {})
-            run_config.update(
-                {
-                    "seed": seed,
-                    "outer_fold": outer_fold_idx,
-                    "phase": "avg_inner_curve_best_per_fold",
-                    "selected_inner_hp_names": selected_hp_names,
-                }
-            )
-            inner_curve_run = wandb.init(
-                project=wandb_project,
-                group=f"outer_fold_{outer_fold_idx}",
-                name=run_name,
-                mode=wandb_mode,
-                config=run_config,
-                reinit="finish_previous",
-            )
-
-            max_epoch = max(len(h) for h in selected_inner_histories)
-            for epoch_i in range(1, max_epoch + 1):
-                epoch_rows = [h[epoch_i - 1] for h in selected_inner_histories if len(h) >= epoch_i]
-                if not epoch_rows:
-                    continue
-
-                train_losses = [float(r["train_loss"]) for r in epoch_rows]
-                val_losses = [float(r["val_loss"]) for r in epoch_rows]
-                val_aucs = [float(r["val_auc"]) for r in epoch_rows]
-
-                inner_curve_run.log(
+            for selected_row, selected_history in zip(selected_inner_rows, selected_inner_histories):
+                inner_fold_idx = int(selected_row["inner_fold"])
+                run_name = (
+                    f"loc{missing_location}_"
+                    f"trainprop{train_missing_prop:g}_"
+                    f"seed{seed}_"
+                    f"outer{outer_fold_idx}_"
+                    f"inner{inner_fold_idx}"
+                )
+                run_config = dict(wandb_base_config or {})
+                run_config.update(
                     {
-                        "avg_inner_best_models/train_loss_mean": float(np.mean(train_losses)),
-                        "avg_inner_best_models/val_loss_mean": float(np.mean(val_losses)),
-                        "avg_inner_best_models/val_auc_mean": float(np.mean(val_aucs)),
-                    },
-                    step=epoch_i,
+                        "seed": seed,
+                        "outer_fold": outer_fold_idx,
+                        "inner_fold": inner_fold_idx,
+                        "phase": "best_inner_curve_per_fold",
+                        "selected_inner_hp_name": selected_row["hp_name"],
+                    }
+                )
+                inner_curve_run = wandb.init(
+                    project=wandb_project,
+                    group=f"outer_fold_{outer_fold_idx}",
+                    name=run_name,
+                    mode=wandb_mode,
+                    config=run_config,
+                    reinit="finish_previous",
                 )
 
-            inner_curve_run.finish()
+                for hrow in selected_history:
+                    epoch_i = int(hrow["epoch"])
+                    inner_curve_run.log(
+                        {
+                            "best_inner_model/train_loss": float(hrow["train_loss"]),
+                            "best_inner_model/val_loss": float(hrow["val_loss"]),
+                            "best_inner_model/val_auc": float(hrow["val_auc"]),
+                            "best_inner_model/val_aucpr": float(hrow["val_aucpr"]),
+                            "best_inner_model/val_acc": float(hrow["val_acc"]),
+                            "best_inner_model/teacher_loss": float(hrow["teacher_loss"]),
+                            "best_inner_model/student_survival_loss": float(hrow["student_survival_loss"]),
+                            "best_inner_model/student_repr_loss": float(hrow["student_repr_loss"]),
+                            "best_inner_model/student_feature_loss": float(hrow["student_feature_loss"]),
+                            "best_inner_model/smil_meta_train_loss": float(hrow["smil_meta_train_loss"]),
+                            "best_inner_model/smil_meta_val_loss": float(hrow["smil_meta_val_loss"]),
+                            "best_inner_model/smil_meta_val_ce": float(hrow["smil_meta_val_ce"]),
+                            "best_inner_model/smil_align_fusion": float(hrow["smil_align_fusion"]),
+                            "best_inner_model/smil_align_hidden": float(hrow["smil_align_hidden"]),
+                        },
+                        step=epoch_i,
+                    )
+
+                inner_curve_run.finish()
 
         # Outer prediction = average predictions of selected inner models on outer-test data (20%).
         # Each model must evaluate on data transformed with its own inner-train scalers.
