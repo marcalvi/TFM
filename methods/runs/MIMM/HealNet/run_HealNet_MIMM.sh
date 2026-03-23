@@ -5,7 +5,7 @@ set -euo pipefail
 # Activate conda environment
 #source /opt/miniconda3/etc/profile.d/conda.sh
 source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-conda activate TFM_5090
+conda activate TFM
 
 # WandB login token
 WANDB_LOGIN_KEY="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"
@@ -22,7 +22,7 @@ fi
 
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/"
-RESULTS_ROOT="${PROJECT_ROOT}/results"
+RESULTS_ROOT="${PROJECT_ROOT}/results_healnet"
 
 ENDPOINT="OS_6"
 SEEDS="22,2002,4,18473,55602"
@@ -35,19 +35,20 @@ EPOCHS=80
 LR_GRID="5e-6,1e-5,5e-5"
 BATCH_SIZE_GRID="4,8,16"
 HEALNET_DEPTH_GRID="1,2"
-HEALNET_NUM_LATENTS_GRID="32,64"
+HEALNET_NUM_LATENTS_GRID="64"
 HEALNET_LATENT_DIM_GRID="64"
 HEALNET_LATENT_HEADS_GRID="2"
 HEALNET_CROSS_HEADS_GRID="1"
 HEALNET_CROSS_DIM_HEAD_GRID="64"
 HEALNET_LATENT_DIM_HEAD_GRID="64"
 HEALNET_NUM_FREQ_BANDS_GRID="2"
-HEALNET_ATTN_DROPOUT_GRID="0.2,0.3"
+HEALNET_ATTN_DROPOUT_GRID="0.2"
 HEALNET_FF_DROPOUT_GRID="0.2"
 HEALNET_SELF_PER_CROSS_ATTN_GRID="1"
 
 # Missingness experiments
-MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
+MISSING_LOCATION_GRID="global"
+# MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
 TRAIN_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
 TEST_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
 

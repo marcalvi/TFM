@@ -1,4 +1,4 @@
-description: 'Functional test: run code'
+description: 'Di-pam'
 executable: /bin/bash
 args: ["-c", "/nfs/rnas/workspaces/malbesa/TFM/methods/runs/MIMM/Di-pAM/run_DipAM_MIMM.sh"]
 env:
