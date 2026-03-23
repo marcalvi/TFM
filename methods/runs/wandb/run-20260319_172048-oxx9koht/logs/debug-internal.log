@@ -1,0 +1,14 @@
+{"time":"2026-03-19T17:20:48.291604148+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-19T17:20:48.559815606+01:00","level":"INFO","msg":"stream: created new stream","id":"oxx9koht"}
+{"time":"2026-03-19T17:20:48.559905887+01:00","level":"INFO","msg":"handler: started","stream_id":"oxx9koht"}
+{"time":"2026-03-19T17:20:48.563711096+01:00","level":"INFO","msg":"stream: started","id":"oxx9koht"}
+{"time":"2026-03-19T17:20:48.563750731+01:00","level":"INFO","msg":"writer: started","stream_id":"oxx9koht"}
+{"time":"2026-03-19T17:20:48.563786047+01:00","level":"INFO","msg":"sender: started","stream_id":"oxx9koht"}
+{"time":"2026-03-19T17:20:49.919136892+01:00","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":80}
+{"time":"2026-03-19T17:20:49.920015873+01:00","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":9}
+{"time":"2026-03-19T17:20:51.333545613+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-19T17:20:57.889368466+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-19T17:20:57.894229199+01:00","level":"INFO","msg":"stream: closing","id":"oxx9koht"}
+{"time":"2026-03-19T17:20:57.894247313+01:00","level":"INFO","msg":"handler: closed","stream_id":"oxx9koht"}
+{"time":"2026-03-19T17:20:57.89480134+01:00","level":"INFO","msg":"sender: closed","stream_id":"oxx9koht"}
+{"time":"2026-03-19T17:20:57.894813342+01:00","level":"INFO","msg":"stream: closed","id":"oxx9koht"}

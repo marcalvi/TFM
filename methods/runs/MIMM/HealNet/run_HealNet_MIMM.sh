@@ -32,9 +32,8 @@ OUTER_SPLITS=5
 EPOCHS=80
 
 # HP grid
-# Actual combinations below: 3 (lr) * 2 (bs) * 2 (depth) * 2 (latents) * 2 (attn drop) * 1 (ff drop) = 48
 LR_GRID="5e-6,1e-5,5e-5"
-BATCH_SIZE_GRID="8,16"
+BATCH_SIZE_GRID="4,8,16"
 HEALNET_DEPTH_GRID="1,2"
 HEALNET_NUM_LATENTS_GRID="32,64"
 HEALNET_LATENT_DIM_GRID="64"
@@ -50,9 +49,7 @@ HEALNET_SELF_PER_CROSS_ATTN_GRID="1"
 # Missingness experiments
 MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
 TRAIN_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
-#TEST_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
-TEST_MISSING_PROP_GRID="0.0"
-
+TEST_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
 
 python "${PROJECT_ROOT}/main.py" \
   --model "HealNet" \

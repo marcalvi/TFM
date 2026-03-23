@@ -17,7 +17,7 @@ fi
 
 WANDB_ARGS=()
 if [[ -n "${WANDB_LOGIN_KEY}" ]]; then
-  WANDB_ARGS+=(--wandb --wandb_project "KNN_MLP_bo" --wandb_mode "offline")
+  WANDB_ARGS+=(--wandb --wandb_project "KNN_MLP" --wandb_mode "offline")
 fi
 
 # Define paths
@@ -32,7 +32,7 @@ RESULTS_ROOT="${PROJECT_ROOT}/results"
 ENDPOINT="OS_6"
 
 # Proposed tuning grid
-SEEDS="2002,55602"
+SEEDS="2002,2002,4,18473,55602"
 #SEEDS="22,2002,4,18473,55602"
 MISSING_PATTERN_SEED=2026
 INNER_SPLITS=5
@@ -48,7 +48,7 @@ DROPOUT_GRID="0.2,0.1"
 IMPUTATION_METHOD="knn"
 
 # Missingness experiments
-MISSING_LOCATION_GRID="radio, blood, radio_report"
+MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
 TRAIN_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
 TEST_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
 

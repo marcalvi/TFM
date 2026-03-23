@@ -1,0 +1,13 @@
+{"time":"2026-03-20T23:59:58.521563767+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-20T23:59:58.625681734+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-20T23:59:58.625710759+01:00","level":"INFO","msg":"stream: created new stream","id":"samscvp7"}
+{"time":"2026-03-20T23:59:58.62572743+01:00","level":"INFO","msg":"handler: started","stream_id":"samscvp7"}
+{"time":"2026-03-20T23:59:58.629693151+01:00","level":"INFO","msg":"stream: started","id":"samscvp7"}
+{"time":"2026-03-20T23:59:58.629707418+01:00","level":"INFO","msg":"writer: started","stream_id":"samscvp7"}
+{"time":"2026-03-20T23:59:58.629710885+01:00","level":"INFO","msg":"sender: started","stream_id":"samscvp7"}
+{"time":"2026-03-20T23:59:58.629880465+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-20T23:59:58.681727934+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-20T23:59:58.682773386+01:00","level":"INFO","msg":"stream: closing","id":"samscvp7"}
+{"time":"2026-03-20T23:59:58.68278052+01:00","level":"INFO","msg":"handler: closed","stream_id":"samscvp7"}
+{"time":"2026-03-20T23:59:58.683217434+01:00","level":"INFO","msg":"sender: closed","stream_id":"samscvp7"}
+{"time":"2026-03-20T23:59:58.683220119+01:00","level":"INFO","msg":"stream: closed","id":"samscvp7"}

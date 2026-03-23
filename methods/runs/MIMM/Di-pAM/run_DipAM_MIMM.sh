@@ -17,7 +17,7 @@ fi
 
 WANDB_ARGS=()
 if [[ -n "${WANDB_LOGIN_KEY}" ]]; then
-  WANDB_ARGS+=(--wandb --wandb_project "Distill_DyAM" --wandb_mode "online")
+  WANDB_ARGS+=(--wandb --wandb_project "Di-pAM" --wandb_mode "online")
 fi
 
 # Define paths
@@ -32,7 +32,7 @@ RESULTS_ROOT="${PROJECT_ROOT}/results"
 ENDPOINT="OS_6"
 
 # Proposed tuning grid (Distill_DyAM)
-SEEDS="2002,4,18473,55602"
+SEEDS="22,55602"
 # 22
 MISSING_PATTERN_SEED=2026
 

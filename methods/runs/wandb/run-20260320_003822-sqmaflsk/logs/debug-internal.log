@@ -1,0 +1,18 @@
+{"time":"2026-03-20T00:38:22.481190019+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-20T00:38:22.741364391+01:00","level":"INFO","msg":"stream: created new stream","id":"sqmaflsk"}
+{"time":"2026-03-20T00:38:22.741501981+01:00","level":"INFO","msg":"handler: started","stream_id":"sqmaflsk"}
+{"time":"2026-03-20T00:38:22.744395359+01:00","level":"INFO","msg":"stream: started","id":"sqmaflsk"}
+{"time":"2026-03-20T00:38:22.744441336+01:00","level":"INFO","msg":"writer: started","stream_id":"sqmaflsk"}
+{"time":"2026-03-20T00:38:22.744458558+01:00","level":"INFO","msg":"sender: started","stream_id":"sqmaflsk"}
+{"time":"2026-03-20T00:38:23.364826818+01:00","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":41}
+{"time":"2026-03-20T00:38:23.365143686+01:00","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":2}
+{"time":"2026-03-20T00:38:23.365488807+01:00","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":111}
+{"time":"2026-03-20T00:38:23.36562272+01:00","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":2}
+{"time":"2026-03-20T00:38:23.365746333+01:00","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":146}
+{"time":"2026-03-20T00:38:23.366329373+01:00","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":5}
+{"time":"2026-03-20T00:38:24.246333038+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-20T00:38:24.480473805+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-20T00:38:24.483178498+01:00","level":"INFO","msg":"stream: closing","id":"sqmaflsk"}
+{"time":"2026-03-20T00:38:24.483184319+01:00","level":"INFO","msg":"handler: closed","stream_id":"sqmaflsk"}
+{"time":"2026-03-20T00:38:24.483574765+01:00","level":"INFO","msg":"sender: closed","stream_id":"sqmaflsk"}
+{"time":"2026-03-20T00:38:24.483580266+01:00","level":"INFO","msg":"stream: closed","id":"sqmaflsk"}

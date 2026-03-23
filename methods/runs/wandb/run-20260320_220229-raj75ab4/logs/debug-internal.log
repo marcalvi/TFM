@@ -1,0 +1,13 @@
+{"time":"2026-03-20T22:02:29.489731914+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-20T22:02:29.77163175+01:00","level":"INFO","msg":"stream: created new stream","id":"raj75ab4"}
+{"time":"2026-03-20T22:02:29.771714748+01:00","level":"INFO","msg":"handler: started","stream_id":"raj75ab4"}
+{"time":"2026-03-20T22:02:29.776414071+01:00","level":"INFO","msg":"stream: started","id":"raj75ab4"}
+{"time":"2026-03-20T22:02:29.776467162+01:00","level":"INFO","msg":"writer: started","stream_id":"raj75ab4"}
+{"time":"2026-03-20T22:02:29.77650317+01:00","level":"INFO","msg":"sender: started","stream_id":"raj75ab4"}
+{"time":"2026-03-20T22:02:32.067175197+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-20T22:03:49.117093225+01:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/pAM_MIMM/raj75ab4/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-03-20T22:04:30.40575449+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-20T22:04:30.420612469+01:00","level":"INFO","msg":"stream: closing","id":"raj75ab4"}
+{"time":"2026-03-20T22:04:30.420631445+01:00","level":"INFO","msg":"handler: closed","stream_id":"raj75ab4"}
+{"time":"2026-03-20T22:04:30.436087663+01:00","level":"INFO","msg":"sender: closed","stream_id":"raj75ab4"}
+{"time":"2026-03-20T22:04:30.4361073+01:00","level":"INFO","msg":"stream: closed","id":"raj75ab4"}
