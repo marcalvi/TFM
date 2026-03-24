@@ -30,6 +30,7 @@ MISSING_PATTERN_SEED=2026
 INNER_SPLITS=5
 OUTER_SPLITS=5
 EPOCHS=80
+RADIO_AGGREGATION_METHOD="mean"
 
 # HP grid
 LR_GRID="5e-6,1e-5,5e-5"
@@ -60,6 +61,7 @@ python "${PROJECT_ROOT}/main.py" \
   --inner_splits "${INNER_SPLITS}" \
   --outer_splits "${OUTER_SPLITS}" \
   --epochs "${EPOCHS}" \
+  --radio_aggregation_method "${RADIO_AGGREGATION_METHOD}" \
   --batch_size "${BATCH_SIZE_GRID}" \
   --learning_rate "${LR_GRID}" \
   --healnet_depth "${HEALNET_DEPTH_GRID}" \

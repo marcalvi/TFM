@@ -77,6 +77,7 @@ def train_smil_e_with_meta_learning(
     train_seed=0,
 ):
     """Train SMIL-E with a SMIL-style meta loop fully contained in inner-train."""
+    min_best_epoch = min(10, int(epochs))
     model_kwargs = dict(model_kwargs or {})
     inner_steps = int(model_kwargs.pop("meta_inner_steps", 1))
     inner_lr = float(model_kwargs.pop("meta_inner_lr", 1e-2))
@@ -240,7 +241,7 @@ def train_smil_e_with_meta_learning(
         )
 
         epoch_score = (float(val_metrics_epoch["AUC"]), -float(avg_val_loss))
-        if epoch_score > best_epoch_score:
+        if epoch >= min_best_epoch and epoch_score > best_epoch_score:
             best_epoch_score = epoch_score
             best_epoch = epoch
             best_model_state = copy.deepcopy(model.state_dict())
@@ -252,8 +253,12 @@ def train_smil_e_with_meta_learning(
             if early_stop >= patience:
                 break
 
-    if best_model_state is not None:
-        model.load_state_dict(best_model_state)
+    if best_model_state is None:
+        raise RuntimeError(
+            f"No best epoch was selected. Check epochs={epochs} and min_best_epoch={min_best_epoch}."
+        )
+
+    model.load_state_dict(best_model_state)
 
     best_metrics = safe_binary_metrics(best_val_targets, best_val_probs)
     best_metrics["best_epoch"] = int(best_epoch)
