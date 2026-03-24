@@ -1,0 +1,13 @@
+{"time":"2026-03-24T16:43:06.637225237+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-24T16:43:06.748938992+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-24T16:43:06.748978376+01:00","level":"INFO","msg":"stream: created new stream","id":"cksta4pd"}
+{"time":"2026-03-24T16:43:06.749016939+01:00","level":"INFO","msg":"handler: started","stream_id":"cksta4pd"}
+{"time":"2026-03-24T16:43:06.754145221+01:00","level":"INFO","msg":"stream: started","id":"cksta4pd"}
+{"time":"2026-03-24T16:43:06.754179416+01:00","level":"INFO","msg":"sender: started","stream_id":"cksta4pd"}
+{"time":"2026-03-24T16:43:06.75416572+01:00","level":"INFO","msg":"writer: started","stream_id":"cksta4pd"}
+{"time":"2026-03-24T16:43:06.754491045+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-24T16:43:06.831544343+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-24T16:43:06.834098891+01:00","level":"INFO","msg":"stream: closing","id":"cksta4pd"}
+{"time":"2026-03-24T16:43:06.834108489+01:00","level":"INFO","msg":"handler: closed","stream_id":"cksta4pd"}
+{"time":"2026-03-24T16:43:06.834452119+01:00","level":"INFO","msg":"sender: closed","stream_id":"cksta4pd"}
+{"time":"2026-03-24T16:43:06.834459523+01:00","level":"INFO","msg":"stream: closed","id":"cksta4pd"}
