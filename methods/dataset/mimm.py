@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from .preprocess_dataset import check_and_collapse_modality_rows
+from .preprocess_dataset import validate_and_prepare_modality_rows
 
 def load_preprocessed_dataset(args):
     """MIMM-specific preprocessing pipeline."""
@@ -104,7 +104,14 @@ def load_preprocessed_dataset(args):
             "No modality CSV found. Provide --dataset_dir with MIMM modality files."
         )
 
-    dfs = check_and_collapse_modality_rows(dfs, id_col)
+    radio_aggregation_method = str(
+        getattr(args, "radio_aggregation_method", "mean")
+    ).strip().lower()
+    dfs = validate_and_prepare_modality_rows(
+        dfs,
+        id_col,
+        radio_aggregation_method=radio_aggregation_method,
+    )
 
     for mod in list(dfs.keys()):
         dfs[mod] = dfs[mod].set_index(id_col, drop=False)

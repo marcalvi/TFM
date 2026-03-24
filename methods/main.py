@@ -17,7 +17,7 @@ from utils import (
 def get_args():
     parser = argparse.ArgumentParser()
 
-    # Required arguments
+    # Main arguments
     parser.add_argument("--odir", type=str, required=True, help="Output directory")
     parser.add_argument("--dataset", type=str, required=True, help="Dataset name suffix")
     parser.add_argument("--endpoint", type=str, required=True, help="Endpoint base name")
@@ -32,6 +32,13 @@ def get_args():
         type=str,
         default=None,
         help="Directory containing all CSV files for the selected dataset.",
+    )
+    parser.add_argument(
+        "--radio_aggregation_method",
+        type=str,
+        default="mean",
+        choices=["mean", "attention"],
+        help="How to aggregate duplicated radiology rows into one patient-level embedding.",
     )
 
     # Cross-validation and optimization hyperparameters
@@ -152,6 +159,36 @@ def get_args():
         default=1e-3,
         help="KL weight for the tabular VAE imputer.",
     )
+    parser.add_argument(
+        "--radio_attention_hidden_dim",
+        type=int,
+        default=128,
+        help="Hidden size of the radiology attention pooling scorer.",
+    )
+    parser.add_argument(
+        "--radio_attention_dropout",
+        type=float,
+        default=0.1,
+        help="Dropout used inside the radiology attention pooling scorer.",
+    )
+    parser.add_argument(
+        "--radio_attention_epochs",
+        type=int,
+        default=25,
+        help="Training epochs for the radiology attention pooling module.",
+    )
+    parser.add_argument(
+        "--radio_attention_lr",
+        type=float,
+        default=1e-3,
+        help="Learning rate for the radiology attention pooling module.",
+    )
+    parser.add_argument(
+        "--radio_attention_weight_decay",
+        type=float,
+        default=1e-4,
+        help="Weight decay for the radiology attention pooling module.",
+    )
 
     # Weights & Biases logging
     parser.add_argument("--wandb", action="store_true", help="Enable Weights & Biases logging")
@@ -169,6 +206,7 @@ def _build_output_dir(
     missing_location,
     train_missing_prop,
     seed,
+    radio_aggregation_method="mean",
 ):
     mapping = {
         "global": "GLOBAL",
@@ -186,6 +224,8 @@ def _build_output_dir(
         )
     else:
         model_label = model_name_norm.upper().replace("_", "-")
+    if str(radio_aggregation_method).strip().lower() != "mean":
+        model_label = f"{model_label}_RAD-{str(radio_aggregation_method).strip().upper()}"
     dataset_label = str(dataset_name).strip().upper()
     key = str(missing_location).strip().lower()
     missing_modality_label = mapping.get(key, key.upper())
@@ -390,6 +430,7 @@ def main():
                     missing_location=missing_location,
                     train_missing_prop=train_missing_prop,
                     seed=seed,
+                    radio_aggregation_method=args.radio_aggregation_method,
                 )
                 print(
                     "Running seed="
@@ -414,6 +455,7 @@ def main():
                     "missing_location": str(missing_location).lower(),
                     "missing_pattern_seed": int(args.missing_pattern_seed),
                     "imputation_method": args.imputation_method,
+                    "radio_aggregation_method": str(args.radio_aggregation_method).strip().lower(),
                     "test_eval_combinations": len(test_eval_setups),
                     "test_missing_props_grid": ",".join(
                         str(float(setup["missing_prop"])) for setup in test_eval_setups
@@ -461,6 +503,15 @@ def main():
                         "lr": float(args.vae_imputer_lr),
                         "beta": float(args.vae_imputer_beta),
                     },
+                    radio_aggregation_method=str(args.radio_aggregation_method).strip().lower(),
+                    radio_pooling_kwargs={
+                        "hidden_dim": int(args.radio_attention_hidden_dim),
+                        "dropout": float(args.radio_attention_dropout),
+                        "epochs": int(args.radio_attention_epochs),
+                        "lr": float(args.radio_attention_lr),
+                        "weight_decay": float(args.radio_attention_weight_decay),
+                    },
+                    candidate_model_dir=os.path.join(odir, "models"),
                 )
 
                 _save_run_outputs(

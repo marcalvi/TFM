@@ -1,4 +1,8 @@
 import copy
+import gc
+import os
+import pickle
+import shutil
 import numpy as np
 import pandas as pd
 import torch
@@ -23,6 +27,8 @@ from utils import (
     set_global_seed,
     normalize_model_name,
 )
+from dataset.preprocess_dataset import collapse_patient_rows
+from dataset.radiology_attention_pooling import RadiologyAttentionPooler
 try:
     import wandb
 except ImportError:
@@ -51,10 +57,164 @@ def _transform_modalities_with_fitted_scalers(dfs_raw, scalers, patient_id_col="
 
     return dfs_scaled
 
+
+def _prepare_patient_level_modalities(
+    dfs_raw,
+    patient_id_col="patient",
+    radio_aggregation_method="mean",
+    fit_radio_pooler=False,
+    radio_pooler=None,
+    radio_pooling_kwargs=None,
+    labels_df=None,
+    label_col=None,
+):
+    """Collapse raw split dataframes to one row per patient, optionally with learned radio pooling."""
+    radio_aggregation_l = str(radio_aggregation_method).strip().lower()
+    prepared = {}
+    fitted_radio_pooler = radio_pooler
+
+    for modality_name, df_raw in dfs_raw.items():
+        if modality_name == "radio" and radio_aggregation_l == "attention":
+            if fit_radio_pooler:
+                if labels_df is None or label_col is None:
+                    raise ValueError(
+                        "labels_df and label_col are required when fitting the radiology attention pooler."
+                    )
+                feature_cols = [c for c in df_raw.columns if c != patient_id_col]
+                if not feature_cols:
+                    raise ValueError("Radiology dataframe has no feature columns to pool.")
+                fitted_radio_pooler = RadiologyAttentionPooler(
+                    input_dim=len(feature_cols),
+                    **dict(radio_pooling_kwargs or {}),
+                )
+                fitted_radio_pooler.fit(
+                    df_train=df_raw,
+                    labels_df=labels_df,
+                    id_col=patient_id_col,
+                    label_col=label_col,
+                )
+            if fitted_radio_pooler is None:
+                raise RuntimeError(
+                    "Radiology attention pooling was requested but no fitted pooler is available."
+                )
+            df_patient = fitted_radio_pooler.transform(df_raw)
+        else:
+            df_patient = collapse_patient_rows(df_raw, id_col=patient_id_col, strategy="mean")
+
+        prepared[modality_name] = df_patient.set_index(patient_id_col, drop=False)
+
+    return prepared, fitted_radio_pooler
+
+
+def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
+    if model_name_l in {"mlp"}:
+        return {
+            "modality_hidden_layers": hp_cfg["modality_hidden_layers"],
+            "fusion_hidden_dim": hp_cfg["fusion_hidden_dim"],
+            "fusion_hidden_layers": hp_cfg["fusion_hidden_layers"],
+            "dropout_p": hp_cfg["dropout"],
+        }
+    if model_name_l in {"dyam"}:
+        return {
+            "dropout_p": hp_cfg["dyam_dropout"],
+            "temperature": hp_cfg["dyam_temperature"],
+        }
+    if model_name_l in {"distill_dyam"}:
+        return {
+            "dropout_p": hp_cfg["dyam_dropout"],
+            "temperature": hp_cfg["dyam_temperature"],
+            "concat_masks_input": True,
+            "distill_alpha": hp_cfg["distill_alpha"],
+            "distill_beta": hp_cfg["distill_beta"],
+        }
+    if model_name_l in {"smil_e"}:
+        return {
+            "latent_dim": hp_cfg["smil_e_latent_dim"],
+            "num_priors": hp_cfg["smil_e_num_priors"],
+            "num_heads": hp_cfg["smil_e_num_heads"],
+            "dropout": hp_cfg["smil_e_dropout"],
+            "alpha": hp_cfg["smil_e_alpha"],
+            "beta": hp_cfg["smil_e_beta"],
+        }
+    if model_name_l in {"healnet"}:
+        return {
+            "depth": hp_cfg["healnet_depth"],
+            "num_freq_bands": hp_cfg["healnet_num_freq_bands"],
+            "num_latents": hp_cfg["healnet_num_latents"],
+            "latent_dim": hp_cfg["healnet_latent_dim"],
+            "cross_heads": hp_cfg["healnet_cross_heads"],
+            "latent_heads": hp_cfg["healnet_latent_heads"],
+            "cross_dim_head": hp_cfg["healnet_cross_dim_head"],
+            "latent_dim_head": hp_cfg["healnet_latent_dim_head"],
+            "attn_dropout": hp_cfg["healnet_attn_dropout"],
+            "ff_dropout": hp_cfg["healnet_ff_dropout"],
+            "self_per_cross_attn": hp_cfg["healnet_self_per_cross_attn"],
+        }
+    raise ValueError(
+        f"Unsupported model '{model_name_l}'. Supported: mlp, dyam, distill_dyam, smil_e, healnet"
+    )
+
+
+def _candidate_bundle_path(candidate_model_dir, outer_fold_idx, inner_fold_idx, hp_name):
+    safe_hp_name = str(hp_name).replace(os.sep, "_")
+    fold_dir = os.path.join(
+        candidate_model_dir,
+        f"outer_fold_{int(outer_fold_idx)}",
+        f"inner_fold_{int(inner_fold_idx)}",
+    )
+    os.makedirs(fold_dir, exist_ok=True)
+    return os.path.join(fold_dir, f"{safe_hp_name}.pkl")
+
+
+def _save_candidate_bundle(
+    bundle_path,
+    model,
+    model_name,
+    input_dims,
+    model_kwargs,
+    scalers,
+    imputer,
+    radio_pooler,
+):
+    bundle = {
+        "model_name": normalize_model_name(model_name),
+        "input_dims": [int(dim) for dim in input_dims],
+        "model_kwargs": dict(model_kwargs or {}),
+        "model_state_dict": {
+            key: value.detach().cpu()
+            for key, value in model.state_dict().items()
+        },
+        "scalers": scalers,
+        "imputer": imputer,
+        "radio_pooler": radio_pooler,
+    }
+    with open(bundle_path, "wb") as handle:
+        pickle.dump(bundle, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def _load_candidate_bundle(bundle_path, device):
+    with open(bundle_path, "rb") as handle:
+        bundle = pickle.load(handle)
+
+    model = build_model(
+        bundle["model_name"],
+        bundle["input_dims"],
+        bundle["model_kwargs"],
+    ).to(device)
+    model.load_state_dict(bundle["model_state_dict"])
+
+    return {
+        "model": model,
+        "scalers": bundle["scalers"],
+        "imputer": bundle["imputer"],
+        "radio_pooler": bundle["radio_pooler"],
+    }
+
+
 def _fit_split_imputer(
-    reference_base_dataset,
-    missing_simulator,
-    apply_missing_reference,
+    split_dataset,
+    split_missing_simulator,
+    apply_split_missing,
     imputation_method,
     missing_pattern_seed,
     imputer_seed,
@@ -64,16 +224,16 @@ def _fit_split_imputer(
     if method_l == "zero":
         return None
 
-    reference_dataset = MultimodalDatasetWithMissing(
-        base_dataset=reference_base_dataset,
-        simulator=missing_simulator,
-        apply_missing=apply_missing_reference,
+    split_reference_dataset = MultimodalDatasetWithMissing(
+        base_dataset=split_dataset,
+        simulator=split_missing_simulator,
+        apply_missing=apply_split_missing,
         imputation_method="zero",
         missing_pattern_seed=missing_pattern_seed,
     )
     return build_imputer(
         imputation_method=method_l,
-        reference_dataset=reference_dataset,
+        reference_dataset=split_reference_dataset,
         knn_k=5,
         vae_kwargs=imputer_kwargs,
         imputer_seed=imputer_seed,
@@ -189,6 +349,7 @@ def train_model_with_validation(
     model_kwargs=None,
     train_seed=0,
 ):
+    min_best_epoch = min(10, int(epochs))
     model_kwargs = model_kwargs or {}
     model_name_l = normalize_model_name(model_name)
 
@@ -384,7 +545,7 @@ def train_model_with_validation(
         )
 
         epoch_score = (float(val_metrics_epoch["AUC"]), -float(avg_val_loss))
-        if epoch_score > best_epoch_score:
+        if epoch >= min_best_epoch and epoch_score > best_epoch_score:
             best_epoch_score = epoch_score
             best_epoch = epoch
             if model_name_l in {"distill_dyam"}:
@@ -399,11 +560,15 @@ def train_model_with_validation(
             if early_stop >= patience:
                 break
 
-    if best_model_state is not None:
-        if model_name_l in {"distill_dyam"}:
-            student_model.load_state_dict(best_model_state)
-        else:
-            model.load_state_dict(best_model_state)
+    if best_model_state is None:
+        raise RuntimeError(
+            f"No best epoch was selected. Check epochs={epochs} and min_best_epoch={min_best_epoch}."
+        )
+
+    if model_name_l in {"distill_dyam"}:
+        student_model.load_state_dict(best_model_state)
+    else:
+        model.load_state_dict(best_model_state)
 
     best_metrics = safe_binary_metrics(best_val_targets, best_val_probs)
     best_metrics["best_epoch"] = int(best_epoch)
@@ -436,6 +601,9 @@ def nested_cv(
     wandb_base_config=None,
     test_eval_setups=None,
     imputer_kwargs=None,
+    radio_aggregation_method="mean",
+    radio_pooling_kwargs=None,
+    candidate_model_dir=None,
 ):
     wandb_active = bool(wandb_enabled and wandb is not None)
     if wandb_enabled and wandb is None:
@@ -493,6 +661,10 @@ def nested_cv(
 
     for outer_fold_idx, (train_outer_idx, test_outer_idx) in enumerate(outer_cv.split(patients, y), 1):
         print(f"\nOuter fold {outer_fold_idx}")
+        outer_candidate_dir = None
+        if candidate_model_dir is not None:
+            outer_candidate_dir = os.path.join(candidate_model_dir, f"outer_fold_{outer_fold_idx}")
+            os.makedirs(outer_candidate_dir, exist_ok=True)
 
         # Get and save patient IDs splits for each outer fold
         train_outer_ids = patients[train_outer_idx]
@@ -514,7 +686,8 @@ def nested_cv(
             for name, df in dfs.items()
         }
 
-        # Select one best HP config per inner fold and keep the 5 trained models.
+        # Train all HPs across all inner folds, then select one robust HP for the whole outer fold.
+        all_inner_candidates_by_hp = {}
         selected_inner_members = []
         selected_inner_rows = []
         selected_inner_histories = []
@@ -543,35 +716,47 @@ def nested_cv(
                 name: filter_by_patients(df, val_inner_ids, id_col=patient_id_col)
                 for name, df in dfs_train_outer_raw.items()
             }
-            dfs_train_inner_scaled, dfs_val_inner_scaled, scalers_inner = fit_and_transform_modalities(
+            dfs_train_inner_prepared, radio_pooler_inner = _prepare_patient_level_modalities(
                 dfs_train_inner_raw,
+                patient_id_col=patient_id_col,
+                radio_aggregation_method=radio_aggregation_method,
+                fit_radio_pooler=True,
+                radio_pooler=None,
+                radio_pooling_kwargs=radio_pooling_kwargs,
+                labels_df=inst_df_train_inner,
+                label_col=label_col,
+            )
+            dfs_val_inner_prepared, _ = _prepare_patient_level_modalities(
                 dfs_val_inner_raw,
+                patient_id_col=patient_id_col,
+                radio_aggregation_method=radio_aggregation_method,
+                fit_radio_pooler=False,
+                radio_pooler=radio_pooler_inner,
+                radio_pooling_kwargs=radio_pooling_kwargs,
+                labels_df=None,
+                label_col=None,
+            )
+            dfs_train_inner_scaled, dfs_val_inner_scaled, scalers_inner = fit_and_transform_modalities(
+                dfs_train_inner_prepared,
+                dfs_val_inner_prepared,
                 id_col=patient_id_col,
             )
 
-            train_base_inner = MultimodalBaseDataset(
+            train_split_dataset = MultimodalBaseDataset(
                 dfs=dfs_train_inner_scaled,
                 label_df=inst_df_train_inner,
                 label_col=label_col,
                 id_col=patient_id_col,
             )
             prefit_inner_imputer = _fit_split_imputer(
-                reference_base_dataset=train_base_inner,
-                missing_simulator=train_missing_simulator,
-                apply_missing_reference=apply_missing_train,
+                split_dataset=train_split_dataset,
+                split_missing_simulator=train_missing_simulator,
+                apply_split_missing=apply_missing_train,
                 imputation_method=imputation_method,
                 missing_pattern_seed=missing_pattern_seed,
                 imputer_seed=int(seed + outer_fold_idx * 10_000 + inner_fold_idx * 100),
                 imputer_kwargs=imputer_kwargs,
             )
-
-            # Keep track of the best model and HP config for this inner fold
-            best_inner_model = None
-            best_inner_hp = None
-            best_inner_metrics = None
-            best_inner_scalers = None
-            best_inner_history = None
-            best_inner_score = (-np.inf, -np.inf)  # (AUC, -LOGLOSS)
 
             # Iterate over each HP config, train a model, and evaluate on inner-val fold
             for hp_idx, hp_cfg in enumerate(hp_configs):
@@ -597,55 +782,7 @@ def nested_cv(
                     imputer_kwargs=imputer_kwargs,
                 )
 
-                # Get model kwargs from this HP config
-                if model_name_l in {"mlp"}:
-                    model_kwargs = {
-                        "modality_hidden_layers": hp_cfg["modality_hidden_layers"],
-                        "fusion_hidden_dim": hp_cfg["fusion_hidden_dim"],
-                        "fusion_hidden_layers": hp_cfg["fusion_hidden_layers"],
-                        "dropout_p": hp_cfg["dropout"],
-                    }
-                elif model_name_l in {"dyam"}:
-                    model_kwargs = {
-                        "dropout_p": hp_cfg["dyam_dropout"],
-                        "temperature": hp_cfg["dyam_temperature"],
-                    }
-                elif model_name_l in {"distill_dyam"}:
-                    model_kwargs = {
-                        "dropout_p": hp_cfg["dyam_dropout"],
-                        "temperature": hp_cfg["dyam_temperature"],
-                        "concat_masks_input": True,
-                        "distill_alpha": hp_cfg["distill_alpha"],
-                        "distill_beta": hp_cfg["distill_beta"],
-                    }
-                elif model_name_l in {"smil_e"}:
-                    model_kwargs = {
-                        "latent_dim": hp_cfg["smil_e_latent_dim"],
-                        "num_priors": hp_cfg["smil_e_num_priors"],
-                        "num_heads": hp_cfg["smil_e_num_heads"],
-                        "dropout": hp_cfg["smil_e_dropout"],
-                        "alpha": hp_cfg["smil_e_alpha"],
-                        "beta": hp_cfg["smil_e_beta"],
-                    }
-                elif model_name_l in {"healnet"}:
-                    model_kwargs = {
-                        "depth": hp_cfg["healnet_depth"],
-                        "num_freq_bands": hp_cfg["healnet_num_freq_bands"],
-                        "num_latents": hp_cfg["healnet_num_latents"],
-                        "latent_dim": hp_cfg["healnet_latent_dim"],
-                        "cross_heads": hp_cfg["healnet_cross_heads"],
-                        "latent_heads": hp_cfg["healnet_latent_heads"],
-                        "cross_dim_head": hp_cfg["healnet_cross_dim_head"],
-                        "latent_dim_head": hp_cfg["healnet_latent_dim_head"],
-                        "attn_dropout": hp_cfg["healnet_attn_dropout"],
-                        "ff_dropout": hp_cfg["healnet_ff_dropout"],
-                        "self_per_cross_attn": hp_cfg["healnet_self_per_cross_attn"],
-                    }
-                else:
-                    raise ValueError(
-                        "Unsupported model "
-                        f"'{model_name}'. Supported: mlp, dyam, distill_dyam, smil_e, healnet"
-                    )
+                model_kwargs = _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg)
 
                 # Train the model and evaluate on inner-val fold
                 model, history, best_metrics = train_model_with_validation(
@@ -691,43 +828,129 @@ def nested_cv(
                         }
                     )
 
-                score = (float(best_metrics["AUC"]), -float(best_metrics["LOGLOSS"]))
-                if score > best_inner_score:
-                    best_inner_score = score
-                    best_inner_model = model
-                    best_inner_hp = hp_cfg
-                    best_inner_metrics = best_metrics
-                    best_inner_scalers = scalers_inner
-                    best_inner_history = history
+                bundle_path = None
+                if outer_candidate_dir is not None:
+                    bundle_path = _candidate_bundle_path(
+                        candidate_model_dir=candidate_model_dir,
+                        outer_fold_idx=outer_fold_idx,
+                        inner_fold_idx=inner_fold_idx,
+                        hp_name=hp_name,
+                    )
+                    _save_candidate_bundle(
+                        bundle_path=bundle_path,
+                        model=model,
+                        model_name=model_name,
+                        input_dims=input_dims,
+                        model_kwargs=model_kwargs,
+                        scalers=scalers_inner,
+                        imputer=prefit_inner_imputer,
+                        radio_pooler=radio_pooler_inner,
+                    )
 
-            if best_inner_model is None:
-                raise RuntimeError(
-                    f"No model selected for outer fold {outer_fold_idx}, inner fold {inner_fold_idx}."
+                all_inner_candidates_by_hp.setdefault(hp_name, []).append(
+                    {
+                        "inner_fold": inner_fold_idx,
+                        "hp_name": hp_name,
+                        "hp_cfg": hp_cfg,
+                        "metrics": best_metrics,
+                        "history": history,
+                        "bundle_path": bundle_path,
+                        "model_kwargs": model_kwargs,
+                        "scalers": scalers_inner if bundle_path is None else None,
+                        "imputer": prefit_inner_imputer if bundle_path is None else None,
+                        "radio_pooler": radio_pooler_inner if bundle_path is None else None,
+                        "model": model if bundle_path is None else None,
+                    }
                 )
-            print(
-                f"  Inner fold {inner_fold_idx} best hp: {best_inner_hp['name']} "
-                f"(AUC={best_inner_metrics['AUC']:.4f}, LOGLOSS={best_inner_metrics['LOGLOSS']:.4f}, "
-                f"best_epoch={int(best_inner_metrics['best_epoch'])})"
+
+                if bundle_path is not None:
+                    del model
+                    gc.collect()
+                    if device.type == "cuda":
+                        torch.cuda.empty_cache()
+
+        if not all_inner_candidates_by_hp:
+            raise RuntimeError(f"No inner-fold candidates were trained for outer fold {outer_fold_idx}.")
+
+        robust_hp_rows = []
+        expected_inner_folds = int(inner_splits)
+        for hp_cfg in hp_configs:
+            hp_name = hp_cfg["name"]
+            candidates = sorted(
+                all_inner_candidates_by_hp.get(hp_name, []),
+                key=lambda item: int(item["inner_fold"]),
+            )
+            if len(candidates) != expected_inner_folds:
+                raise RuntimeError(
+                    f"HP '{hp_name}' is missing trained inner-fold models for outer fold {outer_fold_idx}. "
+                    f"Expected {expected_inner_folds}, found {len(candidates)}."
+                )
+
+            aucs = np.asarray([float(c["metrics"]["AUC"]) for c in candidates], dtype=np.float32)
+            loglosses = np.asarray([float(c["metrics"]["LOGLOSS"]) for c in candidates], dtype=np.float32)
+            mean_auc = float(np.mean(aucs))
+            std_auc = float(np.std(aucs))
+            mean_logloss = float(np.mean(loglosses))
+            robust_score = float(mean_auc - (0.5 * std_auc))
+
+            robust_hp_rows.append(
+                {
+                    "hp_name": hp_name,
+                    "hp_cfg": hp_cfg,
+                    "candidates": candidates,
+                    "mean_auc": mean_auc,
+                    "std_auc": std_auc,
+                    "mean_logloss": mean_logloss,
+                    "robust_score": robust_score,
+                }
             )
 
-            # After iterating over all HP configs, save the best model and its scalers for this inner fold, along with its metrics and history.
-            selected_inner_members.append(
-                {
-                    "model": best_inner_model,
-                    "scalers": best_inner_scalers,
-                    "imputer": prefit_inner_imputer,
-                }
+        best_hp_row = max(
+            robust_hp_rows,
+            key=lambda row: (float(row["robust_score"]), -float(row["mean_logloss"])),
+        )
+        selected_candidates = best_hp_row["candidates"]
+
+        print(
+            f"  Selected robust hp across inner folds: {best_hp_row['hp_name']} "
+            f"(score={best_hp_row['robust_score']:.4f}, mean_AUC={best_hp_row['mean_auc']:.4f}, "
+            f"std_AUC={best_hp_row['std_auc']:.4f}, mean_LOGLOSS={best_hp_row['mean_logloss']:.4f})"
+        )
+
+        for candidate in selected_candidates:
+            candidate_metrics = candidate["metrics"]
+            print(
+                f"    Inner fold {candidate['inner_fold']} retained model: "
+                f"AUC={float(candidate_metrics['AUC']):.4f}, "
+                f"LOGLOSS={float(candidate_metrics['LOGLOSS']):.4f}, "
+                f"best_epoch={int(candidate_metrics['best_epoch'])}"
             )
             selected_inner_rows.append(
                 {
-                    "inner_fold": inner_fold_idx,
-                    "hp_name": best_inner_hp["name"],
-                    **best_inner_hp,
-                    "val_best_AUC": float(best_inner_metrics["AUC"]),
-                    "val_best_LOGLOSS": float(best_inner_metrics["LOGLOSS"]),
+                    "inner_fold": int(candidate["inner_fold"]),
+                    "hp_name": candidate["hp_name"],
+                    **candidate["hp_cfg"],
+                    "val_best_AUC": float(candidate_metrics["AUC"]),
+                    "val_best_LOGLOSS": float(candidate_metrics["LOGLOSS"]),
+                    "robust_selected_mean_AUC": float(best_hp_row["mean_auc"]),
+                    "robust_selected_std_AUC": float(best_hp_row["std_auc"]),
+                    "robust_selected_score": float(best_hp_row["robust_score"]),
                 }
             )
-            selected_inner_histories.append(best_inner_history)
+            selected_inner_histories.append(candidate["history"])
+
+        for candidate in selected_candidates:
+            bundle_path = candidate.get("bundle_path")
+            if bundle_path is not None:
+                loaded_member = _load_candidate_bundle(bundle_path, device=device)
+            else:
+                loaded_member = {
+                    "model": candidate["model"],
+                    "scalers": candidate["scalers"],
+                    "imputer": candidate["imputer"],
+                    "radio_pooler": candidate["radio_pooler"],
+                }
+            selected_inner_members.append(loaded_member)
 
         # Log one W&B run per selected best inner-fold model for this outer fold.
         if wandb_active and selected_inner_histories:
@@ -800,9 +1023,21 @@ def nested_cv(
         for member in selected_inner_members:
             model = member["model"]
             scalers = member["scalers"]
+            radio_pooler = member.get("radio_pooler")
+
+            dfs_outer_eval_prepared, _ = _prepare_patient_level_modalities(
+                dfs_test_outer_raw,
+                patient_id_col=patient_id_col,
+                radio_aggregation_method=radio_aggregation_method,
+                fit_radio_pooler=False,
+                radio_pooler=radio_pooler,
+                radio_pooling_kwargs=radio_pooling_kwargs,
+                labels_df=None,
+                label_col=None,
+            )
 
             dfs_outer_eval_scaled = _transform_modalities_with_fitted_scalers(
-                dfs_test_outer_raw,
+                dfs_outer_eval_prepared,
                 scalers,
                 patient_id_col=patient_id_col,
             )
@@ -925,9 +1160,11 @@ def nested_cv(
                     "eval_missing_location": eval_missing_location,
                     "eval_missing_prop": eval_missing_prop,
                     "inner_models_count": len(selected_inner_members),
-                    "selected_inner_hp_names": "|".join(r["hp_name"] for r in selected_inner_rows),
+                    "selected_inner_hp_names": str(best_hp_row["hp_name"]),
                     "selected_inner_mean_AUC": float(np.mean([r["val_best_AUC"] for r in selected_inner_rows])),
                     "selected_inner_mean_LOGLOSS": float(np.mean([r["val_best_LOGLOSS"] for r in selected_inner_rows])),
+                    "selected_inner_std_AUC": float(best_hp_row["std_auc"]),
+                    "selected_inner_robust_score": float(best_hp_row["robust_score"]),
                     "outer_test_LOGLOSS": float(outer_metrics["LOGLOSS"]),
                     "outer_test_AUC": float(outer_metrics["AUC"]),
                     "outer_test_AUCPR": float(outer_metrics["AUCPR"]),
@@ -937,6 +1174,15 @@ def nested_cv(
                     "outer_test_MCC": float(outer_metrics["MCC"]),
                 }
             )
+
+        for member in selected_inner_members:
+            if "model" in member:
+                del member["model"]
+        gc.collect()
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+        if outer_candidate_dir is not None and os.path.isdir(outer_candidate_dir):
+            shutil.rmtree(outer_candidate_dir, ignore_errors=True)
 
     return (
         pd.DataFrame(inner_eval_rows),

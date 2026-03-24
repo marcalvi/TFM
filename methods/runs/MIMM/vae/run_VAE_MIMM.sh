@@ -38,6 +38,7 @@ MISSING_PATTERN_SEED=2026
 INNER_SPLITS=5
 OUTER_SPLITS=5
 EPOCHS=80
+RADIO_AGGREGATION_METHOD="mean"
 
 BATCH_SIZE_GRID="16,32"
 LR_GRID="5e-5,1e-4"
@@ -70,6 +71,7 @@ python "${PROJECT_ROOT}/main.py" \
   --inner_splits "${INNER_SPLITS}" \
   --outer_splits "${OUTER_SPLITS}" \
   --epochs "${EPOCHS}" \
+  --radio_aggregation_method "${RADIO_AGGREGATION_METHOD}" \
   --batch_size "${BATCH_SIZE_GRID}" \
   --learning_rate "${LR_GRID}" \
   --fusion_hidden_dim "${FUSION_HIDDEN_DIM_GRID}" \
