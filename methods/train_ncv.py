@@ -986,25 +986,35 @@ def nested_cv(
 
                 for hrow in selected_history:
                     epoch_i = int(hrow["epoch"])
-                    inner_curve_run.log(
-                        {
-                            "best_inner_model/train_loss": float(hrow["train_loss"]),
-                            "best_inner_model/val_loss": float(hrow["val_loss"]),
-                            "best_inner_model/val_auc": float(hrow["val_auc"]),
-                            "best_inner_model/val_aucpr": float(hrow["val_aucpr"]),
-                            "best_inner_model/val_acc": float(hrow["val_acc"]),
-                            "best_inner_model/teacher_loss": float(hrow["teacher_loss"]),
-                            "best_inner_model/student_survival_loss": float(hrow["student_survival_loss"]),
-                            "best_inner_model/student_repr_loss": float(hrow["student_repr_loss"]),
-                            "best_inner_model/student_feature_loss": float(hrow["student_feature_loss"]),
-                            "best_inner_model/smil_meta_train_loss": float(hrow["smil_meta_train_loss"]),
-                            "best_inner_model/smil_meta_val_loss": float(hrow["smil_meta_val_loss"]),
-                            "best_inner_model/smil_meta_val_ce": float(hrow["smil_meta_val_ce"]),
-                            "best_inner_model/smil_align_fusion": float(hrow["smil_align_fusion"]),
-                            "best_inner_model/smil_align_hidden": float(hrow["smil_align_hidden"]),
-                        },
-                        step=epoch_i,
-                    )
+                    log_payload = {
+                        "best_inner_model/train_loss": float(hrow["train_loss"]),
+                        "best_inner_model/val_loss": float(hrow["val_loss"]),
+                        "best_inner_model/val_auc": float(hrow["val_auc"]),
+                        "best_inner_model/val_aucpr": float(hrow["val_aucpr"]),
+                        "best_inner_model/val_acc": float(hrow["val_acc"]),
+                    }
+
+                    if model_name_l == "distill_dyam":
+                        log_payload.update(
+                            {
+                                "best_inner_model/teacher_loss": float(hrow["teacher_loss"]),
+                                "best_inner_model/student_survival_loss": float(hrow["student_survival_loss"]),
+                                "best_inner_model/student_repr_loss": float(hrow["student_repr_loss"]),
+                                "best_inner_model/student_feature_loss": float(hrow["student_feature_loss"]),
+                            }
+                        )
+                    elif model_name_l == "smil_e":
+                        log_payload.update(
+                            {
+                                "best_inner_model/smil_meta_train_loss": float(hrow["smil_meta_train_loss"]),
+                                "best_inner_model/smil_meta_val_loss": float(hrow["smil_meta_val_loss"]),
+                                "best_inner_model/smil_meta_val_ce": float(hrow["smil_meta_val_ce"]),
+                                "best_inner_model/smil_align_fusion": float(hrow["smil_align_fusion"]),
+                                "best_inner_model/smil_align_hidden": float(hrow["smil_align_hidden"]),
+                            }
+                        )
+
+                    inner_curve_run.log(log_payload, step=epoch_i)
 
                 inner_curve_run.finish()
 
