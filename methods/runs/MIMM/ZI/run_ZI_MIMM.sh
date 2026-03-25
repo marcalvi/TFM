@@ -5,7 +5,7 @@ set -euo pipefail
 # Activate conda environment
 #source /opt/miniconda3/etc/profile.d/conda.sh
 source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-conda activate TFM
+conda activate TFM_5090
 
 # WandB login token
 WANDB_LOGIN_KEY="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"
@@ -23,20 +23,20 @@ fi
 # Define paths
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/"
-RESULTS_ROOT="${PROJECT_ROOT}/results"
+RESULTS_ROOT="${PROJECT_ROOT}/results_attention"
 
 # Define endpoint
 ENDPOINT="OS_6"
 
 # Proposed tuning grid
-SEEDS="22,2002,4,18473,55602"
+SEEDS="22,2002"
 #SEEDS="22,2002,4,18473,55602"
 MISSING_PATTERN_SEED=2026
 
 INNER_SPLITS=5
 OUTER_SPLITS=5
 EPOCHS=80
-RADIO_AGGREGATION_METHOD="mean"
+RADIO_AGGREGATION_METHOD="attention"
 
 BATCH_SIZE_GRID="16,32"
 LR_GRID="5e-5,1e-4"
@@ -47,9 +47,10 @@ DROPOUT_GRID="0.2,0.1"
 IMPUTATION_METHOD="zero"
 
 # Missingness experiments
-MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
-TRAIN_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
-TEST_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
+MISSING_LOCATION_GRID="global"
+# MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
+TRAIN_MISSING_PROP_GRID="0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8"
+TEST_MISSING_PROP_GRID="0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8"
 
 # Run training
 python "${PROJECT_ROOT}/main.py" \
