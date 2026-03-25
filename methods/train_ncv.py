@@ -11,7 +11,7 @@ import torch.optim as optim
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader
 from imputation_methods import build_imputer
-from meta_learning import train_smil_e_with_meta_learning
+from custom_learning.meta_learning import train_smil_e_with_meta_learning
 from dataset import (
     MultimodalBaseDataset,
     MultimodalDatasetWithMissing,
