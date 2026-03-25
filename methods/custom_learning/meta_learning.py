@@ -77,7 +77,7 @@ def train_smil_e_with_meta_learning(
     train_seed=0,
 ):
     """Train SMIL-E with a SMIL-style meta loop fully contained in inner-train."""
-    min_best_epoch = min(10, int(epochs))
+    min_best_epoch = min(5, int(epochs))
     model_kwargs = dict(model_kwargs or {})
     inner_steps = int(model_kwargs.pop("meta_inner_steps", 1))
     inner_lr = float(model_kwargs.pop("meta_inner_lr", 1e-2))

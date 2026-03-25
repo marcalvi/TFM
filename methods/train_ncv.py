@@ -349,7 +349,7 @@ def train_model_with_validation(
     model_kwargs=None,
     train_seed=0,
 ):
-    min_best_epoch = min(10, int(epochs))
+    min_best_epoch = min(5, int(epochs))
     model_kwargs = model_kwargs or {}
     model_name_l = normalize_model_name(model_name)
 
