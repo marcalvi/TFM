@@ -194,6 +194,13 @@ def get_args():
     parser.add_argument("--wandb", action="store_true", help="Enable Weights & Biases logging")
     parser.add_argument("--wandb_project", type=str, default="unknown")
     parser.add_argument("--wandb_mode", type=str, default="online", choices=["online", "offline", "disabled"])
+    parser.add_argument(
+        "--wandb_console",
+        type=str,
+        default="off",
+        choices=["off", "on"],
+        help="Whether to show W&B console chatter. 'off' keeps only the training prints from this pipeline.",
+    )
 
     return parser.parse_args()
 
@@ -332,6 +339,11 @@ def _build_test_eval_setups_for_run(
 def main():
     # Parse command-line arguments and start timer
     args = get_args()
+    if bool(args.wandb):
+        if str(args.wandb_console).strip().lower() == "off":
+            os.environ.setdefault("WANDB_SILENT", "true")
+            os.environ.setdefault("WANDB_QUIET", "true")
+            os.environ.setdefault("WANDB_CONSOLE", "off")
     start_time = time.time()
     model_name_norm = normalize_model_name(args.model)
     print("Running")
