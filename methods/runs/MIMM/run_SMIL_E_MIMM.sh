@@ -20,9 +20,13 @@ if [[ -n "${WANDB_LOGIN_KEY}" ]]; then
   WANDB_ARGS+=(--wandb --wandb_project "SMIL_E" --wandb_mode "online")
 fi
 
+# Radio aggregation method
+RADIO_AGGREGATION_METHOD="mean"
+
+# Define paths
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/"
-RESULTS_ROOT="${PROJECT_ROOT}/results"
+RESULTS_ROOT="${PROJECT_ROOT}/results/results_${RADIO_AGGREGATION_METHOD}"
 
 ENDPOINT="OS_6"
 SEEDS="22,2002,4,18473,55602"
@@ -30,7 +34,6 @@ MISSING_PATTERN_SEED=2026
 INNER_SPLITS=5
 OUTER_SPLITS=5
 EPOCHS=80
-RADIO_AGGREGATION_METHOD="mean"
 
 # Shared optimization
 BATCH_SIZE_GRID="16,32"
