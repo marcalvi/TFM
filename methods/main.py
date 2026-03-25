@@ -444,12 +444,14 @@ def main():
                     seed=seed,
                     radio_aggregation_method=args.radio_aggregation_method,
                 )
+                best_epoch_warmup = min(5, int(args.epochs))
                 print(
                     "Running seed="
                     f"{seed}, missing_location={missing_location}, "
                     f"train_missing_prop={train_missing_prop}"
                 )
                 print(f"Missing pattern seed: {int(args.missing_pattern_seed)}")
+                print(f"Best-epoch warmup: {best_epoch_warmup}")
                 print(f"Output directory: {odir}")
                 print(f"Hyperparameter combinations to evaluate: {len(hp_configs)}")
                 print(f"Test missingness combinations to evaluate: {len(test_eval_setups)}")
@@ -461,6 +463,7 @@ def main():
                     "modalities": modality_names,
                     "hp_grid_size": len(hp_configs),
                     "epochs": args.epochs,
+                    "best_epoch_warmup": best_epoch_warmup,
                     "inner_splits": args.inner_splits,
                     "outer_splits": args.outer_splits,
                     "train_missing_prop": float(train_missing_prop),
