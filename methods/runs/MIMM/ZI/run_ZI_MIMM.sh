@@ -23,7 +23,7 @@ fi
 # Define paths
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/"
-RESULTS_ROOT="${PROJECT_ROOT}/results_attention"
+RESULTS_ROOT="${PROJECT_ROOT}/results_mean"
 
 # Define endpoint
 ENDPOINT="OS_6"
