@@ -64,6 +64,7 @@ class RadiologyAttentionPooler:
         self.id_col = None
 
     def _prepare_bags(self, df, labels_df, id_col, label_col, feature_cols):
+        df = self._ensure_unambiguous_id_column(df, id_col)
         labels_indexed = labels_df[[id_col, label_col]].drop_duplicates(id_col).set_index(id_col)
         grouped = OrderedDict()
         for patient_id, g in df.groupby(id_col, sort=False):
@@ -86,7 +87,24 @@ class RadiologyAttentionPooler:
     def _normalize_bag(self, bag):
         return (bag - self.feature_mean) / self.feature_std
 
+    @staticmethod
+    def _ensure_unambiguous_id_column(df, id_col):
+        work_df = df.copy()
+        index_names = [
+            name for name in getattr(work_df.index, "names", [work_df.index.name])
+            if name is not None
+        ]
+
+        if id_col in work_df.columns and id_col in index_names:
+            return work_df.reset_index(drop=True)
+
+        if id_col not in work_df.columns and id_col in index_names:
+            return work_df.reset_index()
+
+        return work_df
+
     def fit(self, df_train, labels_df, id_col="patient", label_col="label"):
+        df_train = self._ensure_unambiguous_id_column(df_train, id_col)
         if id_col not in df_train.columns:
             raise ValueError(f"Radiology dataframe must contain '{id_col}'.")
         if label_col not in labels_df.columns:
@@ -154,6 +172,7 @@ class RadiologyAttentionPooler:
         return self
 
     def transform(self, df):
+        df = self._ensure_unambiguous_id_column(df, self.id_col)
         if self.feature_cols is None or self.id_col is None:
             raise RuntimeError("RadiologyAttentionPooler.transform called before fit().")
         if self.id_col not in df.columns:
@@ -182,4 +201,3 @@ class RadiologyAttentionPooler:
         if out.empty:
             raise ValueError("RadiologyAttentionPooler.transform produced an empty dataframe.")
         return out
-

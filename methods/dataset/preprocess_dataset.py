@@ -3,16 +3,33 @@ import importlib
 import pandas as pd
 
 
+def _ensure_unambiguous_id_column(df, id_col):
+    """Return a copy where id_col is available as a plain column, not also as an index level."""
+    work_df = df.copy()
+    index_names = [
+        name for name in getattr(work_df.index, "names", [work_df.index.name])
+        if name is not None
+    ]
+
+    if id_col in work_df.columns and id_col in index_names:
+        return work_df.reset_index(drop=True)
+
+    if id_col not in work_df.columns and id_col in index_names:
+        return work_df.reset_index()
+
+    return work_df
+
+
 def collapse_patient_rows(df, id_col, strategy="mean"):
     """Collapse duplicated patient rows into one feature row per patient."""
-    if id_col not in df.columns:
+    work_df = _ensure_unambiguous_id_column(df, id_col)
+    if id_col not in work_df.columns:
         raise ValueError(f"Dataframe does not contain the id column '{id_col}'.")
 
     strategy_l = str(strategy).strip().lower()
     if strategy_l not in {"mean", "max", "keep"}:
         raise ValueError("strategy must be one of: mean, max, keep")
 
-    work_df = df.copy()
     if strategy_l == "keep":
         return work_df
 
