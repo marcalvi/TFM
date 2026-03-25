@@ -1,0 +1,13 @@
+{"time":"2026-03-24T13:22:31.65112971+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-24T13:22:31.760770082+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-24T13:22:31.760802032+01:00","level":"INFO","msg":"stream: created new stream","id":"tcpm8rdm"}
+{"time":"2026-03-24T13:22:31.760829624+01:00","level":"INFO","msg":"handler: started","stream_id":"tcpm8rdm"}
+{"time":"2026-03-24T13:22:31.764293028+01:00","level":"INFO","msg":"stream: started","id":"tcpm8rdm"}
+{"time":"2026-03-24T13:22:31.764295873+01:00","level":"INFO","msg":"writer: started","stream_id":"tcpm8rdm"}
+{"time":"2026-03-24T13:22:31.764306954+01:00","level":"INFO","msg":"sender: started","stream_id":"tcpm8rdm"}
+{"time":"2026-03-24T13:22:31.764541096+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-24T13:22:31.827677278+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-24T13:22:31.830174306+01:00","level":"INFO","msg":"stream: closing","id":"tcpm8rdm"}
+{"time":"2026-03-24T13:22:31.830187982+01:00","level":"INFO","msg":"handler: closed","stream_id":"tcpm8rdm"}
+{"time":"2026-03-24T13:22:31.830668309+01:00","level":"INFO","msg":"sender: closed","stream_id":"tcpm8rdm"}
+{"time":"2026-03-24T13:22:31.830682997+01:00","level":"INFO","msg":"stream: closed","id":"tcpm8rdm"}

@@ -1,0 +1,13 @@
+{"time":"2026-03-24T14:08:25.16042383+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-24T14:08:25.265181381+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-24T14:08:25.265213852+01:00","level":"INFO","msg":"stream: created new stream","id":"o2hvhmfg"}
+{"time":"2026-03-24T14:08:25.265232607+01:00","level":"INFO","msg":"handler: started","stream_id":"o2hvhmfg"}
+{"time":"2026-03-24T14:08:25.268865159+01:00","level":"INFO","msg":"stream: started","id":"o2hvhmfg"}
+{"time":"2026-03-24T14:08:25.268869367+01:00","level":"INFO","msg":"writer: started","stream_id":"o2hvhmfg"}
+{"time":"2026-03-24T14:08:25.268876871+01:00","level":"INFO","msg":"sender: started","stream_id":"o2hvhmfg"}
+{"time":"2026-03-24T14:08:25.269371457+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-24T14:08:25.302234728+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-24T14:08:25.303568656+01:00","level":"INFO","msg":"stream: closing","id":"o2hvhmfg"}
+{"time":"2026-03-24T14:08:25.303573746+01:00","level":"INFO","msg":"handler: closed","stream_id":"o2hvhmfg"}
+{"time":"2026-03-24T14:08:25.304017737+01:00","level":"INFO","msg":"sender: closed","stream_id":"o2hvhmfg"}
+{"time":"2026-03-24T14:08:25.304020683+01:00","level":"INFO","msg":"stream: closed","id":"o2hvhmfg"}

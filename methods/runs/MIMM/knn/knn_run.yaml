@@ -3,7 +3,7 @@ executable: /bin/bash
 args: ["-c", "/nfs/rnas/workspaces/malbesa/TFM/methods/runs/MIMM/knn/run_KNN_MIMM.sh"]
 env:
   WANDB_DIR: /nfs/rnas/workspaces/malbesa/TFM/methods/runs/wandb
-worker_type: '4090'
+worker_type: '4090-64'
 use_gpu: true
 max_cpus: 8.0
 max_memory_mb: 20000

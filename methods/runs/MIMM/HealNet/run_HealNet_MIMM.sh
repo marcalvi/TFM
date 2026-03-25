@@ -17,7 +17,7 @@ fi
 
 WANDB_ARGS=()
 if [[ -n "${WANDB_LOGIN_KEY}" ]]; then
-  WANDB_ARGS+=(--wandb --wandb_project "HealNet" --wandb_mode "online")
+  WANDB_ARGS+=(--wandb --wandb_project "HealNet_bo" --wandb_mode "online")
 fi
 
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
@@ -33,11 +33,11 @@ EPOCHS=80
 RADIO_AGGREGATION_METHOD="mean"
 
 # HP grid
-LR_GRID="5e-6,1e-5,5e-5"
-BATCH_SIZE_GRID="4,8,16"
+LR_GRID="1e-6,5e-6,1e-5,5e-5"
+BATCH_SIZE_GRID="8,16,32"
 HEALNET_DEPTH_GRID="1,2"
-HEALNET_NUM_LATENTS_GRID="64"
-HEALNET_LATENT_DIM_GRID="64"
+HEALNET_NUM_LATENTS_GRID="16,32,64"
+HEALNET_LATENT_DIM_GRID="16,32,64"
 HEALNET_LATENT_HEADS_GRID="2"
 HEALNET_CROSS_HEADS_GRID="1"
 HEALNET_CROSS_DIM_HEAD_GRID="64"
