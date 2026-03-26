@@ -5,7 +5,7 @@ set -euo pipefail
 # Activate conda environment
 #source /opt/miniconda3/etc/profile.d/conda.sh
 source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-conda activate TFM_5090
+conda activate TFM
 
 # WandB login token
 WANDB_LOGIN_KEY="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"
@@ -32,8 +32,7 @@ RESULTS_ROOT="${PROJECT_ROOT}/results/results_${RADIO_AGGREGATION_METHOD}"
 ENDPOINT="OS_6"
 
 # Proposed tuning grid
-SEEDS="22,2002"
-#SEEDS="22,2002,4,18473,55602"
+SEEDS="22,2002,4,18473,55602"
 MISSING_PATTERN_SEED=2026
 
 INNER_SPLITS=5
@@ -49,8 +48,7 @@ DROPOUT_GRID="0.2,0.1"
 IMPUTATION_METHOD="zero"
 
 # Missingness experiments
-MISSING_LOCATION_GRID="global"
-# MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
+MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
 TRAIN_MISSING_PROP_GRID="0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8"
 TEST_MISSING_PROP_GRID="0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8"
 

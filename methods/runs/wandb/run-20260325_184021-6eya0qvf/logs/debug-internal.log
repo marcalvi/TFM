@@ -1,0 +1,13 @@
+{"time":"2026-03-25T18:40:21.648307293+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-25T18:40:21.976593252+01:00","level":"INFO","msg":"stream: created new stream","id":"6eya0qvf"}
+{"time":"2026-03-25T18:40:21.976638087+01:00","level":"INFO","msg":"handler: started","stream_id":"6eya0qvf"}
+{"time":"2026-03-25T18:40:21.979425479+01:00","level":"INFO","msg":"stream: started","id":"6eya0qvf"}
+{"time":"2026-03-25T18:40:21.979436079+01:00","level":"INFO","msg":"writer: started","stream_id":"6eya0qvf"}
+{"time":"2026-03-25T18:40:21.979445928+01:00","level":"INFO","msg":"sender: started","stream_id":"6eya0qvf"}
+{"time":"2026-03-25T18:40:23.780173872+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-25T18:41:22.787962315+01:00","level":"INFO","msg":"api: retrying HTTP error","status":502,"url":"https://api.wandb.ai/files/marc_albesa/ZI_MLP_MIMM/6eya0qvf/file_stream","body":"\n<html><head>\n<meta http-equiv=\"content-type\" content=\"text/html;charset=utf-8\">\n<title>502 Server Error</title>\n</head>\n<body text=#000000 bgcolor=#ffffff>\n<h1>Error: Server Error</h1>\n<h2>The server encountered a temporary error and could not complete your request.<p>Please try again in 30 seconds.</h2>\n<h2></h2>\n</body></html>\n"}
+{"time":"2026-03-25T18:41:26.55034331+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-25T18:41:26.551244712+01:00","level":"INFO","msg":"stream: closing","id":"6eya0qvf"}
+{"time":"2026-03-25T18:41:26.551250482+01:00","level":"INFO","msg":"handler: closed","stream_id":"6eya0qvf"}
+{"time":"2026-03-25T18:41:26.551887625+01:00","level":"INFO","msg":"sender: closed","stream_id":"6eya0qvf"}
+{"time":"2026-03-25T18:41:26.551891112+01:00","level":"INFO","msg":"stream: closed","id":"6eya0qvf"}

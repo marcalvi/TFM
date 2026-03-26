@@ -1,0 +1,12 @@
+{"time":"2026-03-26T11:48:05.443207554+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-26T11:48:05.761616852+01:00","level":"INFO","msg":"stream: created new stream","id":"oqrxysgi"}
+{"time":"2026-03-26T11:48:05.761660604+01:00","level":"INFO","msg":"handler: started","stream_id":"oqrxysgi"}
+{"time":"2026-03-26T11:48:05.764894672+01:00","level":"INFO","msg":"stream: started","id":"oqrxysgi"}
+{"time":"2026-03-26T11:48:05.764899672+01:00","level":"INFO","msg":"writer: started","stream_id":"oqrxysgi"}
+{"time":"2026-03-26T11:48:05.764909009+01:00","level":"INFO","msg":"sender: started","stream_id":"oqrxysgi"}
+{"time":"2026-03-26T11:48:07.809671066+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-26T11:48:08.219839462+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-26T11:48:08.220957119+01:00","level":"INFO","msg":"stream: closing","id":"oqrxysgi"}
+{"time":"2026-03-26T11:48:08.220963321+01:00","level":"INFO","msg":"handler: closed","stream_id":"oqrxysgi"}
+{"time":"2026-03-26T11:48:08.222231893+01:00","level":"INFO","msg":"sender: closed","stream_id":"oqrxysgi"}
+{"time":"2026-03-26T11:48:08.222234998+01:00","level":"INFO","msg":"stream: closed","id":"oqrxysgi"}

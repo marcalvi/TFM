@@ -1,0 +1,12 @@
+{"time":"2026-03-26T10:36:54.558465612+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-26T10:36:54.830945618+01:00","level":"INFO","msg":"stream: created new stream","id":"remquodb"}
+{"time":"2026-03-26T10:36:54.83112176+01:00","level":"INFO","msg":"handler: started","stream_id":"remquodb"}
+{"time":"2026-03-26T10:36:54.835512689+01:00","level":"INFO","msg":"stream: started","id":"remquodb"}
+{"time":"2026-03-26T10:36:54.83556071+01:00","level":"INFO","msg":"writer: started","stream_id":"remquodb"}
+{"time":"2026-03-26T10:36:54.835600435+01:00","level":"INFO","msg":"sender: started","stream_id":"remquodb"}
+{"time":"2026-03-26T10:36:56.118794172+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-26T10:36:56.386766289+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-26T10:36:56.390770087+01:00","level":"INFO","msg":"stream: closing","id":"remquodb"}
+{"time":"2026-03-26T10:36:56.39078778+01:00","level":"INFO","msg":"handler: closed","stream_id":"remquodb"}
+{"time":"2026-03-26T10:36:56.391602488+01:00","level":"INFO","msg":"sender: closed","stream_id":"remquodb"}
+{"time":"2026-03-26T10:36:56.391614821+01:00","level":"INFO","msg":"stream: closed","id":"remquodb"}

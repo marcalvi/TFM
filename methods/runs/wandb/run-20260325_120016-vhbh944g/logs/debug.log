@@ -1,0 +1,18 @@
+2026-03-25 12:00:16,655 INFO    MainThread:48 [wandb_init.py:setup_run_log_directory():717] Logging user logs to /nfs/rnas/workspaces/malbesa/TFM/methods/runs/wandb/run-20260325_120016-vhbh944g/logs/debug.log
+2026-03-25 12:00:16,655 INFO    MainThread:48 [wandb_init.py:setup_run_log_directory():718] Logging internal logs to /nfs/rnas/workspaces/malbesa/TFM/methods/runs/wandb/run-20260325_120016-vhbh944g/logs/debug-internal.log
+2026-03-25 12:00:16,655 INFO    MainThread:48 [wandb_init.py:init():844] calling init triggers
+2026-03-25 12:00:16,655 INFO    MainThread:48 [wandb_init.py:init():849] wandb.init called with sweep_config: {}
+config: {'endpoint': 'OS_6', 'model': 'dyam', 'dataset': 'MIMM', 'modalities': ['path', 'radio', 'clin', 'blood', 'radio_report'], 'hp_grid_size': 16, 'epochs': 80, 'best_epoch_warmup': 5, 'inner_splits': 5, 'outer_splits': 5, 'train_missing_prop': 0.0, 'missing_location': 'global', 'missing_pattern_seed': 2026, 'imputation_method': 'zero', 'radio_aggregation_method': 'mean', 'test_eval_combinations': 9, 'test_missing_props_grid': '0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8', 'eval_missing_locations_grid': 'global,global,global,global,global,global,global,global,global', 'seed': 22, 'outer_fold': 3, 'inner_fold': 2, 'phase': 'best_inner_curve_per_fold', 'selected_inner_hp_name': 'lr1e-04_bs16_drop0p4_temp2p0_trmiss0_trlocglobal', '_wandb': {}}
+2026-03-25 12:00:16,655 INFO    MainThread:48 [wandb_init.py:init():892] starting backend
+2026-03-25 12:00:16,655 INFO    MainThread:48 [wandb_init.py:init():895] sending inform_init request
+2026-03-25 12:00:16,656 INFO    MainThread:48 [wandb_init.py:init():903] backend started and connected
+2026-03-25 12:00:16,657 INFO    MainThread:48 [wandb_init.py:init():973] updated telemetry
+2026-03-25 12:00:16,657 INFO    MainThread:48 [wandb_init.py:init():997] communicating run to backend with 90.0 second timeout
+2026-03-25 12:00:17,696 INFO    MainThread:48 [wandb_init.py:init():1042] starting run threads in backend
+2026-03-25 12:00:17,725 INFO    MainThread:48 [wandb_run.py:_console_start():2524] atexit reg
+2026-03-25 12:00:17,725 INFO    MainThread:48 [wandb_run.py:_redirect():2373] redirect: off
+2026-03-25 12:00:17,726 INFO    MainThread:48 [wandb_init.py:init():1082] run started, returning control to user process
+2026-03-25 12:00:17,731 INFO    MainThread:48 [wandb_run.py:_finish():2291] finishing run marc_albesa/pAM_MIMM/vhbh944g
+2026-03-25 12:00:17,731 INFO    MainThread:48 [wandb_run.py:_atexit_cleanup():2490] got exitcode: 0
+2026-03-25 12:00:17,731 INFO    MainThread:48 [wandb_run.py:_restore():2472] restore
+2026-03-25 12:00:17,731 INFO    MainThread:48 [wandb_run.py:_restore():2478] restore done

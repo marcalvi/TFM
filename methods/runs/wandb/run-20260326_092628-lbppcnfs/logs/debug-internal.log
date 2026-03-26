@@ -1,0 +1,12 @@
+{"time":"2026-03-26T09:26:28.359497732+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-26T09:26:28.614568305+01:00","level":"INFO","msg":"stream: created new stream","id":"lbppcnfs"}
+{"time":"2026-03-26T09:26:28.614610916+01:00","level":"INFO","msg":"handler: started","stream_id":"lbppcnfs"}
+{"time":"2026-03-26T09:26:28.618243013+01:00","level":"INFO","msg":"stream: started","id":"lbppcnfs"}
+{"time":"2026-03-26T09:26:28.618282077+01:00","level":"INFO","msg":"writer: started","stream_id":"lbppcnfs"}
+{"time":"2026-03-26T09:26:28.618300021+01:00","level":"INFO","msg":"sender: started","stream_id":"lbppcnfs"}
+{"time":"2026-03-26T09:26:30.271363603+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-26T09:26:33.668236954+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-26T09:26:33.669319164+01:00","level":"INFO","msg":"stream: closing","id":"lbppcnfs"}
+{"time":"2026-03-26T09:26:33.669325636+01:00","level":"INFO","msg":"handler: closed","stream_id":"lbppcnfs"}
+{"time":"2026-03-26T09:26:33.670150571+01:00","level":"INFO","msg":"sender: closed","stream_id":"lbppcnfs"}
+{"time":"2026-03-26T09:26:33.67015542+01:00","level":"INFO","msg":"stream: closed","id":"lbppcnfs"}

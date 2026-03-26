@@ -1,0 +1,12 @@
+{"time":"2026-03-25T10:20:59.701265488Z","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-25T10:21:00.088663303Z","level":"INFO","msg":"stream: created new stream","id":"dmrea5gi"}
+{"time":"2026-03-25T10:21:00.088708243Z","level":"INFO","msg":"handler: started","stream_id":"dmrea5gi"}
+{"time":"2026-03-25T10:21:00.093268917Z","level":"INFO","msg":"stream: started","id":"dmrea5gi"}
+{"time":"2026-03-25T10:21:00.093295257Z","level":"INFO","msg":"writer: started","stream_id":"dmrea5gi"}
+{"time":"2026-03-25T10:21:00.093316877Z","level":"INFO","msg":"sender: started","stream_id":"dmrea5gi"}
+{"time":"2026-03-25T10:21:02.527049058Z","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-25T10:21:28.93507012Z","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-25T10:21:28.936397001Z","level":"INFO","msg":"stream: closing","id":"dmrea5gi"}
+{"time":"2026-03-25T10:21:28.936407881Z","level":"INFO","msg":"handler: closed","stream_id":"dmrea5gi"}
+{"time":"2026-03-25T10:21:28.936878282Z","level":"INFO","msg":"sender: closed","stream_id":"dmrea5gi"}
+{"time":"2026-03-25T10:21:28.936884202Z","level":"INFO","msg":"stream: closed","id":"dmrea5gi"}
