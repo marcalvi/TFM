@@ -23,13 +23,13 @@ fi
 # Radio aggregation method
 RADIO_AGGREGATION_METHOD="mean"
 
+# Define endpoint
+ENDPOINT="OS_9"
+
 # Define paths
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/"
-RESULTS_ROOT="${PROJECT_ROOT}/results/results_${RADIO_AGGREGATION_METHOD}"
-
-# Define endpoint
-ENDPOINT="OS_6"
+RESULTS_ROOT="${PROJECT_ROOT}/results/results_${RADIO_AGGREGATION_METHOD}_${ENDPOINT}"
 
 # Proposed tuning grid
 SEEDS="22,2002"
