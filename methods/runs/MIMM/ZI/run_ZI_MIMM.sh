@@ -48,9 +48,9 @@ DROPOUT_GRID="0.2,0.1"
 IMPUTATION_METHOD="zero"
 
 # Missingness experiments
-MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
-TRAIN_MISSING_PROP_GRID="0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8"
-TEST_MISSING_PROP_GRID="0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8"
+MISSING_LOCATION_GRID="global"
+TRAIN_MISSING_PROP_GRID="0.0"
+TEST_MISSING_PROP_GRID="0.0"
 
 # Run training
 python "${PROJECT_ROOT}/main.py" \
