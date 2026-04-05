@@ -1,0 +1,13 @@
+{"time":"2026-03-25T15:23:29.117677506+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-25T15:23:29.235969799+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-25T15:23:29.235994456+01:00","level":"INFO","msg":"stream: created new stream","id":"cnny3pcr"}
+{"time":"2026-03-25T15:23:29.236014314+01:00","level":"INFO","msg":"handler: started","stream_id":"cnny3pcr"}
+{"time":"2026-03-25T15:23:29.238720832+01:00","level":"INFO","msg":"stream: started","id":"cnny3pcr"}
+{"time":"2026-03-25T15:23:29.238730991+01:00","level":"INFO","msg":"writer: started","stream_id":"cnny3pcr"}
+{"time":"2026-03-25T15:23:29.238739637+01:00","level":"INFO","msg":"sender: started","stream_id":"cnny3pcr"}
+{"time":"2026-03-25T15:23:29.238906214+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-25T15:23:29.31530947+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-25T15:23:29.317184967+01:00","level":"INFO","msg":"stream: closing","id":"cnny3pcr"}
+{"time":"2026-03-25T15:23:29.317193273+01:00","level":"INFO","msg":"handler: closed","stream_id":"cnny3pcr"}
+{"time":"2026-03-25T15:23:29.317778396+01:00","level":"INFO","msg":"sender: closed","stream_id":"cnny3pcr"}
+{"time":"2026-03-25T15:23:29.3177856+01:00","level":"INFO","msg":"stream: closed","id":"cnny3pcr"}

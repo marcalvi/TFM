@@ -1,0 +1,13 @@
+{"time":"2026-03-26T11:51:59.871514259+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-26T11:51:59.996720079+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-26T11:51:59.996752831+01:00","level":"INFO","msg":"stream: created new stream","id":"rexs3ynp"}
+{"time":"2026-03-26T11:51:59.996802907+01:00","level":"INFO","msg":"handler: started","stream_id":"rexs3ynp"}
+{"time":"2026-03-26T11:52:00.001042703+01:00","level":"INFO","msg":"stream: started","id":"rexs3ynp"}
+{"time":"2026-03-26T11:52:00.001082819+01:00","level":"INFO","msg":"writer: started","stream_id":"rexs3ynp"}
+{"time":"2026-03-26T11:52:00.001117886+01:00","level":"INFO","msg":"sender: started","stream_id":"rexs3ynp"}
+{"time":"2026-03-26T11:52:00.001368964+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-26T11:52:00.125356487+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-26T11:52:00.128657086+01:00","level":"INFO","msg":"stream: closing","id":"rexs3ynp"}
+{"time":"2026-03-26T11:52:00.128675381+01:00","level":"INFO","msg":"handler: closed","stream_id":"rexs3ynp"}
+{"time":"2026-03-26T11:52:00.129312062+01:00","level":"INFO","msg":"sender: closed","stream_id":"rexs3ynp"}
+{"time":"2026-03-26T11:52:00.129324396+01:00","level":"INFO","msg":"stream: closed","id":"rexs3ynp"}

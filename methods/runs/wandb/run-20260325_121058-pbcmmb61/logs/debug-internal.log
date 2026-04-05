@@ -1,0 +1,12 @@
+{"time":"2026-03-25T12:10:58.936866733Z","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-25T12:10:59.192665443Z","level":"INFO","msg":"stream: created new stream","id":"pbcmmb61"}
+{"time":"2026-03-25T12:10:59.192734883Z","level":"INFO","msg":"handler: started","stream_id":"pbcmmb61"}
+{"time":"2026-03-25T12:10:59.195951692Z","level":"INFO","msg":"stream: started","id":"pbcmmb61"}
+{"time":"2026-03-25T12:10:59.196001922Z","level":"INFO","msg":"writer: started","stream_id":"pbcmmb61"}
+{"time":"2026-03-25T12:10:59.196011332Z","level":"INFO","msg":"sender: started","stream_id":"pbcmmb61"}
+{"time":"2026-03-25T12:11:01.308549353Z","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-25T12:11:25.056452755Z","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-25T12:11:25.057818361Z","level":"INFO","msg":"stream: closing","id":"pbcmmb61"}
+{"time":"2026-03-25T12:11:25.065832634Z","level":"INFO","msg":"handler: closed","stream_id":"pbcmmb61"}
+{"time":"2026-03-25T12:11:25.066373902Z","level":"INFO","msg":"sender: closed","stream_id":"pbcmmb61"}
+{"time":"2026-03-25T12:11:25.066382462Z","level":"INFO","msg":"stream: closed","id":"pbcmmb61"}

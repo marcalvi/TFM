@@ -1,0 +1,13 @@
+{"time":"2026-03-25T23:54:49.41188621+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-25T23:54:49.529060868+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-25T23:54:49.529083261+01:00","level":"INFO","msg":"stream: created new stream","id":"cofcak6a"}
+{"time":"2026-03-25T23:54:49.529104301+01:00","level":"INFO","msg":"handler: started","stream_id":"cofcak6a"}
+{"time":"2026-03-25T23:54:49.533034751+01:00","level":"INFO","msg":"stream: started","id":"cofcak6a"}
+{"time":"2026-03-25T23:54:49.533048557+01:00","level":"INFO","msg":"writer: started","stream_id":"cofcak6a"}
+{"time":"2026-03-25T23:54:49.533057444+01:00","level":"INFO","msg":"sender: started","stream_id":"cofcak6a"}
+{"time":"2026-03-25T23:54:49.533248498+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-25T23:54:49.606330405+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-25T23:54:49.607929549+01:00","level":"INFO","msg":"stream: closing","id":"cofcak6a"}
+{"time":"2026-03-25T23:54:49.607938686+01:00","level":"INFO","msg":"handler: closed","stream_id":"cofcak6a"}
+{"time":"2026-03-25T23:54:49.608389354+01:00","level":"INFO","msg":"sender: closed","stream_id":"cofcak6a"}
+{"time":"2026-03-25T23:54:49.608396347+01:00","level":"INFO","msg":"stream: closed","id":"cofcak6a"}

@@ -1,0 +1,13 @@
+{"time":"2026-03-25T21:37:01.158631702+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-25T21:37:01.419697781+01:00","level":"INFO","msg":"stream: created new stream","id":"at2g0ily"}
+{"time":"2026-03-25T21:37:01.419734831+01:00","level":"INFO","msg":"handler: started","stream_id":"at2g0ily"}
+{"time":"2026-03-25T21:37:01.423368053+01:00","level":"INFO","msg":"stream: started","id":"at2g0ily"}
+{"time":"2026-03-25T21:37:01.423379313+01:00","level":"INFO","msg":"writer: started","stream_id":"at2g0ily"}
+{"time":"2026-03-25T21:37:01.423391413+01:00","level":"INFO","msg":"sender: started","stream_id":"at2g0ily"}
+{"time":"2026-03-25T21:37:02.707774504+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-25T21:38:02.82366224+01:00","level":"INFO","msg":"api: retrying HTTP error","status":502,"url":"https://api.wandb.ai/files/marc_albesa/pAM_MIMM/at2g0ily/file_stream","body":"\n<html><head>\n<meta http-equiv=\"content-type\" content=\"text/html;charset=utf-8\">\n<title>502 Server Error</title>\n</head>\n<body text=#000000 bgcolor=#ffffff>\n<h1>Error: Server Error</h1>\n<h2>The server encountered a temporary error and could not complete your request.<p>Please try again in 30 seconds.</h2>\n<h2></h2>\n</body></html>\n"}
+{"time":"2026-03-25T21:38:05.588143473+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-25T21:38:05.589484444+01:00","level":"INFO","msg":"stream: closing","id":"at2g0ily"}
+{"time":"2026-03-25T21:38:05.589490954+01:00","level":"INFO","msg":"handler: closed","stream_id":"at2g0ily"}
+{"time":"2026-03-25T21:38:05.590009534+01:00","level":"INFO","msg":"sender: closed","stream_id":"at2g0ily"}
+{"time":"2026-03-25T21:38:05.590014464+01:00","level":"INFO","msg":"stream: closed","id":"at2g0ily"}

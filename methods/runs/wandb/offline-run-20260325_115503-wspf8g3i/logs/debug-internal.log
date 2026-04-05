@@ -1,0 +1,13 @@
+{"time":"2026-03-25T11:55:03.459617094+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-25T11:55:03.577466005+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-25T11:55:03.577502945+01:00","level":"INFO","msg":"stream: created new stream","id":"wspf8g3i"}
+{"time":"2026-03-25T11:55:03.577526841+01:00","level":"INFO","msg":"handler: started","stream_id":"wspf8g3i"}
+{"time":"2026-03-25T11:55:03.581900864+01:00","level":"INFO","msg":"stream: started","id":"wspf8g3i"}
+{"time":"2026-03-25T11:55:03.581926583+01:00","level":"INFO","msg":"writer: started","stream_id":"wspf8g3i"}
+{"time":"2026-03-25T11:55:03.581956831+01:00","level":"INFO","msg":"sender: started","stream_id":"wspf8g3i"}
+{"time":"2026-03-25T11:55:03.582291529+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-25T11:55:03.673700715+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-25T11:55:03.675480586+01:00","level":"INFO","msg":"stream: closing","id":"wspf8g3i"}
+{"time":"2026-03-25T11:55:03.675490134+01:00","level":"INFO","msg":"handler: closed","stream_id":"wspf8g3i"}
+{"time":"2026-03-25T11:55:03.675937346+01:00","level":"INFO","msg":"sender: closed","stream_id":"wspf8g3i"}
+{"time":"2026-03-25T11:55:03.675944801+01:00","level":"INFO","msg":"stream: closed","id":"wspf8g3i"}

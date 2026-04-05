@@ -1,0 +1,12 @@
+{"time":"2026-03-25T14:01:06.962597267+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-25T14:01:07.224203349+01:00","level":"INFO","msg":"stream: created new stream","id":"pdf1bgme"}
+{"time":"2026-03-25T14:01:07.22424081+01:00","level":"INFO","msg":"handler: started","stream_id":"pdf1bgme"}
+{"time":"2026-03-25T14:01:07.22702398+01:00","level":"INFO","msg":"stream: started","id":"pdf1bgme"}
+{"time":"2026-03-25T14:01:07.227037014+01:00","level":"INFO","msg":"writer: started","stream_id":"pdf1bgme"}
+{"time":"2026-03-25T14:01:07.22705615+01:00","level":"INFO","msg":"sender: started","stream_id":"pdf1bgme"}
+{"time":"2026-03-25T14:01:09.056883548+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-25T14:01:43.425382004+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-25T14:01:43.430173076+01:00","level":"INFO","msg":"stream: closing","id":"pdf1bgme"}
+{"time":"2026-03-25T14:01:43.43019116+01:00","level":"INFO","msg":"handler: closed","stream_id":"pdf1bgme"}
+{"time":"2026-03-25T14:01:43.434071787+01:00","level":"INFO","msg":"sender: closed","stream_id":"pdf1bgme"}
+{"time":"2026-03-25T14:01:43.434088769+01:00","level":"INFO","msg":"stream: closed","id":"pdf1bgme"}

@@ -1,0 +1,14 @@
+{"time":"2026-03-25T18:13:48.478336989+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-25T18:13:48.733180347+01:00","level":"INFO","msg":"stream: created new stream","id":"wpjsmumd"}
+{"time":"2026-03-25T18:13:48.733230281+01:00","level":"INFO","msg":"handler: started","stream_id":"wpjsmumd"}
+{"time":"2026-03-25T18:13:48.735939043+01:00","level":"INFO","msg":"stream: started","id":"wpjsmumd"}
+{"time":"2026-03-25T18:13:48.735962177+01:00","level":"INFO","msg":"writer: started","stream_id":"wpjsmumd"}
+{"time":"2026-03-25T18:13:48.735961315+01:00","level":"INFO","msg":"sender: started","stream_id":"wpjsmumd"}
+{"time":"2026-03-25T18:13:49.48506316+01:00","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":39}
+{"time":"2026-03-25T18:13:49.485554086+01:00","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":28}
+{"time":"2026-03-25T18:13:50.84652547+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-25T18:13:52.326212462+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-25T18:13:52.327454857+01:00","level":"INFO","msg":"stream: closing","id":"wpjsmumd"}
+{"time":"2026-03-25T18:13:52.327460598+01:00","level":"INFO","msg":"handler: closed","stream_id":"wpjsmumd"}
+{"time":"2026-03-25T18:13:52.327922099+01:00","level":"INFO","msg":"sender: closed","stream_id":"wpjsmumd"}
+{"time":"2026-03-25T18:13:52.327929423+01:00","level":"INFO","msg":"stream: closed","id":"wpjsmumd"}

@@ -1,0 +1,130 @@
+_wandb:
+    value:
+        cli_version: 0.25.0
+        e:
+            oxmx9ptcpgbqabxa04kixk6jajga3vgl:
+                args:
+                    - --model
+                    - MLP
+                    - --dataset
+                    - MIMM
+                    - --odir
+                    - /home/osiris-user/Desktop/TFM/methods/results/results_mean
+                    - --dataset_dir
+                    - /nfs/rnas/projects/M3BENCH/data/inputs/MIMM/
+                    - --endpoint
+                    - OS_6
+                    - --inner_splits
+                    - "5"
+                    - --outer_splits
+                    - "5"
+                    - --epochs
+                    - "80"
+                    - --radio_aggregation_method
+                    - mean
+                    - --batch_size
+                    - 16,32
+                    - --learning_rate
+                    - 5e-5,1e-4
+                    - --fusion_hidden_dim
+                    - 32,64
+                    - --fusion_hidden_layers
+                    - "1"
+                    - --modality_hidden_layers
+                    - "1"
+                    - --dropout
+                    - 0.2,0.1
+                    - --imputation_method
+                    - zero
+                    - --train_missing_prop
+                    - 0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8
+                    - --missing_location
+                    - global, path, radio, clin, blood, radio_report
+                    - --test_missing_prop
+                    - 0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8
+                    - --seeds
+                    - 22,2002,4,18473,55602
+                    - --missing_pattern_seed
+                    - "2026"
+                    - --wandb
+                    - --wandb_project
+                    - ZI_MLP
+                    - --wandb_mode
+                    - online
+                executable: /home/osiris-user/anaconda3/envs/TFM/bin/python
+                host: 1587b5a4593d
+                os: Linux-6.8.0-90-generic-x86_64-with-glibc2.39
+                program: /home/osiris-user/Desktop/TFM/methods/main.py
+                python: CPython 3.9.23
+                root: /nfs/rnas/workspaces/malbesa/TFM/methods/runs
+                startedAt: "2026-03-26T00:27:55.313040Z"
+                writerId: oxmx9ptcpgbqabxa04kixk6jajga3vgl
+        m: []
+        python_version: 3.9.23
+        t:
+            "1":
+                - 1
+                - 5
+                - 53
+            "2":
+                - 1
+                - 5
+                - 53
+            "3":
+                - 2
+                - 13
+                - 16
+                - 61
+            "4": 3.9.23
+            "5": 0.25.0
+            "12": 0.25.0
+            "13": linux-x86_64
+best_epoch_warmup:
+    value: 5
+dataset:
+    value: MIMM
+endpoint:
+    value: OS_6
+epochs:
+    value: 80
+eval_missing_locations_grid:
+    value: radio_report
+hp_grid_size:
+    value: 16
+imputation_method:
+    value: zero
+inner_fold:
+    value: 3
+inner_splits:
+    value: 5
+missing_location:
+    value: radio_report
+missing_pattern_seed:
+    value: 2026
+modalities:
+    value:
+        - path
+        - radio
+        - clin
+        - blood
+        - radio_report
+model:
+    value: mlp
+outer_fold:
+    value: 2
+outer_splits:
+    value: 5
+phase:
+    value: best_inner_curve_per_fold
+radio_aggregation_method:
+    value: mean
+seed:
+    value: 22
+selected_inner_hp_name:
+    value: lr1e-04_bs16_modL1_fusion64_fusionL1_drop0p1_trmiss30_trlocradio_report
+test_eval_combinations:
+    value: 1
+test_missing_props_grid:
+    value: "0.0"
+train_missing_prop:
+    value: 0.3

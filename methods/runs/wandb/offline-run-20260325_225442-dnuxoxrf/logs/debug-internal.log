@@ -1,0 +1,13 @@
+{"time":"2026-03-25T22:54:42.908407799+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-25T22:54:43.02791725+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-25T22:54:43.027950754+01:00","level":"INFO","msg":"stream: created new stream","id":"dnuxoxrf"}
+{"time":"2026-03-25T22:54:43.027983567+01:00","level":"INFO","msg":"handler: started","stream_id":"dnuxoxrf"}
+{"time":"2026-03-25T22:54:43.031872177+01:00","level":"INFO","msg":"stream: started","id":"dnuxoxrf"}
+{"time":"2026-03-25T22:54:43.03188907+01:00","level":"INFO","msg":"writer: started","stream_id":"dnuxoxrf"}
+{"time":"2026-03-25T22:54:43.031897666+01:00","level":"INFO","msg":"sender: started","stream_id":"dnuxoxrf"}
+{"time":"2026-03-25T22:54:43.032190974+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-25T22:54:43.126020121+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-25T22:54:43.127881443+01:00","level":"INFO","msg":"stream: closing","id":"dnuxoxrf"}
+{"time":"2026-03-25T22:54:43.127890972+01:00","level":"INFO","msg":"handler: closed","stream_id":"dnuxoxrf"}
+{"time":"2026-03-25T22:54:43.128351448+01:00","level":"INFO","msg":"sender: closed","stream_id":"dnuxoxrf"}
+{"time":"2026-03-25T22:54:43.128358602+01:00","level":"INFO","msg":"stream: closed","id":"dnuxoxrf"}

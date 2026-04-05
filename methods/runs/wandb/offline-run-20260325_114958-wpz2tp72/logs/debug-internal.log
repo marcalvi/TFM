@@ -1,0 +1,13 @@
+{"time":"2026-03-25T11:49:58.954975129+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-25T11:49:59.072834559+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-25T11:49:59.072885176+01:00","level":"INFO","msg":"stream: created new stream","id":"wpz2tp72"}
+{"time":"2026-03-25T11:49:59.072916926+01:00","level":"INFO","msg":"handler: started","stream_id":"wpz2tp72"}
+{"time":"2026-03-25T11:49:59.076544552+01:00","level":"INFO","msg":"stream: started","id":"wpz2tp72"}
+{"time":"2026-03-25T11:49:59.076558308+01:00","level":"INFO","msg":"writer: started","stream_id":"wpz2tp72"}
+{"time":"2026-03-25T11:49:59.076571834+01:00","level":"INFO","msg":"sender: started","stream_id":"wpz2tp72"}
+{"time":"2026-03-25T11:49:59.076860163+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-25T11:49:59.150616759+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-25T11:49:59.152452428+01:00","level":"INFO","msg":"stream: closing","id":"wpz2tp72"}
+{"time":"2026-03-25T11:49:59.152461425+01:00","level":"INFO","msg":"handler: closed","stream_id":"wpz2tp72"}
+{"time":"2026-03-25T11:49:59.152924648+01:00","level":"INFO","msg":"sender: closed","stream_id":"wpz2tp72"}
+{"time":"2026-03-25T11:49:59.152931662+01:00","level":"INFO","msg":"stream: closed","id":"wpz2tp72"}

@@ -1,0 +1,12 @@
+{"time":"2026-03-25T20:00:34.433016601+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-25T20:00:34.762889457+01:00","level":"INFO","msg":"stream: created new stream","id":"ogmjobel"}
+{"time":"2026-03-25T20:00:34.762928237+01:00","level":"INFO","msg":"handler: started","stream_id":"ogmjobel"}
+{"time":"2026-03-25T20:00:34.767261858+01:00","level":"INFO","msg":"stream: started","id":"ogmjobel"}
+{"time":"2026-03-25T20:00:34.767287588+01:00","level":"INFO","msg":"writer: started","stream_id":"ogmjobel"}
+{"time":"2026-03-25T20:00:34.767311208+01:00","level":"INFO","msg":"sender: started","stream_id":"ogmjobel"}
+{"time":"2026-03-25T20:00:36.869286613+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-25T20:00:37.581869987+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-25T20:00:37.583004688+01:00","level":"INFO","msg":"stream: closing","id":"ogmjobel"}
+{"time":"2026-03-25T20:00:37.583013898+01:00","level":"INFO","msg":"handler: closed","stream_id":"ogmjobel"}
+{"time":"2026-03-25T20:00:37.583662058+01:00","level":"INFO","msg":"sender: closed","stream_id":"ogmjobel"}
+{"time":"2026-03-25T20:00:37.583669618+01:00","level":"INFO","msg":"stream: closed","id":"ogmjobel"}

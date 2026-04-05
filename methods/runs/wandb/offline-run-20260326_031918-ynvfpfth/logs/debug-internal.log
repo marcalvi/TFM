@@ -1,0 +1,13 @@
+{"time":"2026-03-26T03:19:18.099718899+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-26T03:19:18.216909638+01:00","level":"WARN","msg":"featurechecker: GraphQL client is nil, skipping feature loading"}
+{"time":"2026-03-26T03:19:18.216934505+01:00","level":"INFO","msg":"stream: created new stream","id":"ynvfpfth"}
+{"time":"2026-03-26T03:19:18.216965965+01:00","level":"INFO","msg":"handler: started","stream_id":"ynvfpfth"}
+{"time":"2026-03-26T03:19:18.21962685+01:00","level":"INFO","msg":"stream: started","id":"ynvfpfth"}
+{"time":"2026-03-26T03:19:18.219643872+01:00","level":"INFO","msg":"writer: started","stream_id":"ynvfpfth"}
+{"time":"2026-03-26T03:19:18.219649012+01:00","level":"INFO","msg":"sender: started","stream_id":"ynvfpfth"}
+{"time":"2026-03-26T03:19:18.219983989+01:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2026-03-26T03:19:18.305114796+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-26T03:19:18.307122057+01:00","level":"INFO","msg":"stream: closing","id":"ynvfpfth"}
+{"time":"2026-03-26T03:19:18.307131595+01:00","level":"INFO","msg":"handler: closed","stream_id":"ynvfpfth"}
+{"time":"2026-03-26T03:19:18.307461272+01:00","level":"INFO","msg":"sender: closed","stream_id":"ynvfpfth"}
+{"time":"2026-03-26T03:19:18.307471712+01:00","level":"INFO","msg":"stream: closed","id":"ynvfpfth"}

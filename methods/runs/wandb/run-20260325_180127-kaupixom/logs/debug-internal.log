@@ -1,0 +1,12 @@
+{"time":"2026-03-25T18:01:27.245823314+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-25T18:01:27.588974095+01:00","level":"INFO","msg":"stream: created new stream","id":"kaupixom"}
+{"time":"2026-03-25T18:01:27.589766731+01:00","level":"INFO","msg":"handler: started","stream_id":"kaupixom"}
+{"time":"2026-03-25T18:01:27.594107139+01:00","level":"INFO","msg":"stream: started","id":"kaupixom"}
+{"time":"2026-03-25T18:01:27.594405902+01:00","level":"INFO","msg":"writer: started","stream_id":"kaupixom"}
+{"time":"2026-03-25T18:01:27.594429186+01:00","level":"INFO","msg":"sender: started","stream_id":"kaupixom"}
+{"time":"2026-03-25T18:01:29.929624474+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-25T18:01:30.260096169+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-25T18:01:30.261594255+01:00","level":"INFO","msg":"stream: closing","id":"kaupixom"}
+{"time":"2026-03-25T18:01:30.261601489+01:00","level":"INFO","msg":"handler: closed","stream_id":"kaupixom"}
+{"time":"2026-03-25T18:01:30.262138882+01:00","level":"INFO","msg":"sender: closed","stream_id":"kaupixom"}
+{"time":"2026-03-25T18:01:30.262146196+01:00","level":"INFO","msg":"stream: closed","id":"kaupixom"}

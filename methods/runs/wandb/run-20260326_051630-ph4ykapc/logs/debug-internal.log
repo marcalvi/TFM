@@ -1,0 +1,12 @@
+{"time":"2026-03-26T05:16:30.401410185+01:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-03-26T05:16:30.653091074+01:00","level":"INFO","msg":"stream: created new stream","id":"ph4ykapc"}
+{"time":"2026-03-26T05:16:30.653143773+01:00","level":"INFO","msg":"handler: started","stream_id":"ph4ykapc"}
+{"time":"2026-03-26T05:16:30.657455744+01:00","level":"INFO","msg":"stream: started","id":"ph4ykapc"}
+{"time":"2026-03-26T05:16:30.657481934+01:00","level":"INFO","msg":"writer: started","stream_id":"ph4ykapc"}
+{"time":"2026-03-26T05:16:30.657489568+01:00","level":"INFO","msg":"sender: started","stream_id":"ph4ykapc"}
+{"time":"2026-03-26T05:16:32.52112081+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-03-26T05:16:32.937492204+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-03-26T05:16:32.938556832+01:00","level":"INFO","msg":"stream: closing","id":"ph4ykapc"}
+{"time":"2026-03-26T05:16:32.93856662+01:00","level":"INFO","msg":"handler: closed","stream_id":"ph4ykapc"}
+{"time":"2026-03-26T05:16:32.939113551+01:00","level":"INFO","msg":"sender: closed","stream_id":"ph4ykapc"}
+{"time":"2026-03-26T05:16:32.939117539+01:00","level":"INFO","msg":"stream: closed","id":"ph4ykapc"}
