@@ -17,7 +17,7 @@ fi
 
 WANDB_ARGS=()
 if [[ -n "${WANDB_LOGIN_KEY}" ]]; then
-  WANDB_ARGS+=(--wandb --wandb_project "ZI_MLP" --wandb_mode "online")
+  WANDB_ARGS+=(--wandb --wandb_project "ZI_MLP_reduced" --wandb_mode "online")
 fi
 
 # Radio aggregation method
@@ -29,7 +29,7 @@ ENDPOINT="OS_9"
 # Define paths
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/"
-RESULTS_ROOT="${PROJECT_ROOT}/results/results_${RADIO_AGGREGATION_METHOD}_${ENDPOINT}"
+RESULTS_ROOT="${PROJECT_ROOT}/results/results_reduced_${ENDPOINT}"
 
 # Proposed tuning grid
 SEEDS="22,2002,4,18473,55602"
@@ -40,7 +40,7 @@ OUTER_SPLITS=5
 EPOCHS=80
 
 BATCH_SIZE_GRID="16,32"
-LR_GRID="5e-5,1e-4"
+LR_GRID="1e-5,5e-5,1e-4"
 FUSION_HIDDEN_DIM_GRID="32,64"
 FUSION_HIDDEN_LAYERS_GRID="1"
 MODALITY_HIDDEN_LAYERS_GRID="1"
