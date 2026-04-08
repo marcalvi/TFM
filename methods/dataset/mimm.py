@@ -51,7 +51,7 @@ def load_preprocessed_dataset(args):
 
     inst_path = _resolve_csv_path(
         dataset_dir,
-        "patients_mimm.csv",
+        "patients_mimm_reduced.csv",
         required=True,
     )
     patho_path = _resolve_csv_path(
