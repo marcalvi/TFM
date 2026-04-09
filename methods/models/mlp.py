@@ -2,17 +2,18 @@ import torch
 import torch.nn as nn
 
 
-def _build_hidden_stack(input_dim, hidden_dim, n_hidden_layers, dropout_p):
+def _build_hidden_stack(input_dim, hidden_dim, n_hidden_layers, dropout_p, use_batchnorm=True):
     if n_hidden_layers < 1:
         raise ValueError("n_hidden_layers must be >= 1")
 
     layers = []
     in_dim = input_dim
     for _ in range(n_hidden_layers):
+        layers.append(nn.Linear(in_dim, hidden_dim))
+        if use_batchnorm:
+            layers.append(nn.BatchNorm1d(hidden_dim))
         layers.extend(
             [
-                nn.Linear(in_dim, hidden_dim),
-                nn.BatchNorm1d(hidden_dim),
                 nn.ReLU(),
                 nn.Dropout(p=dropout_p),
             ]
@@ -31,6 +32,7 @@ class MultimodalMLP(nn.Module):
         fusion_hidden_layers=1,
         dropout_p=0.2,
         use_mask=True,
+        fusion_batchnorm=False,
     ):
         super().__init__()
 
@@ -49,6 +51,7 @@ class MultimodalMLP(nn.Module):
                         hidden_dim=modality_hidden_dim,
                         n_hidden_layers=modality_hidden_layers,
                         dropout_p=dropout_p,
+                        use_batchnorm=True,
                     )
                 )
                 for dim in self.input_dims
@@ -64,6 +67,7 @@ class MultimodalMLP(nn.Module):
             hidden_dim=fusion_hidden_dim,
             n_hidden_layers=fusion_hidden_layers,
             dropout_p=dropout_p,
+            use_batchnorm=bool(fusion_batchnorm),
         )
         fusion_layers.append(nn.Linear(fusion_hidden_dim, 1))
         self.fusion = nn.Sequential(*fusion_layers)

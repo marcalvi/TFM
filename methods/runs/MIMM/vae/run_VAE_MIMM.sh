@@ -22,6 +22,7 @@ fi
 
 # Radio aggregation method
 RADIO_AGGREGATION_METHOD="mean"
+RETRAIN_OUTER="true"
 
 # Define paths
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
@@ -42,6 +43,7 @@ BATCH_SIZE_GRID="16,32"
 LR_GRID="5e-5,1e-4"
 FUSION_HIDDEN_DIM_GRID="32,64"
 FUSION_HIDDEN_LAYERS_GRID="1"
+FUSION_BATCHNORM_GRID="false"
 MODALITY_HIDDEN_LAYERS_GRID="1"
 DROPOUT_GRID="0.2,0.1"
 IMPUTATION_METHOD="vae"
@@ -69,11 +71,13 @@ python "${PROJECT_ROOT}/main.py" \
   --inner_splits "${INNER_SPLITS}" \
   --outer_splits "${OUTER_SPLITS}" \
   --epochs "${EPOCHS}" \
+  --retrain_outer "${RETRAIN_OUTER}" \
   --radio_aggregation_method "${RADIO_AGGREGATION_METHOD}" \
   --batch_size "${BATCH_SIZE_GRID}" \
   --learning_rate "${LR_GRID}" \
   --fusion_hidden_dim "${FUSION_HIDDEN_DIM_GRID}" \
   --fusion_hidden_layers "${FUSION_HIDDEN_LAYERS_GRID}" \
+  --fusion_batchnorm "${FUSION_BATCHNORM_GRID}" \
   --modality_hidden_layers "${MODALITY_HIDDEN_LAYERS_GRID}" \
   --dropout "${DROPOUT_GRID}" \
   --imputation_method "${IMPUTATION_METHOD}" \

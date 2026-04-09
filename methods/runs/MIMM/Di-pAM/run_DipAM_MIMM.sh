@@ -22,6 +22,7 @@ fi
 
 # Radio aggregation method
 RADIO_AGGREGATION_METHOD="mean"
+RETRAIN_OUTER="true"
 
 # Define paths
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
@@ -68,6 +69,7 @@ python "${PROJECT_ROOT}/main.py" \
   --inner_splits "${INNER_SPLITS}" \
   --outer_splits "${OUTER_SPLITS}" \
   --epochs "${EPOCHS}" \
+  --retrain_outer "${RETRAIN_OUTER}" \
   --radio_aggregation_method "${RADIO_AGGREGATION_METHOD}" \
   --batch_size "${BATCH_SIZE_GRID}" \
   --learning_rate "${LR_GRID}" \

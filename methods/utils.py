@@ -106,6 +106,24 @@ def parse_value_or_list(raw_value, dtype, to_lower=None):
 
     return casted
 
+
+def parse_bool_value_or_list(raw_value):
+    items = [x.strip() for x in str(raw_value).split(",") if x.strip()]
+    if not items:
+        raise ValueError(f"Empty value received for parameter '{raw_value}'.")
+    out = []
+    for item in items:
+        item_l = item.lower()
+        if item_l in {"1", "true", "yes", "y"}:
+            out.append(True)
+        elif item_l in {"0", "false", "no", "n"}:
+            out.append(False)
+        else:
+            raise ValueError(
+                f"Invalid boolean value '{item}'. Use one of: true, false, 1, 0, yes, no."
+            )
+    return out
+
 # Format hp_name for runs' names
 def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
     model_name = normalize_model_name(model_name)
@@ -189,6 +207,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
     fusion_str = str(cfg["fusion_hidden_dim"])
     modality_layers_str = str(cfg["modality_hidden_layers"])
     fusion_layers_str = str(cfg["fusion_hidden_layers"])
+    fusion_bn_str = "1" if bool(cfg.get("fusion_batchnorm", False)) else "0"
     dropout_str = str(cfg["dropout"]).replace(".", "p")
     return (
         f"lr{lr_str}_"
@@ -196,6 +215,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
         f"modL{modality_layers_str}_"
         f"fusion{fusion_str}_"
         f"fusionL{fusion_layers_str}_"
+        f"fusionBN{fusion_bn_str}_"
         f"drop{dropout_str}_"
         f"trmiss{train_missing_pct}_"
         f"trloc{missing_location}"
@@ -285,14 +305,16 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
         modality_hidden_layers = parse_value_or_list(args.modality_hidden_layers, int)
         fusion_hidden_dims = parse_value_or_list(args.fusion_hidden_dim, int)
         fusion_hidden_layers = parse_value_or_list(args.fusion_hidden_layers, int)
+        fusion_batchnorm_values = parse_bool_value_or_list(args.fusion_batchnorm)
         dropouts = parse_value_or_list(args.dropout, float)
 
-        for bs, lr, mod_layers, fusion_dim, fusion_layers, dropout in product(
+        for bs, lr, mod_layers, fusion_dim, fusion_layers, fusion_batchnorm, dropout in product(
             batch_sizes,
             learning_rates,
             modality_hidden_layers,
             fusion_hidden_dims,
             fusion_hidden_layers,
+            fusion_batchnorm_values,
             dropouts,
         ):
             cfg = {
@@ -301,6 +323,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 "modality_hidden_layers": int(mod_layers),
                 "fusion_hidden_dim": int(fusion_dim),
                 "fusion_hidden_layers": int(fusion_layers),
+                "fusion_batchnorm": bool(fusion_batchnorm),
                 "dropout": float(dropout),
             }
             key = (
@@ -309,6 +332,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 cfg["modality_hidden_layers"],
                 cfg["fusion_hidden_dim"],
                 cfg["fusion_hidden_layers"],
+                cfg["fusion_batchnorm"],
                 cfg["dropout"],
             )
             if key in seen:

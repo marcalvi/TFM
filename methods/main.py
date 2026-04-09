@@ -14,6 +14,18 @@ from utils import (
 
 # ------------------------ HELPER FUNCTIONS --------------------------
 
+def _parse_bool_flag(value):
+    if isinstance(value, bool):
+        return value
+    value_l = str(value).strip().lower()
+    if value_l in {"1", "true", "yes", "y"}:
+        return True
+    if value_l in {"0", "false", "no", "n"}:
+        return False
+    raise argparse.ArgumentTypeError(
+        f"Invalid boolean value '{value}'. Use one of: true, false, 1, 0, yes, no."
+    )
+
 def get_args():
     parser = argparse.ArgumentParser()
 
@@ -46,6 +58,15 @@ def get_args():
     parser.add_argument("--outer_splits", type=int, default=5)
     parser.add_argument("--batch_size", type=str, default="16") # Supports scalar or comma-separated list for tuning
     parser.add_argument("--epochs", type=int, default=80)
+    parser.add_argument(
+        "--retrain_outer",
+        type=_parse_bool_flag,
+        default=True,
+        help=(
+            "If true, refit one final model on the full outer-train split using the robustly selected HPs. "
+            "If false, keep the previous behavior: ensemble the retained inner-fold models on outer-test."
+        ),
+    )
     parser.add_argument("--learning_rate", type=str, default="5e-5") # Supports scalar or comma-separated list for tuning
     parser.add_argument("--seeds", type=str, default="123") # Supports scalar or comma-separated list for tuning
     parser.add_argument(
@@ -57,6 +78,12 @@ def get_args():
     # MLP architecture hyperparameters
     parser.add_argument("--fusion_hidden_dim", type=str, default="32") # Supports scalar or comma-separated list for tuning
     parser.add_argument("--fusion_hidden_layers", type=str, default="1") # Supports scalar or comma-separated list for tuning
+    parser.add_argument(
+        "--fusion_batchnorm",
+        type=str,
+        default="false",
+        help="Whether to use BatchNorm in the shared fusion block of the MLP. Supports scalar or comma-separated list.",
+    )
     parser.add_argument("--modality_hidden_layers", type=str, default="1") # Supports scalar or comma-separated list for tuning
     parser.add_argument("--dropout", type=str, default="0.2") # Supports scalar or comma-separated list for tuning
 
@@ -452,6 +479,7 @@ def main():
                 )
                 print(f"Missing pattern seed: {int(args.missing_pattern_seed)}")
                 print(f"Best-epoch warmup: {best_epoch_warmup}")
+                print(f"Retrain outer train: {bool(args.retrain_outer)}")
                 print(f"Output directory: {odir}")
                 print(f"Hyperparameter combinations to evaluate: {len(hp_configs)}")
                 print(f"Test missingness combinations to evaluate: {len(test_eval_setups)}")
@@ -463,6 +491,7 @@ def main():
                     "modalities": modality_names,
                     "hp_grid_size": len(hp_configs),
                     "epochs": args.epochs,
+                    "retrain_outer": bool(args.retrain_outer),
                     "best_epoch_warmup": best_epoch_warmup,
                     "inner_splits": args.inner_splits,
                     "outer_splits": args.outer_splits,
@@ -498,6 +527,7 @@ def main():
                     epochs=args.epochs,
                     seed=seed,
                     hp_configs=hp_configs,
+                    retrain_outer=bool(args.retrain_outer),
                     train_missing_simulator=train_missing_simulator,
                     model_name=args.model,
                     imputation_method=args.imputation_method,
