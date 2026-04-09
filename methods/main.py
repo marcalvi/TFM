@@ -46,6 +46,12 @@ def get_args():
         help="Directory containing all CSV files for the selected dataset.",
     )
     parser.add_argument(
+        "--reduced_df",
+        type=_parse_bool_flag,
+        default=False,
+        help="If true, use the reduced patients table for MIMM when available.",
+    )
+    parser.add_argument(
         "--radio_aggregation_method",
         type=str,
         default="mean",
@@ -480,6 +486,7 @@ def main():
                 print(f"Missing pattern seed: {int(args.missing_pattern_seed)}")
                 print(f"Best-epoch warmup: {best_epoch_warmup}")
                 print(f"Retrain outer train: {bool(args.retrain_outer)}")
+                print(f"Reduced dataframe: {bool(args.reduced_df)}")
                 print(f"Output directory: {odir}")
                 print(f"Hyperparameter combinations to evaluate: {len(hp_configs)}")
                 print(f"Test missingness combinations to evaluate: {len(test_eval_setups)}")
@@ -492,6 +499,7 @@ def main():
                     "hp_grid_size": len(hp_configs),
                     "epochs": args.epochs,
                     "retrain_outer": bool(args.retrain_outer),
+                    "reduced_df": bool(args.reduced_df),
                     "best_epoch_warmup": best_epoch_warmup,
                     "inner_splits": args.inner_splits,
                     "outer_splits": args.outer_splits,

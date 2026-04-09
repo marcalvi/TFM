@@ -49,9 +49,12 @@ def load_preprocessed_dataset(args):
             "MIMM preprocessing requires --dataset_dir with all dataset CSV files."
         )
 
+    reduced_df = bool(getattr(args, "reduced_df", False))
+    patients_filename = "patients_mimm_reduced.csv" if reduced_df else "patients_mimm.csv"
+
     inst_path = _resolve_csv_path(
         dataset_dir,
-        "patients_mimm_reduced.csv",
+        patients_filename,
         required=True,
     )
     patho_path = _resolve_csv_path(

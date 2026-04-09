@@ -23,6 +23,7 @@ fi
 # Radio aggregation method
 RADIO_AGGREGATION_METHOD="mean"
 RETRAIN_OUTER="true"
+REDUCED_DF="true"
 
 # Define endpoint
 ENDPOINT="OS_9"
@@ -30,7 +31,7 @@ ENDPOINT="OS_9"
 # Define paths
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/"
-RESULTS_ROOT="${PROJECT_ROOT}/results/results_reduced_${ENDPOINT}"
+RESULTS_ROOT="${PROJECT_ROOT}/results/results_${ENDPOINT}_reduced${REDUCED_DF}_retrain${RETRAIN_OUTER}"
 
 # Proposed tuning grid
 SEEDS="22,2002,4,18473,55602"
@@ -65,6 +66,7 @@ python "${PROJECT_ROOT}/main.py" \
   --outer_splits "${OUTER_SPLITS}" \
   --epochs "${EPOCHS}" \
   --retrain_outer "${RETRAIN_OUTER}" \
+  --reduced_df "${REDUCED_DF}" \
   --radio_aggregation_method "${RADIO_AGGREGATION_METHOD}" \
   --batch_size "${BATCH_SIZE_GRID}" \
   --learning_rate "${LR_GRID}" \
