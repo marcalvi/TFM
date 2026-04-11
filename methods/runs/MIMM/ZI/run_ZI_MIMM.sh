@@ -27,6 +27,9 @@ REDUCED_DF="false"
 
 # Define endpoint
 ENDPOINT="OS_9"
+k=4
+INNER_SPLITS=${k}
+OUTER_SPLITS=${k}
 
 # Define paths
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
@@ -37,9 +40,6 @@ RESULTS_ROOT="${PROJECT_ROOT}/results/results_${ENDPOINT}_reduced${REDUCED_DF}_r
 SEEDS="22,2002,4,18473,55602"
 MISSING_PATTERN_SEED=2026
 
-k=4
-INNER_SPLITS=${k}
-OUTER_SPLITS=${k}
 EPOCHS=80
 
 BATCH_SIZE_GRID="16,32"

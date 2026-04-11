@@ -28,10 +28,10 @@ REDUCED_DF="false"
 # Define paths
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/"
-RESULTS_ROOT="${PROJECT_ROOT}/results/results_${ENDPOINT}_reduced${REDUCED_DF}_retrain${RETRAIN_OUTER}"
 
 # Define endpoint
 ENDPOINT="OS_6"
+RESULTS_ROOT="${PROJECT_ROOT}/results/results_${ENDPOINT}_reduced${REDUCED_DF}_retrain${RETRAIN_OUTER}"
 
 # Proposed tuning grid
 SEEDS="22,2002,4,18473,55602"

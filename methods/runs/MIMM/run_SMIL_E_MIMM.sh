@@ -28,9 +28,9 @@ REDUCED_DF="false"
 # Define paths
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/"
-RESULTS_ROOT="${PROJECT_ROOT}/results/results_${ENDPOINT}_reduced${REDUCED_DF}_retrain${RETRAIN_OUTER}"
 
 ENDPOINT="OS_6"
+RESULTS_ROOT="${PROJECT_ROOT}/results/results_${ENDPOINT}_reduced${REDUCED_DF}_retrain${RETRAIN_OUTER}"
 SEEDS="22,2002,4,18473,55602"
 MISSING_PATTERN_SEED=2026
 INNER_SPLITS=5
