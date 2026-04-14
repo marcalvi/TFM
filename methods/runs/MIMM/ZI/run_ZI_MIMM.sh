@@ -5,7 +5,7 @@ set -euo pipefail
 # Activate conda environment
 #source /opt/miniconda3/etc/profile.d/conda.sh
 source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-conda activate TFM
+conda activate TFM_5090
 
 # WandB login token
 WANDB_LOGIN_KEY="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"
@@ -22,7 +22,7 @@ fi
 
 # Radio aggregation method
 RADIO_AGGREGATION_METHOD="mean"
-RETRAIN_OUTER="true"
+RETRAIN_OUTER="false"
 REDUCED_DF="false"
 
 # Define endpoint
