@@ -24,9 +24,10 @@ fi
 RADIO_AGGREGATION_METHOD="mean"
 
 # Define paths
+DATASET="MIMM"
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
-DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/"
-RESULTS_ROOT="${PROJECT_ROOT}/results/results_${RADIO_AGGREGATION_METHOD}"
+DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/${DATASET}/"
+RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}/results_${RADIO_AGGREGATION_METHOD}"
 
 # Define endpoint
 ENDPOINT="OS_6"
@@ -55,7 +56,7 @@ TEST_MISSING_PROP_GRID="0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8"
 # Run training
 python "${PROJECT_ROOT}/main.py" \
   --model "DyAM" \
-  --dataset "MIMM" \
+  --dataset "${DATASET}" \
   --odir "${RESULTS_ROOT}" \
   --dataset_dir "${DATA_ROOT}" \
   --endpoint "${ENDPOINT}" \

@@ -26,20 +26,16 @@ RETRAIN_OUTER="false"
 REDUCED_DF="false"
 
 # Define endpoint
+DATASET="MIMM"
 ENDPOINT="OS_9"
-<<<<<<< Updated upstream
 k=5
-=======
-k=4
-
->>>>>>> Stashed changes
 INNER_SPLITS=${k}
 OUTER_SPLITS=${k}
 
 # Define paths
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
-DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/"
-RESULTS_ROOT="${PROJECT_ROOT}/results/results_${ENDPOINT}_reduced${REDUCED_DF}_retrain${RETRAIN_OUTER}_k${k}"
+DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/${DATASET}/"
+RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}/results_${ENDPOINT}_reduced${REDUCED_DF}_retrain${RETRAIN_OUTER}_k${k}"
 
 # Proposed tuning grid
 SEEDS="22,2002,4,18473,55602"
@@ -58,13 +54,13 @@ IMPUTATION_METHOD="zero"
 
 # Missingness experiments
 MISSING_LOCATION_GRID="global"
-TRAIN_MISSING_PROP_GRID="0.0"
-TEST_MISSING_PROP_GRID="0.0"
+TRAIN_MISSING_PROP_GRID="0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8"
+TEST_MISSING_PROP_GRID="0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8"
 
 # Run training
 python "${PROJECT_ROOT}/main.py" \
   --model "MLP" \
-  --dataset "MIMM" \
+  --dataset "${DATASET}" \
   --odir "${RESULTS_ROOT}" \
   --dataset_dir "${DATA_ROOT}" \
   --endpoint "${ENDPOINT}" \

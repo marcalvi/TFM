@@ -92,7 +92,7 @@ def train_clf(self,
                 self.evaluate_clf_epoch(model, test_data, criterion, epoch)
 
 
-    def evaluate_clf_epoch(self, model: nn.Module, test_data: DataLoader, criterion: nn.Module, epoch: int):
+def evaluate_clf_epoch(self, model: nn.Module, test_data: DataLoader, criterion: nn.Module, epoch: int):
         model.eval()
         majority_val_acc = majority_classifier_acc(y_true=test_data.dataset.dataset.y_disc)
         val_loss = 0.0
