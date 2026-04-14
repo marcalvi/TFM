@@ -27,7 +27,12 @@ REDUCED_DF="false"
 
 # Define endpoint
 ENDPOINT="OS_9"
+<<<<<<< Updated upstream
 k=5
+=======
+k=4
+
+>>>>>>> Stashed changes
 INNER_SPLITS=${k}
 OUTER_SPLITS=${k}
 
