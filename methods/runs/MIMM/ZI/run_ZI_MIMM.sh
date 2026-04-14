@@ -23,11 +23,11 @@ fi
 # Radio aggregation method
 RADIO_AGGREGATION_METHOD="mean"
 RETRAIN_OUTER="false"
-REDUCED_DF="true"
+REDUCED_DF="false"
 
 # Define endpoint
 ENDPOINT="OS_9"
-k=4
+k=5
 INNER_SPLITS=${k}
 OUTER_SPLITS=${k}
 
