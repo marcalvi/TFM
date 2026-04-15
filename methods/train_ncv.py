@@ -832,7 +832,6 @@ def nested_cv(
     wandb_base_config=None,
     test_eval_setups=None,
     imputer_kwargs=None,
-    radio_aggregation_method="mean",
     radio_pooling_kwargs=None,
     candidate_model_dir=None,
     retrain_outer=True,
@@ -946,7 +945,7 @@ def nested_cv(
             dfs_train_inner_prepared, radio_pooler_inner = _prepare_patient_level_modalities(
                 dfs_train_inner_raw,
                 patient_id_col=patient_id_col,
-                radio_aggregation_method=radio_aggregation_method,
+                radio_aggregation_method="mean",
                 fit_radio_pooler=True,
                 radio_pooler=None,
                 radio_pooling_kwargs=radio_pooling_kwargs,
@@ -956,7 +955,7 @@ def nested_cv(
             dfs_val_inner_prepared, _ = _prepare_patient_level_modalities(
                 dfs_val_inner_raw,
                 patient_id_col=patient_id_col,
-                radio_aggregation_method=radio_aggregation_method,
+                radio_aggregation_method="mean",
                 fit_radio_pooler=False,
                 radio_pooler=radio_pooler_inner,
                 radio_pooling_kwargs=radio_pooling_kwargs,
@@ -1186,7 +1185,7 @@ def nested_cv(
             dfs_train_outer_prepared, radio_pooler_outer = _prepare_patient_level_modalities(
                 dfs_train_outer_raw,
                 patient_id_col=patient_id_col,
-                radio_aggregation_method=radio_aggregation_method,
+                radio_aggregation_method="mean",
                 fit_radio_pooler=True,
                 radio_pooler=None,
                 radio_pooling_kwargs=radio_pooling_kwargs,
@@ -1313,7 +1312,7 @@ def nested_cv(
             dfs_outer_eval_prepared, _ = _prepare_patient_level_modalities(
                 dfs_test_outer_raw,
                 patient_id_col=patient_id_col,
-                radio_aggregation_method=radio_aggregation_method,
+                radio_aggregation_method="mean",
                 fit_radio_pooler=False,
                 radio_pooler=radio_pooler_outer,
                 radio_pooling_kwargs=radio_pooling_kwargs,
@@ -1466,7 +1465,7 @@ def nested_cv(
                     dfs_outer_eval_prepared, _ = _prepare_patient_level_modalities(
                         dfs_test_outer_raw,
                         patient_id_col=patient_id_col,
-                        radio_aggregation_method=radio_aggregation_method,
+                        radio_aggregation_method="mean",
                         fit_radio_pooler=False,
                         radio_pooler=loaded_bundle["radio_pooler"],
                         radio_pooling_kwargs=radio_pooling_kwargs,
