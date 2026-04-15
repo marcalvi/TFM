@@ -43,11 +43,7 @@ KNN_NEIGHBORS=5
 # -------------------------------------------------------------------------
 # Modality configuration:
 # Define one block per modality.
-<<<<<<< HEAD
 # Optional: *_DROP_COLS, *_CATEGORICAL_COLS and *_AGGREGATION_METHOD
-=======
-# Optional: *_DROP_COLS, *_CATEGORICAL_COLS and *_AGGREGATION_METHOD may be omitted.
->>>>>>> 6d3fdcf2d3fa264247f3f493aeb87ae633a31331
 # -------------------------------------------------------------------------
 
 # Template:
