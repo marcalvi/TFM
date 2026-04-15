@@ -322,9 +322,8 @@ def main():
         summary_payload=summary_payload,
     )
 
-    print("\n=== Preflight Complete ===")
-    print(f"Processed endpoint CSV saved to: {os.path.join(output_dir, 'endpoints_selected.csv')}")
-    print(f"Processed modality CSVs saved to: {os.path.join(output_dir, 'modalities')}")
+    print("\n=== Preprocessing Complete ===")
+    print(f"Preprocessing results saved to: {args.results_root}")
     print("Model execution is intentionally not launched yet. This template stops after preprocessing.")
 
 
