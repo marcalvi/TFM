@@ -1,0 +1,12 @@
+{"time":"2026-04-15T00:31:28.944251081+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-15T00:31:29.41401588+02:00","level":"INFO","msg":"stream: created new stream","id":"s9pifish"}
+{"time":"2026-04-15T00:31:29.414356644+02:00","level":"INFO","msg":"handler: started","stream_id":"s9pifish"}
+{"time":"2026-04-15T00:31:29.417667586+02:00","level":"INFO","msg":"stream: started","id":"s9pifish"}
+{"time":"2026-04-15T00:31:29.417722911+02:00","level":"INFO","msg":"writer: started","stream_id":"s9pifish"}
+{"time":"2026-04-15T00:31:29.417759379+02:00","level":"INFO","msg":"sender: started","stream_id":"s9pifish"}
+{"time":"2026-04-15T00:31:31.006086536+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-15T00:31:31.284586859+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-15T00:31:31.288394619+02:00","level":"INFO","msg":"stream: closing","id":"s9pifish"}
+{"time":"2026-04-15T00:31:31.288412583+02:00","level":"INFO","msg":"handler: closed","stream_id":"s9pifish"}
+{"time":"2026-04-15T00:31:31.289042382+02:00","level":"INFO","msg":"sender: closed","stream_id":"s9pifish"}
+{"time":"2026-04-15T00:31:31.289062971+02:00","level":"INFO","msg":"stream: closed","id":"s9pifish"}

@@ -22,44 +22,42 @@ fi
 
 # Radio aggregation method
 RADIO_AGGREGATION_METHOD="mean"
-RETRAIN_OUTER="true"
+RETRAIN_OUTER="false"
 REDUCED_DF="false"
 
-# Define paths
+# Define main parameters
 DATASET="MIMM"
+ENDPOINT="OS_9"
+
+# Define splits
+k=5
+INNER_SPLITS=${k}
+OUTER_SPLITS=${k}
+
+# Define paths
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/${DATASET}/"
+RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}/results_${ENDPOINT}_reduced${REDUCED_DF}_retrain${RETRAIN_OUTER}_k${k}"
 
-# Define endpoint
-ENDPOINT="OS_6"
-RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}/results_${ENDPOINT}_reduced${REDUCED_DF}_retrain${RETRAIN_OUTER}"
-
-# Proposed tuning grid (Distill_DyAM)
-SEEDS="22,55602"
-# 22
+# Proposed tuning grid (pAM)
+SEEDS="22,2002,4,18473,55602"
 MISSING_PATTERN_SEED=2026
 
-INNER_SPLITS=5
-OUTER_SPLITS=5
-EPOCHS=80
-
 # Shared optimization hparams
+EPOCHS=80
 BATCH_SIZE_GRID="16,32"
-LR_GRID="5e-5,1e-4"
+LR_GRID="1e-5,1e-4"
 
-# DyAM-specific hparams
+# DipAM-specific hparams
 DYAM_DROPOUT_GRID="0.2,0.4"
 DYAM_TEMPERATURE_GRID="1.0,2.0"
-
-# Distillation weights
-# total student loss = BCE + a*repr_loss + b*feature_loss
 DISTILL_ALPHA_GRID="1.0,2.0"
 DISTILL_BETA_GRID="0.1,0.3"
 
 # Missingness experiments
-MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
-TRAIN_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
-TEST_MISSING_PROP_GRID="0.0,0.2,0.4,0.6,0.8"
+MISSING_LOCATION_GRID="global"
+TRAIN_MISSING_PROP_GRID="0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8"
+TEST_MISSING_PROP_GRID="0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8"
 
 # Run training
 python "${PROJECT_ROOT}/main.py" \

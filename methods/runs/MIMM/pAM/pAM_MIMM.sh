@@ -5,7 +5,7 @@ set -euo pipefail
 # Activate conda environment
 #source /opt/miniconda3/etc/profile.d/conda.sh
 source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-conda activate TFM_5090
+conda activate TFM
 
 # WandB login token
 WANDB_LOGIN_KEY="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"
@@ -20,36 +20,40 @@ if [[ -n "${WANDB_LOGIN_KEY}" ]]; then
   WANDB_ARGS+=(--wandb --wandb_project "pAM" --wandb_mode "online")
 fi
 
-# Radio aggregation method
+# Strategical parameters
 RADIO_AGGREGATION_METHOD="mean"
+RETRAIN_OUTER="false"
+REDUCED_DF="false"
+
+# Define main parameters
+DATASET="MIMM"
+ENDPOINT="OS_9"
+
+# Define splits
+k=5
+INNER_SPLITS=${k}
+OUTER_SPLITS=${k}
 
 # Define paths
-DATASET="MIMM"
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/${DATASET}/"
-RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}/results_${RADIO_AGGREGATION_METHOD}"
+RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}/results_${ENDPOINT}_reduced${REDUCED_DF}_retrain${RETRAIN_OUTER}_k${k}"
 
-# Define endpoint
-ENDPOINT="OS_6"
-
-# Proposed tuning grid (DyAM)
+# Proposed tuning grid (pAM)
 SEEDS="22,2002,4,18473,55602"
 MISSING_PATTERN_SEED=2026
 
-INNER_SPLITS=5
-OUTER_SPLITS=5
-EPOCHS=80
-
 # Shared optimization hparams
+EPOCHS=80
 BATCH_SIZE_GRID="16,32"
-LR_GRID="5e-5,1e-4"
+LR_GRID="1e-5,5e-5,1e-4"
 
 # DyAM-specific hparams
 DYAM_DROPOUT_GRID="0.2,0.4"
 DYAM_TEMPERATURE_GRID="1.0,2.0"
 
 # Missingness experiments
-MISSING_LOCATION_GRID="global, path, radio, clin, blood, radio_report"
+MISSING_LOCATION_GRID="global"
 TRAIN_MISSING_PROP_GRID="0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8"
 TEST_MISSING_PROP_GRID="0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8"
 
