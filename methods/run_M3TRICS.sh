@@ -25,7 +25,7 @@ DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs"
 DATASET="MIMM"
 PATIENT_ID_COL="patient"
 ENDPOINTS_CSV="patients_mimm.csv"
-ENDPOINT_COL="OS_9"
+ENDPOINT_COL="OS_9_label"
 
 # Output directory
 RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}_${ENDPOINT_COL}"
@@ -43,17 +43,15 @@ KNN_NEIGHBORS=5
 # -------------------------------------------------------------------------
 # Modality configuration:
 # Define one block per modality.
-# Optional: add *_DROP_COLS, *_CATEGORICAL_COLS or *_AGGREGATION_METHOD
+# Optional: *_DROP_COLS, *_CATEGORICAL_COLS and *_AGGREGATION_METHOD
 # -------------------------------------------------------------------------
 
-"""
-Template:
-PATH_NAME="PATH"
-PATH_CSV="pathology_mimm.csv"
-PATH_DROP_COLS=""
-PATH_CATEGORICAL_COLS=""
-PATH_AGGREGATION_METHOD=""
-"""
+# Template:
+# PATH_NAME="PATH"
+# PATH_CSV="pathology_mimm.csv"
+# PATH_DROP_COLS=""
+# PATH_CATEGORICAL_COLS=""
+# PATH_AGGREGATION_METHOD=""
 
 # Path modality
 PATH_NAME="path"
@@ -101,11 +99,11 @@ add_modality_args() {
 }
 
 MODALITY_ARGS=()
-add_modality_args "${PATH_NAME}" "${PATH_CSV}" "${PATH_DROP_COLS}" "${PATH_CATEGORICAL_COLS}" "${PATH_AGGREGATION_METHOD}"
-add_modality_args "${RADIO_NAME}" "${RADIO_CSV}" "${RADIO_DROP_COLS}" "${RADIO_CATEGORICAL_COLS}" "${RADIO_AGGREGATION_METHOD}"
-add_modality_args "${CLIN_NAME}" "${CLIN_CSV}" "${CLIN_DROP_COLS}" "${CLIN_CATEGORICAL_COLS}" "${CLIN_AGGREGATION_METHOD}"
-add_modality_args "${BLOOD_NAME}" "${BLOOD_CSV}" "${BLOOD_DROP_COLS}" "${BLOOD_CATEGORICAL_COLS}" "${BLOOD_AGGREGATION_METHOD}"
-add_modality_args "${RADIO_REPORT_NAME}" "${RADIO_REPORT_CSV}" "${RADIO_REPORT_DROP_COLS}" "${RADIO_REPORT_CATEGORICAL_COLS}" "${RADIO_REPORT_AGGREGATION_METHOD}"
+add_modality_args "${PATH_NAME}" "${PATH_CSV}" "${PATH_DROP_COLS:-}" "${PATH_CATEGORICAL_COLS:-}" "${PATH_AGGREGATION_METHOD:-}"
+add_modality_args "${RADIO_NAME}" "${RADIO_CSV}" "${RADIO_DROP_COLS:-}" "${RADIO_CATEGORICAL_COLS:-}" "${RADIO_AGGREGATION_METHOD:-}"
+add_modality_args "${CLIN_NAME}" "${CLIN_CSV}" "${CLIN_DROP_COLS:-}" "${CLIN_CATEGORICAL_COLS:-}" "${CLIN_AGGREGATION_METHOD:-}"
+add_modality_args "${BLOOD_NAME}" "${BLOOD_CSV}" "${BLOOD_DROP_COLS:-}" "${BLOOD_CATEGORICAL_COLS:-}" "${BLOOD_AGGREGATION_METHOD:-}"
+add_modality_args "${RADIO_REPORT_NAME}" "${RADIO_REPORT_CSV}" "${RADIO_REPORT_DROP_COLS:-}" "${RADIO_REPORT_CATEGORICAL_COLS:-}" "${RADIO_REPORT_AGGREGATION_METHOD:-}"
 
 M3TRICS_ARGS=(
   --dataset "${DATASET}"

@@ -11,6 +11,7 @@ from dataset.preprocess_dataset import (
     summarize_missing_values,
     validate_numeric_columns,
 )
+from utils import filter_by_patients
 
 def _parse_key_value_arg(raw_value, arg_name):
     if "=" not in raw_value:
@@ -28,7 +29,6 @@ def _parse_keyed_str_map(values, arg_name):
         key, value = _parse_key_value_arg(raw_value, arg_name)
         mapping[key] = value
     return mapping
-
 
 def _parse_keyed_list_map(values, arg_name):
     mapping = OrderedDict()
@@ -105,7 +105,7 @@ def _load_endpoint_df(path, patient_id_col, endpoint_col):
         )
     return endpoint_df
 
-def _load_modality_frames(args):
+def _load_modality_frames(args, endpoint_df):
     modality_paths = _parse_keyed_str_map(args.modality_csv, "--modality_csv")
     if not modality_paths:
         raise ValueError("At least one --modality_csv NAME=PATH argument is required.")
@@ -116,6 +116,7 @@ def _load_modality_frames(args):
 
     modality_frames = OrderedDict()
     modality_configs = OrderedDict()
+    endpoint_patient_ids = endpoint_df[args.patient_id_col].tolist()
 
     for modality_name, csv_path in modality_paths.items():
         if not os.path.exists(csv_path):
@@ -134,6 +135,8 @@ def _load_modality_frames(args):
             )
         if drop_cols:
             df = df.drop(columns=drop_cols)
+
+        df = filter_by_patients(df, endpoint_patient_ids, id_col=args.patient_id_col)
 
         categorical_cols = categorical_cols_map.get(modality_name, [])
         missing_categorical_cols = [col for col in categorical_cols if col not in df.columns]
@@ -217,7 +220,7 @@ def main():
         patient_id_col=args.patient_id_col,
         endpoint_col=args.endpoint_col,
     )
-    modality_frames, modality_configs = _load_modality_frames(args)
+    modality_frames, modality_configs = _load_modality_frames(args, endpoint_df)
 
     missing_summary, total_missing = summarize_missing_values(
         modality_frames,
