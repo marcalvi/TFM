@@ -175,7 +175,7 @@ def _save_outputs(output_dir, endpoint_df, patient_id_col, endpoint_col, modalit
     for modality_name, df in modality_frames.items():
         df.to_csv(os.path.join(modalities_dir, f"{modality_name}.csv"), index=False)
 
-    with open(os.path.join(output_dir, "preflight_summary.json"), "w", encoding="utf-8") as handle:
+    with open(os.path.join(output_dir, "preprocessing_summary.json"), "w", encoding="utf-8") as handle:
         json.dump(summary_payload, handle, indent=2)
 
 
@@ -322,7 +322,7 @@ def main():
     print("\n=== Preflight Complete ===")
     print(f"Processed endpoint CSV saved to: {os.path.join(output_dir, 'endpoints_selected.csv')}")
     print(f"Processed modality CSVs saved to: {os.path.join(output_dir, 'modalities')}")
-    print("Model execution is intentionally not launched yet. This template stops after preflight.")
+    print("Model execution is intentionally not launched yet. This template stops after preprocessing.")
 
 
 if __name__ == "__main__":
