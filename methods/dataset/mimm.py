@@ -49,12 +49,9 @@ def load_preprocessed_dataset(args):
             "MIMM preprocessing requires --dataset_dir with all dataset CSV files."
         )
 
-    reduced_df = bool(getattr(args, "reduced_df", False))
-    patients_filename = "patients_mimm_reduced.csv" if reduced_df else "patients_mimm.csv"
-
     inst_path = _resolve_csv_path(
         dataset_dir,
-        patients_filename,
+        "patients_mimm.csv",
         required=True,
     )
     patho_path = _resolve_csv_path(
@@ -107,13 +104,10 @@ def load_preprocessed_dataset(args):
             "No modality CSV found. Provide --dataset_dir with MIMM modality files."
         )
 
-    radio_aggregation_method = str(
-        getattr(args, "radio_aggregation_method", "mean")
-    ).strip().lower()
     dfs = validate_and_prepare_modality_rows(
         dfs,
         id_col,
-        radio_aggregation_method=radio_aggregation_method,
+        radio_aggregation_method="mean",
     )
 
     for mod in list(dfs.keys()):

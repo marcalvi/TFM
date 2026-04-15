@@ -20,10 +20,7 @@ if [[ -n "${WANDB_LOGIN_KEY}" ]]; then
   WANDB_ARGS+=(--wandb --wandb_project "ZI_MLP" --wandb_mode "online")
 fi
 
-# Radio aggregation method
-RADIO_AGGREGATION_METHOD="mean"
 RETRAIN_OUTER="false"
-REDUCED_DF="false"
 
 # Define main parameters
 DATASET="MIMM"
@@ -38,7 +35,7 @@ OUTER_SPLITS=${k}
 # Define paths
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/${DATASET}/"
-RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}/results_${ENDPOINT}_reduced${REDUCED_DF}_retrain${RETRAIN_OUTER}_k${k}"
+RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}/results_${ENDPOINT}_retrain${RETRAIN_OUTER}_k${k}"
 
 # Proposed tuning grid
 SEEDS="22,2002,4,18473,55602"
@@ -70,8 +67,6 @@ python "${PROJECT_ROOT}/main.py" \
   --outer_splits "${OUTER_SPLITS}" \
   --epochs "${EPOCHS}" \
   --retrain_outer "${RETRAIN_OUTER}" \
-  --reduced_df "${REDUCED_DF}" \
-  --radio_aggregation_method "${RADIO_AGGREGATION_METHOD}" \
   --batch_size "${BATCH_SIZE_GRID}" \
   --learning_rate "${LR_GRID}" \
   --fusion_hidden_dim "${FUSION_HIDDEN_DIM_GRID}" \

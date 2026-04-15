@@ -21,9 +21,7 @@ if [[ -n "${WANDB_LOGIN_KEY}" ]]; then
 fi
 
 # Strategical parameters
-RADIO_AGGREGATION_METHOD="mean"
 RETRAIN_OUTER="false"
-REDUCED_DF="false"
 
 # Define main parameters
 DATASET="MIMM"
@@ -37,7 +35,7 @@ OUTER_SPLITS=${k}
 # Define paths
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs/${DATASET}/"
-RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}/results_${ENDPOINT}_reduced${REDUCED_DF}_retrain${RETRAIN_OUTER}_k${k}"
+RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}/results_${ENDPOINT}_retrain${RETRAIN_OUTER}_k${k}"
 
 # Proposed tuning grid (pAM)
 SEEDS="22,2002,4,18473,55602"

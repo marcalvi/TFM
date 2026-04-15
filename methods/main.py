@@ -45,20 +45,6 @@ def get_args():
         default=None,
         help="Directory containing all CSV files for the selected dataset.",
     )
-    parser.add_argument(
-        "--reduced_df",
-        type=_parse_bool_flag,
-        default=False,
-        help="If true, use the reduced patients table for MIMM when available.",
-    )
-    parser.add_argument(
-        "--radio_aggregation_method",
-        type=str,
-        default="mean",
-        choices=["mean", "attention"],
-        help="How to aggregate duplicated radiology rows into one patient-level embedding.",
-    )
-
     # Cross-validation and optimization hyperparameters
     parser.add_argument("--inner_splits", type=int, default=5)
     parser.add_argument("--outer_splits", type=int, default=5)
@@ -246,7 +232,6 @@ def _build_output_dir(
     missing_location,
     train_missing_prop,
     seed,
-    radio_aggregation_method="mean",
 ):
     mapping = {
         "global": "GLOBAL",
@@ -264,8 +249,6 @@ def _build_output_dir(
         )
     else:
         model_label = model_name_norm.upper().replace("_", "-")
-    if str(radio_aggregation_method).strip().lower() != "mean":
-        model_label = f"{model_label}_RAD-{str(radio_aggregation_method).strip().upper()}"
     dataset_label = str(dataset_name).strip().upper()
     key = str(missing_location).strip().lower()
     missing_modality_label = mapping.get(key, key.upper())
@@ -475,7 +458,6 @@ def main():
                     missing_location=missing_location,
                     train_missing_prop=train_missing_prop,
                     seed=seed,
-                    radio_aggregation_method=args.radio_aggregation_method,
                 )
                 best_epoch_warmup = min(5, int(args.epochs))
                 print(
@@ -486,7 +468,6 @@ def main():
                 print(f"Missing pattern seed: {int(args.missing_pattern_seed)}")
                 print(f"Best-epoch warmup: {best_epoch_warmup}")
                 print(f"Retrain outer train: {bool(args.retrain_outer)}")
-                print(f"Reduced dataframe: {bool(args.reduced_df)}")
                 print(f"Output directory: {odir}")
                 print(f"Hyperparameter combinations to evaluate: {len(hp_configs)}")
                 print(f"Test missingness combinations to evaluate: {len(test_eval_setups)}")
@@ -499,7 +480,6 @@ def main():
                     "hp_grid_size": len(hp_configs),
                     "epochs": args.epochs,
                     "retrain_outer": bool(args.retrain_outer),
-                    "reduced_df": bool(args.reduced_df),
                     "best_epoch_warmup": best_epoch_warmup,
                     "inner_splits": args.inner_splits,
                     "outer_splits": args.outer_splits,
@@ -507,7 +487,6 @@ def main():
                     "missing_location": str(missing_location).lower(),
                     "missing_pattern_seed": int(args.missing_pattern_seed),
                     "imputation_method": args.imputation_method,
-                    "radio_aggregation_method": str(args.radio_aggregation_method).strip().lower(),
                     "test_eval_combinations": len(test_eval_setups),
                     "test_missing_props_grid": ",".join(
                         str(float(setup["missing_prop"])) for setup in test_eval_setups
@@ -556,7 +535,6 @@ def main():
                         "lr": float(args.vae_imputer_lr),
                         "beta": float(args.vae_imputer_beta),
                     },
-                    radio_aggregation_method=str(args.radio_aggregation_method).strip().lower(),
                     radio_pooling_kwargs={
                         "hidden_dim": int(args.radio_attention_hidden_dim),
                         "dropout": float(args.radio_attention_dropout),
