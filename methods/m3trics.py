@@ -1,4 +1,5 @@
 import argparse
+import gc
 import os
 import sys
 import time
@@ -149,6 +150,28 @@ def _build_training_modality_pooling(modality_configs):
             continue
         pairs.append(f"{modality_name}={aggregation_method}")
     return ",".join(pairs)
+
+
+def _cleanup_after_training_run():
+    gc.collect()
+
+    try:
+        import wandb
+
+        if getattr(wandb, "run", None) is not None:
+            wandb.finish()
+    except Exception:
+        pass
+
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        elif hasattr(torch, "mps") and hasattr(torch.mps, "empty_cache"):
+            torch.mps.empty_cache()
+    except Exception:
+        pass
 
 
 # ------------------------ TRAINING CLI ------------------------------
@@ -735,7 +758,11 @@ def _run_selected_models(args, modality_configs):
             modality_pooling=training_modality_pooling,
         )
         print(f"\nLaunching {model_config['display_name']}...")
-        run_training_from_args(training_args)
+        try:
+            run_training_from_args(training_args)
+        finally:
+            del training_args
+            _cleanup_after_training_run()
 
 
 def build_preprocessing_arg_parser():
