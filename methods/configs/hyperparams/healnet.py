@@ -1,0 +1,20 @@
+MODEL_CONFIG = {
+    "display_name": "HealNet",
+    "model": "HealNet",
+    "epochs": 80,
+    "main_args": {
+        "batch_size": "8,16,32",
+        "learning_rate": "1e-6,5e-6,1e-5,5e-5",
+        "healnet_depth": "1,2",
+        "healnet_num_freq_bands": "2",
+        "healnet_num_latents": "16,32,64",
+        "healnet_latent_dim": "16,32,64",
+        "healnet_cross_heads": "1",
+        "healnet_latent_heads": "2",
+        "healnet_cross_dim_head": "64",
+        "healnet_latent_dim_head": "64",
+        "healnet_attn_dropout": "0.2",
+        "healnet_ff_dropout": "0.2",
+        "healnet_self_per_cross_attn": "1",
+    },
+}

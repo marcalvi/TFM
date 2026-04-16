@@ -6,12 +6,9 @@ import shutil
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
-import torch.optim as optim
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader
 from imputation_methods import build_imputer
-from custom_learning.meta_learning import train_smil_e_with_meta_learning
 from dataset import (
     MultimodalBaseDataset,
     MultimodalDatasetWithMissing,
@@ -22,13 +19,17 @@ from utils import (
     build_model,
     safe_binary_metrics,
     select_device,
-    filter_by_patients,
     fit_and_transform_modalities,
     set_global_seed,
     normalize_model_name,
 )
-from dataset.preprocess_dataset import collapse_patient_rows
+from dataset.preprocess_dataset import collapse_patient_rows, filter_by_patients
 from dataset.radiology_attention_pooling import RadiologyAttentionPooler
+from model_training import (
+    get_model_init_kwargs,
+    train_model_on_full_dataset,
+    train_model_with_validation,
+)
 try:
     import wandb
 except ImportError:
@@ -61,49 +62,58 @@ def _transform_modalities_with_fitted_scalers(dfs_raw, scalers, patient_id_col="
 def _prepare_patient_level_modalities(
     dfs_raw,
     patient_id_col="patient",
-    radio_aggregation_method="mean",
-    fit_radio_pooler=False,
-    radio_pooler=None,
+    modality_pooling=None,
+    fit_attention_poolers=False,
+    fitted_poolers=None,
     radio_pooling_kwargs=None,
     labels_df=None,
     label_col=None,
 ):
-    """Collapse raw split dataframes to one row per patient, optionally with learned radio pooling."""
-    radio_aggregation_l = str(radio_aggregation_method).strip().lower()
+    """Collapse raw split dataframes to one row per patient, optionally with learned attention pooling."""
+    modality_pooling = dict(modality_pooling or {})
     prepared = {}
-    fitted_radio_pooler = radio_pooler
+    active_poolers = dict(fitted_poolers or {})
 
     for modality_name, df_raw in dfs_raw.items():
-        if modality_name == "radio" and radio_aggregation_l == "attention":
-            if fit_radio_pooler:
+        pooling_method = str(modality_pooling.get(modality_name, "mean")).strip().lower()
+        if pooling_method not in {"mean", "attention"}:
+            raise ValueError(
+                f"Unsupported pooling method '{pooling_method}' for modality '{modality_name}'. "
+                "Valid methods: mean, attention."
+            )
+
+        if pooling_method == "attention":
+            if fit_attention_poolers:
                 if labels_df is None or label_col is None:
                     raise ValueError(
-                        "labels_df and label_col are required when fitting the radiology attention pooler."
+                        "labels_df and label_col are required when fitting an attention pooler."
                     )
                 feature_cols = [c for c in df_raw.columns if c != patient_id_col]
                 if not feature_cols:
-                    raise ValueError("Radiology dataframe has no feature columns to pool.")
-                fitted_radio_pooler = RadiologyAttentionPooler(
+                    raise ValueError(
+                        f"Modality '{modality_name}' has no feature columns to attention-pool."
+                    )
+                active_poolers[modality_name] = RadiologyAttentionPooler(
                     input_dim=len(feature_cols),
                     **dict(radio_pooling_kwargs or {}),
                 )
-                fitted_radio_pooler.fit(
+                active_poolers[modality_name].fit(
                     df_train=df_raw,
                     labels_df=labels_df,
                     id_col=patient_id_col,
                     label_col=label_col,
                 )
-            if fitted_radio_pooler is None:
+            if modality_name not in active_poolers or active_poolers[modality_name] is None:
                 raise RuntimeError(
-                    "Radiology attention pooling was requested but no fitted pooler is available."
+                    f"Attention pooling was requested for modality '{modality_name}' but no fitted pooler is available."
                 )
-            df_patient = fitted_radio_pooler.transform(df_raw)
+            df_patient = active_poolers[modality_name].transform(df_raw)
         else:
             df_patient = collapse_patient_rows(df_raw, id_col=patient_id_col, strategy="mean")
 
         prepared[modality_name] = df_patient.set_index(patient_id_col, drop=False)
 
-    return prepared, fitted_radio_pooler
+    return prepared, active_poolers
 
 
 def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
@@ -115,15 +125,15 @@ def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
             "dropout_p": hp_cfg["dropout"],
             "fusion_batchnorm": bool(hp_cfg["fusion_batchnorm"]),
         }
-    if model_name_l in {"dyam"}:
+    if model_name_l in {"pam"}:
         return {
-            "dropout_p": hp_cfg["dyam_dropout"],
-            "temperature": hp_cfg["dyam_temperature"],
+            "dropout_p": hp_cfg["pam_dropout"],
+            "temperature": hp_cfg["pam_temperature"],
         }
-    if model_name_l in {"distill_dyam"}:
+    if model_name_l in {"di_pam"}:
         return {
-            "dropout_p": hp_cfg["dyam_dropout"],
-            "temperature": hp_cfg["dyam_temperature"],
+            "dropout_p": hp_cfg["pam_dropout"],
+            "temperature": hp_cfg["pam_temperature"],
             "concat_masks_input": True,
             "distill_alpha": hp_cfg["distill_alpha"],
             "distill_beta": hp_cfg["distill_beta"],
@@ -152,7 +162,7 @@ def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
             "self_per_cross_attn": hp_cfg["healnet_self_per_cross_attn"],
         }
     raise ValueError(
-        f"Unsupported model '{model_name_l}'. Supported: mlp, dyam, distill_dyam, smil_e, healnet"
+        f"Unsupported model '{model_name_l}'. Supported: mlp, pam, di_pam, smile, healnet"
     )
 
 
@@ -175,19 +185,19 @@ def _save_candidate_bundle(
     model_kwargs,
     scalers,
     imputer,
-    radio_pooler,
+    modality_poolers,
 ):
     bundle = {
         "model_name": normalize_model_name(model_name),
         "input_dims": [int(dim) for dim in input_dims],
-        "model_kwargs": dict(model_kwargs or {}),
+        "model_kwargs": get_model_init_kwargs(model_name, model_kwargs),
         "model_state_dict": {
             key: value.detach().cpu()
             for key, value in model.state_dict().items()
         },
         "scalers": scalers,
         "imputer": imputer,
-        "radio_pooler": radio_pooler,
+        "modality_poolers": dict(modality_poolers or {}),
     }
     with open(bundle_path, "wb") as handle:
         pickle.dump(bundle, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -200,15 +210,20 @@ def _load_candidate_bundle(bundle_path, device):
     model = build_model(
         bundle["model_name"],
         bundle["input_dims"],
-        bundle["model_kwargs"],
+        get_model_init_kwargs(bundle["model_name"], bundle["model_kwargs"]),
     ).to(device)
     model.load_state_dict(bundle["model_state_dict"])
+
+    modality_poolers = bundle.get("modality_poolers")
+    if modality_poolers is None:
+        legacy_radio_pooler = bundle.get("radio_pooler")
+        modality_poolers = {} if legacy_radio_pooler is None else {"radio": legacy_radio_pooler}
 
     return {
         "model": model,
         "scalers": bundle["scalers"],
         "imputer": bundle["imputer"],
-        "radio_pooler": bundle["radio_pooler"],
+        "modality_poolers": modality_poolers,
     }
 
 
@@ -246,7 +261,7 @@ def _predict_model_probabilities(
     data_loader,
     device,
     bypass_mask=False,
-    collect_dyam_details=False,
+    collect_pam_details=False,
     model_name=None,
 ):
     """Run one model on a loader and return y_true / logits / probabilities / pids."""
@@ -255,8 +270,8 @@ def _predict_model_probabilities(
     y_logits = []
     y_prob = []
     pids = []
-    dyam_alpha = []
-    dyam_r_scores = []
+    pam_alpha = []
+    pam_r_scores = []
 
     with torch.no_grad():
         for Xs, present_mask, y, pid_batch in data_loader:
@@ -264,16 +279,16 @@ def _predict_model_probabilities(
             present_mask = present_mask.to(device)
 
             model_mask = None if bypass_mask else present_mask
-            if collect_dyam_details:
+            if collect_pam_details:
                 model_out = model(Xs, model_mask, return_aux=True)
                 logits = model_out[0].squeeze(1)
-                if model_name not in {"dyam", "distill_dyam"}:
+                if model_name not in {"pam", "di_pam"}:
                     raise ValueError(
-                        "collect_dyam_details=True is only supported for model_name in "
-                        "{'dyam', 'distill_dyam'}."
+                        "collect_pam_details=True is only supported for model_name in "
+                        "{'pam', 'di_pam'}."
                     )
-                dyam_alpha.append(model_out[2].detach().cpu().numpy())
-                dyam_r_scores.append(model_out[3].detach().cpu().numpy())
+                pam_alpha.append(model_out[2].detach().cpu().numpy())
+                pam_r_scores.append(model_out[3].detach().cpu().numpy())
             else:
                 logits = model(Xs, model_mask).squeeze(1)
             logits_np = logits.detach().cpu().numpy().reshape(-1)
@@ -284,457 +299,14 @@ def _predict_model_probabilities(
             y_true.extend(y.cpu().numpy().tolist())
             pids.extend(pid_batch)
 
-    dyam_details = None
-    if collect_dyam_details:
-        dyam_details = {
-            "alpha": np.concatenate(dyam_alpha, axis=0),
-            "R": np.concatenate(dyam_r_scores, axis=0),
+    pam_details = None
+    if collect_pam_details:
+        pam_details = {
+            "alpha": np.concatenate(pam_alpha, axis=0),
+            "R": np.concatenate(pam_r_scores, axis=0),
         }
 
-    return np.asarray(y_true), np.asarray(y_logits), np.asarray(y_prob), list(pids), dyam_details
-
-# Function to build a complete-modality batch for teacher input in distillation
-def _build_full_batch_from_patient_ids(base_dataset, pid_batch, device):
-    """Build a complete-modality batch (teacher input) from patient IDs."""
-    xs_rows = []
-    ys = []
-    for pid in pid_batch:
-        xs_i, y_i, _ = base_dataset.get_by_patient_id(pid)
-        xs_rows.append(xs_i)
-        ys.append(y_i)
-
-    n_modalities = len(xs_rows[0])
-    xs_full = []
-    for m_idx in range(n_modalities):
-        xs_full.append(torch.stack([row[m_idx] for row in xs_rows], dim=0).to(device))
-    y_full = torch.stack(ys, dim=0).to(dtype=torch.float32, device=device)
-    full_mask = torch.ones((len(pid_batch), n_modalities), dtype=torch.bool, device=device)
-    return xs_full, full_mask, y_full
-
-# Functions to compute losses for supervised and distillation cases
-def _compute_supervised_bce_loss(logits, targets, bce_criterion):
-    return bce_criterion(logits, targets)
-
-# For distillation, we combine the student's supervised loss with weighted representation and feature matching losses against the teacher
-def _compute_distill_student_loss(
-    student_logits,
-    student_repr,
-    teacher_logits,
-    teacher_repr,
-    targets,
-    bce_criterion,
-    repr_criterion,
-    feat_criterion,
-    alpha_repr,
-    beta_feat,
-):
-    loss_survival = bce_criterion(student_logits, targets)
-    loss_repr = repr_criterion(student_repr, teacher_repr)
-    loss_feature = feat_criterion(student_logits, teacher_logits)
-    total = loss_survival + (alpha_repr * loss_repr) + (beta_feat * loss_feature)
-    return total, loss_survival, loss_repr, loss_feature
-
-
-# ---------------------------- TRAIN FUNCTION -------------------------------
-
-# Train function with validation and early stopping
-def train_model_with_validation(
-    train_loader,
-    val_loader,
-    device,
-    input_dims,
-    epochs,
-    lr,
-    model_name,
-    imputation_method="zero",
-    model_kwargs=None,
-    train_seed=0,
-):
-    min_best_epoch = min(5, int(epochs))
-    model_kwargs = model_kwargs or {}
-    model_name_l = normalize_model_name(model_name)
-
-    if model_name_l in {"smil_e"}:
-        return train_smil_e_with_meta_learning(
-            train_loader=train_loader,
-            val_loader=val_loader,
-            device=device,
-            input_dims=input_dims,
-            epochs=epochs,
-            lr=lr,
-            model_kwargs=model_kwargs,
-            train_seed=train_seed,
-        )
-
-    # For MLP with learned/external imputation, do not re-mask imputed modalities.
-    bypass_mask = (
-        model_name_l == "mlp"
-        and str(imputation_method).strip().lower() in {"knn", "vae"}
-    )
-
-    criterion = nn.BCEWithLogitsLoss()
-
-    if model_name_l in {"distill_dyam"}:
-        dyam_kwargs = {k: v for k, v in model_kwargs.items() if k not in {"distill_alpha", "distill_beta"}}
-        distill_alpha = float(model_kwargs.get("distill_alpha", 1.0))
-        distill_beta = float(model_kwargs.get("distill_beta", 0.3))
-
-        teacher_model = build_model("distill_dyam", input_dims, dyam_kwargs).to(device)
-        student_model = build_model("distill_dyam", input_dims, dyam_kwargs).to(device)
-        teacher_optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=1e-4)
-        student_optimizer = optim.Adam(student_model.parameters(), lr=lr, weight_decay=1e-4)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            student_optimizer,
-            mode="min",
-            factor=0.5,
-            patience=5,
-        )
-        repr_criterion = nn.MSELoss()
-        feat_criterion = nn.MSELoss()
-        teacher_base_dataset = train_loader.dataset.base_dataset
-    else:
-        model = build_model(model_name, input_dims, model_kwargs).to(device)
-        weight_decay = 1e-4
-        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-        scheduler_patience = 5
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            mode="min",
-            factor=0.5,
-            patience=scheduler_patience,
-        )
-
-    # Align epoch selection with inner-fold HP selection:
-    # maximize AUC, break ties with lower validation loss.
-    best_epoch_score = (-np.inf, -np.inf)  # (AUC, -VAL_LOSS)
-    best_epoch = 1
-    best_model_state = None
-    best_val_targets = None
-    best_val_probs = None
-
-    early_stop = 0
-    patience = 20
-
-    history = []
-
-    for epoch in range(1, epochs + 1):
-        if model_name_l in {"distill_dyam"}:
-            teacher_model.train()
-            student_model.train()
-        else:
-            model.train()
-        train_loss = 0.0
-        train_steps = 0
-        train_teacher_loss = 0.0
-        train_student_survival = 0.0
-        train_student_repr = 0.0
-        train_student_feature = 0.0
-
-        for Xs, present_mask, y, pids in train_loader:
-            Xs = [x.to(device) for x in Xs]
-            present_mask = present_mask.to(device)
-            y = y.to(device)
-
-            if model_name_l in {"distill_dyam"}:
-                Xs_teacher, teacher_mask, y_teacher = _build_full_batch_from_patient_ids(
-                    teacher_base_dataset,
-                    pids,
-                    device=device,
-                )
-
-                teacher_optimizer.zero_grad()
-                teacher_out = teacher_model(Xs_teacher, teacher_mask, return_aux=True)
-                teacher_logits = teacher_out[0].squeeze(1)
-                teacher_repr = teacher_out[4]
-                teacher_loss = _compute_supervised_bce_loss(teacher_logits, y_teacher, criterion)
-                teacher_loss.backward()
-                teacher_optimizer.step()
-
-                student_optimizer.zero_grad()
-                student_out = student_model(Xs, present_mask, return_aux=True)
-                student_logits = student_out[0].squeeze(1)
-                student_repr = student_out[4]
-                student_loss, student_survival, student_repr_loss, student_feature_loss = _compute_distill_student_loss(
-                    student_logits=student_logits,
-                    student_repr=student_repr,
-                    teacher_logits=teacher_logits.detach(),
-                    teacher_repr=teacher_repr.detach(),
-                    targets=y,
-                    bce_criterion=criterion,
-                    repr_criterion=repr_criterion,
-                    feat_criterion=feat_criterion,
-                    alpha_repr=distill_alpha,
-                    beta_feat=distill_beta,
-                )
-                student_loss.backward()
-                student_optimizer.step()
-
-                train_loss += student_loss.item()
-                train_teacher_loss += teacher_loss.item()
-                train_student_survival += student_survival.item()
-                train_student_repr += student_repr_loss.item()
-                train_student_feature += student_feature_loss.item()
-                train_steps += 1
-            else:
-                model_mask = None if bypass_mask else present_mask
-                optimizer.zero_grad()
-                logits_out = model(Xs, model_mask)
-                if logits_out is None:
-                    continue
-                logits = logits_out.squeeze(1)
-                loss = _compute_supervised_bce_loss(logits, y, criterion)
-                loss.backward()
-                optimizer.step()
-
-                train_loss += loss.item()
-                train_steps += 1
-
-        avg_train_loss = train_loss / max(train_steps, 1)
-        avg_teacher_loss = train_teacher_loss / max(train_steps, 1)
-        avg_student_survival = train_student_survival / max(train_steps, 1)
-        avg_student_repr = train_student_repr / max(train_steps, 1)
-        avg_student_feature = train_student_feature / max(train_steps, 1)
-
-        if model_name_l in {"distill_dyam"}:
-            student_model.eval()
-        else:
-            model.eval()
-        val_loss = 0.0
-        val_targets = []
-        val_probs = []
-
-        with torch.no_grad():
-            for Xs, present_mask, y, _ in val_loader:
-                Xs = [x.to(device) for x in Xs]
-                present_mask = present_mask.to(device)
-                y = y.to(device)
-
-                if model_name_l in {"distill_dyam"}:
-                    logits = student_model(Xs, present_mask).squeeze(1)
-                    loss = _compute_supervised_bce_loss(logits, y, criterion)
-                else:
-                    model_mask = None if bypass_mask else present_mask
-                    logits = model(Xs, model_mask).squeeze(1)
-                    loss = _compute_supervised_bce_loss(logits, y, criterion)
-
-                val_loss += loss.item()
-                val_probs.extend(torch.sigmoid(logits).cpu().numpy().tolist())
-                val_targets.extend(y.cpu().numpy())
-
-        avg_val_loss = val_loss / max(len(val_loader), 1)
-        scheduler.step(avg_val_loss)
-
-        val_metrics_epoch = safe_binary_metrics(val_targets, val_probs)
-        history.append(
-            {
-                "epoch": epoch,
-                "train_loss": float(avg_train_loss),
-                "val_loss": float(avg_val_loss),
-                "val_auc": float(val_metrics_epoch["AUC"]),
-                "val_aucpr": float(val_metrics_epoch["AUCPR"]),
-                "val_acc": float(val_metrics_epoch["ACC"]),
-                "teacher_loss": float(avg_teacher_loss),
-                "student_survival_loss": float(avg_student_survival),
-                "student_repr_loss": float(avg_student_repr),
-                "student_feature_loss": float(avg_student_feature),
-                "smil_meta_train_loss": 0.0,
-                "smil_meta_val_loss": 0.0,
-                "smil_meta_val_ce": 0.0,
-                "smil_align_fusion": 0.0,
-                "smil_align_hidden": 0.0,
-            }
-        )
-
-        epoch_score = (float(val_metrics_epoch["AUC"]), -float(avg_val_loss))
-        if epoch >= min_best_epoch and epoch_score > best_epoch_score:
-            best_epoch_score = epoch_score
-            best_epoch = epoch
-            if model_name_l in {"distill_dyam"}:
-                best_model_state = copy.deepcopy(student_model.state_dict())
-            else:
-                best_model_state = copy.deepcopy(model.state_dict())
-            best_val_targets = np.asarray(val_targets)
-            best_val_probs = np.asarray(val_probs)
-            early_stop = 0
-        else:
-            early_stop += 1
-            if early_stop >= patience:
-                break
-
-    if best_model_state is None:
-        raise RuntimeError(
-            f"No best epoch was selected. Check epochs={epochs} and min_best_epoch={min_best_epoch}."
-        )
-
-    if model_name_l in {"distill_dyam"}:
-        student_model.load_state_dict(best_model_state)
-    else:
-        model.load_state_dict(best_model_state)
-
-    best_metrics = safe_binary_metrics(best_val_targets, best_val_probs)
-    best_metrics["best_epoch"] = int(best_epoch)
-
-    if model_name_l in {"distill_dyam"}:
-        return student_model, history, best_metrics
-    return model, history, best_metrics
-
-
-def train_model_on_full_dataset(
-    train_loader,
-    device,
-    input_dims,
-    epochs,
-    lr,
-    model_name,
-    imputation_method="zero",
-    model_kwargs=None,
-    train_seed=0,
-):
-    """Train a final model on the full outer-train split for a fixed number of epochs."""
-    model_kwargs = model_kwargs or {}
-    model_name_l = normalize_model_name(model_name)
-    set_global_seed(train_seed, deterministic=True)
-
-    bypass_mask = (
-        model_name_l == "mlp"
-        and str(imputation_method).strip().lower() in {"knn", "vae"}
-    )
-
-    criterion = nn.BCEWithLogitsLoss()
-
-    if model_name_l in {"distill_dyam"}:
-        dyam_kwargs = {k: v for k, v in model_kwargs.items() if k not in {"distill_alpha", "distill_beta"}}
-        distill_alpha = float(model_kwargs.get("distill_alpha", 1.0))
-        distill_beta = float(model_kwargs.get("distill_beta", 0.3))
-
-        teacher_model = build_model("distill_dyam", input_dims, dyam_kwargs).to(device)
-        student_model = build_model("distill_dyam", input_dims, dyam_kwargs).to(device)
-        teacher_optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=1e-4)
-        student_optimizer = optim.Adam(student_model.parameters(), lr=lr, weight_decay=1e-4)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            student_optimizer,
-            mode="min",
-            factor=0.5,
-            patience=5,
-        )
-        repr_criterion = nn.MSELoss()
-        feat_criterion = nn.MSELoss()
-        teacher_base_dataset = train_loader.dataset.base_dataset
-    else:
-        model = build_model(model_name, input_dims, model_kwargs).to(device)
-        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            mode="min",
-            factor=0.5,
-            patience=5,
-        )
-
-    history = []
-
-    for epoch in range(1, int(epochs) + 1):
-        if model_name_l in {"distill_dyam"}:
-            teacher_model.train()
-            student_model.train()
-        else:
-            model.train()
-
-        train_loss = 0.0
-        train_steps = 0
-        train_targets = []
-        train_probs = []
-        train_teacher_loss = 0.0
-        train_student_survival = 0.0
-        train_student_repr = 0.0
-        train_student_feature = 0.0
-
-        for Xs, present_mask, y, pids in train_loader:
-            Xs = [x.to(device) for x in Xs]
-            present_mask = present_mask.to(device)
-            y = y.to(device)
-
-            if model_name_l in {"distill_dyam"}:
-                Xs_teacher, teacher_mask, y_teacher = _build_full_batch_from_patient_ids(
-                    teacher_base_dataset,
-                    pids,
-                    device=device,
-                )
-
-                teacher_optimizer.zero_grad()
-                teacher_out = teacher_model(Xs_teacher, teacher_mask, return_aux=True)
-                teacher_logits = teacher_out[0].squeeze(1)
-                teacher_repr = teacher_out[4]
-                teacher_loss = _compute_supervised_bce_loss(teacher_logits, y_teacher, criterion)
-                teacher_loss.backward()
-                teacher_optimizer.step()
-
-                student_optimizer.zero_grad()
-                student_out = student_model(Xs, present_mask, return_aux=True)
-                student_logits = student_out[0].squeeze(1)
-                student_repr = student_out[4]
-                student_loss, student_survival, student_repr_loss, student_feature_loss = _compute_distill_student_loss(
-                    student_logits=student_logits,
-                    student_repr=student_repr,
-                    teacher_logits=teacher_logits.detach(),
-                    teacher_repr=teacher_repr.detach(),
-                    targets=y,
-                    bce_criterion=criterion,
-                    repr_criterion=repr_criterion,
-                    feat_criterion=feat_criterion,
-                    alpha_repr=distill_alpha,
-                    beta_feat=distill_beta,
-                )
-                student_loss.backward()
-                student_optimizer.step()
-
-                probs = torch.sigmoid(student_logits).detach().cpu().numpy().reshape(-1)
-                train_targets.extend(y.detach().cpu().numpy().tolist())
-                train_probs.extend(probs.tolist())
-                train_loss += student_loss.item()
-                train_teacher_loss += teacher_loss.item()
-                train_student_survival += student_survival.item()
-                train_student_repr += student_repr_loss.item()
-                train_student_feature += student_feature_loss.item()
-                train_steps += 1
-            else:
-                model_mask = None if bypass_mask else present_mask
-                optimizer.zero_grad()
-                logits_out = model(Xs, model_mask)
-                if logits_out is None:
-                    continue
-                logits = logits_out.squeeze(1)
-                loss = _compute_supervised_bce_loss(logits, y, criterion)
-                loss.backward()
-                optimizer.step()
-
-                probs = torch.sigmoid(logits).detach().cpu().numpy().reshape(-1)
-                train_targets.extend(y.detach().cpu().numpy().tolist())
-                train_probs.extend(probs.tolist())
-                train_loss += loss.item()
-                train_steps += 1
-
-        avg_train_loss = train_loss / max(train_steps, 1)
-        scheduler.step(avg_train_loss)
-        train_metrics_epoch = safe_binary_metrics(train_targets, train_probs)
-
-        history.append(
-            {
-                "epoch": epoch,
-                "train_loss": float(avg_train_loss),
-                "train_auc": float(train_metrics_epoch["AUC"]),
-                "train_aucpr": float(train_metrics_epoch["AUCPR"]),
-                "train_acc": float(train_metrics_epoch["ACC"]),
-                "teacher_loss": float(train_teacher_loss / max(train_steps, 1)),
-                "student_survival_loss": float(train_student_survival / max(train_steps, 1)),
-                "student_repr_loss": float(train_student_repr / max(train_steps, 1)),
-                "student_feature_loss": float(train_student_feature / max(train_steps, 1)),
-            }
-        )
-
-    if model_name_l in {"distill_dyam"}:
-        return student_model, history
-    return model, history
-
+    return np.asarray(y_true), np.asarray(y_logits), np.asarray(y_prob), list(pids), pam_details
 
 def _log_selected_inner_models_to_wandb(
     selected_candidates,
@@ -785,7 +357,7 @@ def _log_selected_inner_models_to_wandb(
                 "best_inner_model/val_aucpr": float(hrow["val_aucpr"]),
                 "best_inner_model/val_acc": float(hrow["val_acc"]),
             }
-            if model_name_l == "distill_dyam":
+            if model_name_l == "di_pam":
                 log_payload.update(
                     {
                         "best_inner_model/teacher_loss": float(hrow["teacher_loss"]),
@@ -833,6 +405,7 @@ def nested_cv(
     test_eval_setups=None,
     imputer_kwargs=None,
     radio_pooling_kwargs=None,
+    modality_pooling=None,
     candidate_model_dir=None,
     retrain_outer=True,
 ):
@@ -942,12 +515,12 @@ def nested_cv(
                 name: filter_by_patients(df, val_inner_ids, id_col=patient_id_col)
                 for name, df in dfs_train_outer_raw.items()
             }
-            dfs_train_inner_prepared, radio_pooler_inner = _prepare_patient_level_modalities(
+            dfs_train_inner_prepared, modality_poolers_inner = _prepare_patient_level_modalities(
                 dfs_train_inner_raw,
                 patient_id_col=patient_id_col,
-                radio_aggregation_method="mean",
-                fit_radio_pooler=True,
-                radio_pooler=None,
+                modality_pooling=modality_pooling,
+                fit_attention_poolers=True,
+                fitted_poolers=None,
                 radio_pooling_kwargs=radio_pooling_kwargs,
                 labels_df=inst_df_train_inner,
                 label_col=label_col,
@@ -955,9 +528,9 @@ def nested_cv(
             dfs_val_inner_prepared, _ = _prepare_patient_level_modalities(
                 dfs_val_inner_raw,
                 patient_id_col=patient_id_col,
-                radio_aggregation_method="mean",
-                fit_radio_pooler=False,
-                radio_pooler=radio_pooler_inner,
+                modality_pooling=modality_pooling,
+                fit_attention_poolers=False,
+                fitted_poolers=modality_poolers_inner,
                 radio_pooling_kwargs=radio_pooling_kwargs,
                 labels_df=None,
                 label_col=None,
@@ -1070,7 +643,7 @@ def nested_cv(
                         model_kwargs=model_kwargs,
                         scalers=scalers_inner,
                         imputer=prefit_inner_imputer,
-                        radio_pooler=radio_pooler_inner,
+                        modality_poolers=modality_poolers_inner,
                     )
 
                 all_inner_candidates_by_hp.setdefault(hp_name, []).append(
@@ -1182,12 +755,12 @@ def nested_cv(
                 f"epochs={refit_epochs}"
             )
 
-            dfs_train_outer_prepared, radio_pooler_outer = _prepare_patient_level_modalities(
+            dfs_train_outer_prepared, modality_poolers_outer = _prepare_patient_level_modalities(
                 dfs_train_outer_raw,
                 patient_id_col=patient_id_col,
-                radio_aggregation_method="mean",
-                fit_radio_pooler=True,
-                radio_pooler=None,
+                modality_pooling=modality_pooling,
+                fit_attention_poolers=True,
+                fitted_poolers=None,
                 radio_pooling_kwargs=radio_pooling_kwargs,
                 labels_df=inst_df_train_outer,
                 label_col=label_col,
@@ -1295,7 +868,7 @@ def nested_cv(
                         "outer_train_model/train_acc": float(hrow["train_acc"]),
                     }
 
-                    if model_name_l == "distill_dyam":
+                    if model_name_l == "di_pam":
                         log_payload.update(
                             {
                                 "outer_train_model/teacher_loss": float(hrow["teacher_loss"]),
@@ -1312,9 +885,9 @@ def nested_cv(
             dfs_outer_eval_prepared, _ = _prepare_patient_level_modalities(
                 dfs_test_outer_raw,
                 patient_id_col=patient_id_col,
-                radio_aggregation_method="mean",
-                fit_radio_pooler=False,
-                radio_pooler=radio_pooler_outer,
+                modality_pooling=modality_pooling,
+                fit_attention_poolers=False,
+                fitted_poolers=modality_poolers_outer,
                 radio_pooling_kwargs=radio_pooling_kwargs,
                 labels_df=None,
                 label_col=None,
@@ -1354,12 +927,12 @@ def nested_cv(
                     drop_last=False,
                 )
 
-                y_true_outer, y_logits_outer, y_prob_outer, pids_outer, dyam_details_outer = _predict_model_probabilities(
+                y_true_outer, y_logits_outer, y_prob_outer, pids_outer, pam_details_outer = _predict_model_probabilities(
                     model=outer_train_model,
                     data_loader=outer_eval_loader,
                     device=device,
                     bypass_mask=predict_bypass_mask,
-                    collect_dyam_details=model_name_l in {"dyam", "distill_dyam"},
+                    collect_pam_details=model_name_l in {"pam", "di_pam"},
                     model_name=model_name_l,
                 )
                 outer_metrics = safe_binary_metrics(y_true_outer, y_prob_outer)
@@ -1384,13 +957,13 @@ def nested_cv(
                     row["inner_model_1_logit"] = logit_value
                     row["inner_model_1_prob"] = prob_value
                     row["inner_model_1_pred_label"] = pred_label
-                    if model_name_l in {"dyam", "distill_dyam"} and dyam_details_outer is not None:
+                    if model_name_l in {"pam", "di_pam"} and pam_details_outer is not None:
                         for modality_idx, modality_name in enumerate(modality_names):
                             row[f"inner_model_1_{modality_name}_alpha"] = float(
-                                dyam_details_outer["alpha"][patient_idx, modality_idx]
+                                pam_details_outer["alpha"][patient_idx, modality_idx]
                             )
                             row[f"inner_model_1_{modality_name}_R"] = float(
-                                dyam_details_outer["R"][patient_idx, modality_idx]
+                                pam_details_outer["R"][patient_idx, modality_idx]
                             )
                     per_patient_prediction_rows.append(row)
 
@@ -1465,9 +1038,9 @@ def nested_cv(
                     dfs_outer_eval_prepared, _ = _prepare_patient_level_modalities(
                         dfs_test_outer_raw,
                         patient_id_col=patient_id_col,
-                        radio_aggregation_method="mean",
-                        fit_radio_pooler=False,
-                        radio_pooler=loaded_bundle["radio_pooler"],
+                        modality_pooling=modality_pooling,
+                        fit_attention_poolers=False,
+                        fitted_poolers=loaded_bundle["modality_poolers"],
                         radio_pooling_kwargs=radio_pooling_kwargs,
                         labels_df=None,
                         label_col=None,
@@ -1500,12 +1073,12 @@ def nested_cv(
                         drop_last=False,
                     )
 
-                    y_true_outer, y_logits_outer, y_prob_outer, pids_outer, dyam_details_outer = _predict_model_probabilities(
+                    y_true_outer, y_logits_outer, y_prob_outer, pids_outer, pam_details_outer = _predict_model_probabilities(
                         model=loaded_bundle["model"],
                         data_loader=outer_eval_loader,
                         device=device,
                         bypass_mask=predict_bypass_mask,
-                        collect_dyam_details=model_name_l in {"dyam", "distill_dyam"},
+                        collect_pam_details=model_name_l in {"pam", "di_pam"},
                         model_name=model_name_l,
                     )
 
@@ -1520,7 +1093,7 @@ def nested_cv(
 
                     model_logits.append(y_logits_outer)
                     model_probs.append(y_prob_outer)
-                    model_details.append(dyam_details_outer)
+                    model_details.append(pam_details_outer)
 
                     del loaded_bundle["model"]
                     gc.collect()
@@ -1554,7 +1127,7 @@ def nested_cv(
                         row[f"inner_model_{model_idx}_logit"] = float(logits_arr[patient_idx])
                         row[f"inner_model_{model_idx}_prob"] = float(probs_arr[patient_idx])
                         row[f"inner_model_{model_idx}_pred_label"] = int(logits_arr[patient_idx] >= 0.0)
-                        if model_name_l in {"dyam", "distill_dyam"} and details_arr is not None:
+                        if model_name_l in {"pam", "di_pam"} and details_arr is not None:
                             for modality_idx, modality_name in enumerate(modality_names):
                                 row[f"inner_model_{model_idx}_{modality_name}_alpha"] = float(
                                     details_arr["alpha"][patient_idx, modality_idx]

@@ -3,7 +3,7 @@ import torch
 import pandas as pd
 import random
 from itertools import product
-from models import MultimodalMLP, DyAM, DistillDyAM, SMILE, HealNetBinaryWrapper
+from models import MultimodalMLP, PAM, DiPAM, SMILE, HealNetBinaryWrapper
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import average_precision_score, roc_auc_score
 
@@ -15,10 +15,10 @@ def normalize_model_name(model_name):
     compact = name.replace("_", "").replace("-", "")
     if compact == "mlp":
         return "mlp"
-    if compact == "dyam":
-        return "dyam"
-    if compact in {"distilldyam"}:
-        return "distill_dyam"
+    if compact == "pam":
+        return "pam"
+    if compact == "dipam":
+        return "di_pam"
     if compact in {"smile", "smilee", "smilextended"}:
         return "smil_e"
     if compact == "healnet":
@@ -53,10 +53,6 @@ def set_global_seed(seed, deterministic=True):
         torch.backends.cudnn.benchmark = True
 
 # ------------------------ 1. PREPROCESSING --------------------------
-
-# Function to filter dataframes by patient IDs
-def filter_by_patients(df, patient_ids, id_col="patient"):
-    return df[df[id_col].isin(patient_ids)].copy()
 
 # Function to scale features of each modality using only traiing data
 def fit_and_transform_modalities(dfs_train_raw, dfs_eval_raw, id_col="patient"):
@@ -129,9 +125,9 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
     model_name = normalize_model_name(model_name)
     lr_str = f"{cfg['learning_rate']:.0e}"
     bs_str = str(cfg["batch_size"])
-    if model_name in {"dyam"}:
-        dropout_str = str(cfg["dyam_dropout"]).replace(".", "p")
-        temp_str = str(cfg["dyam_temperature"]).replace(".", "p")
+    if model_name in {"pam"}:
+        dropout_str = str(cfg["pam_dropout"]).replace(".", "p")
+        temp_str = str(cfg["pam_temperature"]).replace(".", "p")
         return (
             f"lr{lr_str}_"
             f"bs{bs_str}_"
@@ -140,9 +136,9 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"trmiss{train_missing_pct}_"
             f"trloc{missing_location}"
         )
-    if model_name in {"distill_dyam"}:
-        dropout_str = str(cfg["dyam_dropout"]).replace(".", "p")
-        temp_str = str(cfg["dyam_temperature"]).replace(".", "p")
+    if model_name in {"di_pam"}:
+        dropout_str = str(cfg["pam_dropout"]).replace(".", "p")
+        temp_str = str(cfg["pam_temperature"]).replace(".", "p")
         alpha_str = str(cfg["distill_alpha"]).replace(".", "p")
         beta_str = str(cfg["distill_beta"]).replace(".", "p")
         return (
@@ -235,27 +231,27 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
     hp_configs = []
     seen = set()
 
-    if model_name in {"dyam"}:
-        dyam_dropouts = parse_value_or_list(args.dyam_dropout, float)
-        temperatures = parse_value_or_list(args.dyam_temperature, float)
+    if model_name in {"pam"}:
+        pam_dropouts = parse_value_or_list(args.pam_dropout, float)
+        temperatures = parse_value_or_list(args.pam_temperature, float)
 
         for bs, lr, dropout, temp in product(
             batch_sizes,
             learning_rates,
-            dyam_dropouts,
+            pam_dropouts,
             temperatures,
         ):
             cfg = {
                 "batch_size": int(bs),
                 "learning_rate": float(lr),
-                "dyam_dropout": float(dropout),
-                "dyam_temperature": float(temp),
+                "pam_dropout": float(dropout),
+                "pam_temperature": float(temp),
             }
             key = (
                 cfg["batch_size"],
                 cfg["learning_rate"],
-                cfg["dyam_dropout"],
-                cfg["dyam_temperature"],
+                cfg["pam_dropout"],
+                cfg["pam_temperature"],
             )
             if key in seen:
                 continue
@@ -264,16 +260,16 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 cfg, train_missing_pct, missing_location, model_name=model_name
             )
             hp_configs.append(cfg)
-    if model_name in {"distill_dyam"}:
-        dyam_dropouts = parse_value_or_list(args.dyam_dropout, float)
-        temperatures = parse_value_or_list(args.dyam_temperature, float)
+    if model_name in {"di_pam"}:
+        pam_dropouts = parse_value_or_list(args.pam_dropout, float)
+        temperatures = parse_value_or_list(args.pam_temperature, float)
         distill_alphas = parse_value_or_list(args.distill_alpha, float)
         distill_betas = parse_value_or_list(args.distill_beta, float)
 
         for bs, lr, dropout, temp, alpha, beta in product(
             batch_sizes,
             learning_rates,
-            dyam_dropouts,
+            pam_dropouts,
             temperatures,
             distill_alphas,
             distill_betas,
@@ -281,16 +277,16 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
             cfg = {
                 "batch_size": int(bs),
                 "learning_rate": float(lr),
-                "dyam_dropout": float(dropout),
-                "dyam_temperature": float(temp),
+                "pam_dropout": float(dropout),
+                "pam_temperature": float(temp),
                 "distill_alpha": float(alpha),
                 "distill_beta": float(beta),
             }
             key = (
                 cfg["batch_size"],
                 cfg["learning_rate"],
-                cfg["dyam_dropout"],
-                cfg["dyam_temperature"],
+                cfg["pam_dropout"],
+                cfg["pam_temperature"],
                 cfg["distill_alpha"],
                 cfg["distill_beta"],
             )
@@ -481,16 +477,16 @@ def build_model(model_name, input_dims, model_kwargs):
     model_name = normalize_model_name(model_name)
     if model_name in {"mlp"}:
         return MultimodalMLP(input_dims, **model_kwargs)
-    if model_name in {"dyam"}:
-        return DyAM(input_dims, **model_kwargs)
-    if model_name in {"distill_dyam"}:
-        return DistillDyAM(input_dims, **model_kwargs)
+    if model_name in {"pam"}:
+        return PAM(input_dims, **model_kwargs)
+    if model_name in {"di_pam"}:
+        return DiPAM(input_dims, **model_kwargs)
     if model_name in {"smil_e"}:
         return SMILE(input_dims, **model_kwargs)
     if model_name in {"healnet"}:
         return HealNetBinaryWrapper(input_dims, **model_kwargs)
     raise ValueError(
-        f"Unsupported model '{model_name}'. Supported: mlp, dyam, distill_dyam, smil_e, healnet"
+        f"Unsupported model '{model_name}'. Supported: mlp, pam, di_pam, smile, healnet"
     )
 
 # -------------------------- 5. EVALUATION ----------------------------

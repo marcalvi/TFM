@@ -1,9 +1,25 @@
-import importlib
+import json
+import os
+from collections import OrderedDict
+
 import numpy as np
 import pandas as pd
 from sklearn.impute import KNNImputer
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
+
+
+def filter_by_patients(df, patient_ids, id_col="patient"):
+    return df[df[id_col].isin(patient_ids)].copy()
+
+
+def _normalize_method(value, valid_values, arg_name):
+    value_l = str(value).strip().lower()
+    if value_l not in valid_values:
+        valid_text = ", ".join(sorted(valid_values))
+        raise ValueError(f"Invalid {arg_name}='{value}'. Expected one of: {valid_text}.")
+    return value_l
+
 
 def _ensure_unambiguous_id_column(df, id_col):
     """Return a copy where id_col is available as a plain column, not also as an index level."""
@@ -20,6 +36,7 @@ def _ensure_unambiguous_id_column(df, id_col):
         return work_df.reset_index()
 
     return work_df
+
 
 def collapse_patient_rows(df, id_col, strategy="mean"):
     """Collapse duplicated patient rows into one feature row per patient."""
@@ -211,15 +228,6 @@ def impute_modality_df(
     return work_df
 
 
-def aggregate_modality_df(df, id_col, method):
-    method_l = str(method).strip().lower()
-    if method_l in {"mean", "max", "keep"}:
-        return collapse_patient_rows(df, id_col=id_col, strategy=method_l)
-    if method_l == "first":
-        return df.drop_duplicates(subset=[id_col], keep="first").reset_index(drop=True)
-    raise ValueError("Aggregation method must be one of: mean, max, first, keep")
-
-
 def summarize_missing_values(modality_frames, modality_configs, id_col):
     rows = []
     total_missing = 0
@@ -260,6 +268,195 @@ def summarize_duplicate_patient_rows(modality_frames, modality_configs, id_col):
             }
         )
     return rows
+
+
+def validate_imputation_requirements(modality_frames, modality_configs, id_col):
+    errors = []
+    for modality_name, df in modality_frames.items():
+        feature_cols = [col for col in df.columns if col != id_col]
+        missing_cols = [col for col in feature_cols if df[col].isna().any()]
+        if not missing_cols:
+            continue
+
+        categorical_cols = set(modality_configs[modality_name]["categorical_cols"])
+        categorical_missing_cols = [col for col in missing_cols if col in categorical_cols]
+        numeric_missing_cols = [col for col in missing_cols if col not in categorical_cols]
+
+        numeric_imputation = modality_configs[modality_name]["numeric_imputation"]
+        categorical_imputation = modality_configs[modality_name]["categorical_imputation"]
+        knn_neighbors = modality_configs[modality_name]["knn_neighbors"]
+
+        if numeric_missing_cols and numeric_imputation is None:
+            errors.append(
+                f"Imputation method not defined for modality '{modality_name}' with missing numeric columns: "
+                f"{', '.join(numeric_missing_cols)}"
+            )
+        if categorical_missing_cols and categorical_imputation is None:
+            errors.append(
+                f"Imputation method not defined for modality '{modality_name}' with missing categorical columns: "
+                f"{', '.join(categorical_missing_cols)}"
+            )
+
+        if numeric_missing_cols and numeric_imputation == "knn_mean" and knn_neighbors is None:
+            errors.append(
+                f"KNN neighbors not defined for modality '{modality_name}' using numeric knn_mean imputation."
+            )
+        if categorical_missing_cols and categorical_imputation == "knn_mode" and knn_neighbors is None:
+            errors.append(
+                f"KNN neighbors not defined for modality '{modality_name}' using categorical knn_mode imputation."
+            )
+
+    if errors:
+        raise ValueError("\n".join(errors))
+
+
+def load_endpoint_df(path, patient_id_col, endpoint_col):
+    endpoint_df = pd.read_csv(path)
+    for required_col in [patient_id_col, endpoint_col]:
+        if required_col not in endpoint_df.columns:
+            raise ValueError(
+                f"Required column '{required_col}' not found in endpoint CSV '{path}'."
+            )
+    if endpoint_df[patient_id_col].isna().any():
+        raise ValueError(f"Endpoint CSV '{path}' has missing values in '{patient_id_col}'.")
+    if endpoint_df[endpoint_col].isna().any():
+        raise ValueError(f"Endpoint CSV '{path}' has missing values in '{endpoint_col}'.")
+    duplicated = endpoint_df[patient_id_col].duplicated(keep=False)
+    if duplicated.any():
+        preview = endpoint_df.loc[duplicated, patient_id_col].astype(str).head(10).tolist()
+        raise ValueError(
+            f"Endpoint CSV '{path}' has duplicated patient ids in '{patient_id_col}'. "
+            f"Examples: {preview}"
+        )
+    return endpoint_df
+
+
+def find_label_column(inst_df, endpoint):
+    preferred = f"{endpoint}_label"
+    if preferred in inst_df.columns:
+        return preferred
+    if endpoint in inst_df.columns:
+        return endpoint
+    raise ValueError(f"Label column not found. Tried '{preferred}' and '{endpoint}'.")
+
+
+def load_configured_modality_frames(
+    modality_paths,
+    patient_id_col,
+    endpoint_df,
+    drop_cols_map=None,
+    categorical_cols_map=None,
+    aggregation_map=None,
+    numeric_imputation_map=None,
+    categorical_imputation_map=None,
+    knn_neighbors_map=None,
+):
+    if not modality_paths:
+        raise ValueError("At least one modality CSV must be provided.")
+
+    drop_cols_map = drop_cols_map or OrderedDict()
+    categorical_cols_map = categorical_cols_map or OrderedDict()
+    aggregation_map = aggregation_map or OrderedDict()
+    numeric_imputation_map = numeric_imputation_map or OrderedDict()
+    categorical_imputation_map = categorical_imputation_map or OrderedDict()
+    knn_neighbors_map = knn_neighbors_map or OrderedDict()
+
+    modality_frames = OrderedDict()
+    modality_configs = OrderedDict()
+    endpoint_patient_ids = endpoint_df[patient_id_col].tolist()
+
+    for modality_name, csv_path in modality_paths.items():
+        if not os.path.exists(csv_path):
+            raise FileNotFoundError(f"Modality CSV for '{modality_name}' not found: {csv_path}")
+        df = pd.read_csv(csv_path)
+        if patient_id_col not in df.columns:
+            raise ValueError(
+                f"Modality '{modality_name}' does not contain patient id column '{patient_id_col}'."
+            )
+
+        drop_cols = drop_cols_map.get(modality_name, [])
+        missing_drop_cols = [col for col in drop_cols if col not in df.columns]
+        if missing_drop_cols:
+            raise ValueError(
+                f"Modality '{modality_name}' drop columns not found: {missing_drop_cols}"
+            )
+        if drop_cols:
+            df = df.drop(columns=drop_cols)
+
+        df = filter_by_patients(df, endpoint_patient_ids, id_col=patient_id_col)
+
+        categorical_cols = categorical_cols_map.get(modality_name, [])
+        missing_categorical_cols = [col for col in categorical_cols if col not in df.columns]
+        if missing_categorical_cols:
+            raise ValueError(
+                f"Modality '{modality_name}' categorical columns not found: {missing_categorical_cols}"
+            )
+
+        aggregation_method = aggregation_map.get(modality_name)
+        if aggregation_method is not None:
+            aggregation_method = _normalize_method(
+                aggregation_method,
+                {"mean", "attention"},
+                arg_name="aggregation_method",
+            )
+
+        numeric_imputation = numeric_imputation_map.get(modality_name)
+        if numeric_imputation is not None:
+            numeric_imputation = _normalize_method(
+                numeric_imputation,
+                {"mean", "median", "knn_mean"},
+                "numeric_imputation",
+            )
+        categorical_imputation = categorical_imputation_map.get(modality_name)
+        if categorical_imputation is not None:
+            categorical_imputation = _normalize_method(
+                categorical_imputation,
+                {"column_mode", "knn_mode"},
+                "categorical_imputation",
+            )
+        raw_knn_neighbors = knn_neighbors_map.get(modality_name)
+        if raw_knn_neighbors is None:
+            knn_neighbors = None
+        else:
+            try:
+                knn_neighbors = int(raw_knn_neighbors)
+            except ValueError as exc:
+                raise ValueError(
+                    f"Invalid knn_neighbors for modality '{modality_name}': {raw_knn_neighbors!r}"
+                ) from exc
+            if knn_neighbors < 1:
+                raise ValueError(f"knn_neighbors for modality '{modality_name}' must be >= 1")
+
+        feature_cols = [col for col in df.columns if col != patient_id_col]
+        numeric_cols = [col for col in feature_cols if col not in categorical_cols]
+        validate_numeric_columns(df, numeric_cols, modality_name=modality_name)
+
+        modality_frames[modality_name] = df
+        modality_configs[modality_name] = {
+            "csv_path": csv_path,
+            "drop_cols": drop_cols,
+            "categorical_cols": categorical_cols,
+            "aggregation_method": aggregation_method,
+            "numeric_imputation": numeric_imputation,
+            "categorical_imputation": categorical_imputation,
+            "knn_neighbors": knn_neighbors,
+        }
+
+    return modality_frames, modality_configs
+
+
+def save_processed_outputs(output_dir, endpoint_df, patient_id_col, endpoint_col, modality_frames, summary_payload):
+    os.makedirs(output_dir, exist_ok=True)
+    endpoint_out = endpoint_df[[patient_id_col, endpoint_col]].copy()
+    endpoint_out.to_csv(os.path.join(output_dir, "endpoints_selected.csv"), index=False)
+
+    modalities_dir = os.path.join(output_dir, "modalities")
+    os.makedirs(modalities_dir, exist_ok=True)
+    for modality_name, df in modality_frames.items():
+        df.to_csv(os.path.join(modalities_dir, f"{modality_name}.csv"), index=False)
+
+    with open(os.path.join(output_dir, "preprocessing_summary.json"), "w", encoding="utf-8") as handle:
+        json.dump(summary_payload, handle, indent=2)
 
 
 def validate_and_prepare_modality_rows(dfs, id_col, radio_aggregation_method="mean"):
@@ -310,31 +507,157 @@ def validate_and_prepare_modality_rows(dfs, id_col, radio_aggregation_method="me
 
     return cleaned
 
-def load_or_preprocess_dataset(args):
-    """Load dataset-specific preprocessed bundle."""
-    dataset_name = str(args.dataset).strip().lower()
-    module_name = f"dataset.{dataset_name}"
-    try:
-        module = importlib.import_module(module_name)
-    except ModuleNotFoundError as exc:
-        # Only fallback this specific missing module to a clear user-facing error.
-        if exc.name == module_name:
-            raise NotImplementedError(
-                f"Preprocessing for dataset '{args.dataset}' is not implemented yet. "
-                "Add dataset/<dataset_name>.py with load_preprocessed_dataset(args)."
-            ) from exc
-        raise
 
-    loader_fn = getattr(module, "load_preprocessed_dataset", None)
-    if not callable(loader_fn):
-        raise ValueError(
-            f"Dataset module '{module_name}' does not expose "
-            "load_preprocessed_dataset(args)."
-        )
-    bundle = loader_fn(args)
-    if not isinstance(bundle, tuple) or len(bundle) != 4:
-        raise ValueError(
-            f"Dataset module '{module_name}' must return "
-            "(inst_df, dfs, label_col, patient_id_col)."
-        )
-    return bundle
+def _resolve_processed_bundle_dir(dataset_dir):
+    candidate_dirs = [
+        dataset_dir,
+        os.path.join(dataset_dir, "processed_data"),
+    ]
+    for candidate in candidate_dirs:
+        endpoints_path = os.path.join(candidate, "endpoints_selected.csv")
+        modalities_dir = os.path.join(candidate, "modalities")
+        if os.path.isfile(endpoints_path) and os.path.isdir(modalities_dir):
+            return candidate
+    return None
+
+
+def _infer_patient_id_col_from_processed_bundle(endpoints_df, summary_path=None):
+    if summary_path and os.path.isfile(summary_path):
+        with open(summary_path, "r", encoding="utf-8") as handle:
+            summary_payload = json.load(handle)
+        patient_id_col = summary_payload.get("patient_id_col")
+        if patient_id_col and patient_id_col in endpoints_df.columns:
+            return patient_id_col
+
+    if "patient" in endpoints_df.columns:
+        return "patient"
+    if len(endpoints_df.columns) == 2:
+        return endpoints_df.columns[0]
+    raise ValueError(
+        "Could not infer patient_id_col from processed endpoints CSV. "
+        "Ensure preprocessing_summary.json contains patient_id_col."
+    )
+
+
+def _load_processed_dataset_bundle(dataset_dir, endpoint):
+    processed_root = _resolve_processed_bundle_dir(dataset_dir)
+    if processed_root is None:
+        return None
+
+    endpoints_path = os.path.join(processed_root, "endpoints_selected.csv")
+    summary_path = os.path.join(processed_root, "preprocessing_summary.json")
+    modalities_dir = os.path.join(processed_root, "modalities")
+
+    inst_df = pd.read_csv(endpoints_path)
+    patient_id_col = _infer_patient_id_col_from_processed_bundle(inst_df, summary_path=summary_path)
+    label_col = find_label_column(inst_df, endpoint)
+    inst_df = inst_df[[patient_id_col, label_col]].copy()
+
+    modality_files = sorted(
+        filename for filename in os.listdir(modalities_dir) if filename.lower().endswith(".csv")
+    )
+    if not modality_files:
+        raise ValueError(f"No modality CSVs found in processed bundle: '{modalities_dir}'.")
+
+    dfs = OrderedDict()
+    for filename in modality_files:
+        modality_name = os.path.splitext(filename)[0]
+        df = pd.read_csv(os.path.join(modalities_dir, filename))
+        if patient_id_col not in df.columns:
+            raise ValueError(
+                f"Processed modality '{modality_name}' does not contain patient id column '{patient_id_col}'."
+            )
+        dfs[modality_name] = df.set_index(patient_id_col, drop=False)
+
+    inst_df = inst_df.set_index(patient_id_col, drop=False)
+    return inst_df, dfs, label_col, patient_id_col
+
+
+def _resolve_csv_path(dataset_dir, filename, required=False):
+    candidate = os.path.join(dataset_dir, filename)
+    if os.path.exists(candidate):
+        return candidate
+    if required:
+        raise FileNotFoundError(f"Required file not found: '{candidate}'")
+    return None
+
+
+def _load_mimm_pathology_df(patho_path, inst_df, id_col):
+    path_df = pd.read_csv(patho_path)
+    path_df = path_df.rename(columns=lambda x: x.replace("embedding_", "patho_"))
+    path_df = pd.merge(path_df, inst_df[[id_col]], on=id_col, how="inner")
+    keep = [id_col] + [c for c in path_df.columns if c.startswith("patho_")]
+    return path_df[keep]
+
+
+def _load_mimm_prefixed_df(csv_path, inst_df, prefix, id_col):
+    df = pd.read_csv(csv_path)
+    df = df.rename(columns=lambda x: f"{prefix}_{x}" if x != id_col else x)
+    return pd.merge(df, inst_df[[id_col]], on=id_col, how="inner")
+
+
+def _load_mimm_radio_df(radio_path, inst_df, id_col):
+    rad_df = pd.read_csv(radio_path).rename(columns=lambda x: x.replace("pred_", "radio_"))
+    rad_df = rad_df.drop(columns=["image_path", "lesion_tag"], errors="ignore")
+    rad_df = pd.merge(rad_df, inst_df[[id_col]], on=id_col, how="inner")
+    keep = [id_col] + [c for c in rad_df.columns if c.startswith("radio_")]
+    return rad_df[keep]
+
+
+def _load_legacy_mimm_raw_bundle(dataset_dir, endpoint):
+    id_col = "patient"
+    inst_path = _resolve_csv_path(dataset_dir, "patients_mimm.csv", required=True)
+    patho_path = _resolve_csv_path(dataset_dir, "pathology_mimm.csv", required=False)
+    radio_path = _resolve_csv_path(dataset_dir, "radiology_mimm.csv", required=False)
+    clin_path = _resolve_csv_path(dataset_dir, "clinical_mimm.csv", required=False)
+    blood_path = _resolve_csv_path(dataset_dir, "blood_mimm.csv", required=False)
+    radio_report_path = _resolve_csv_path(dataset_dir, "radioreports_mimm.csv", required=False)
+
+    inst_df = pd.read_csv(inst_path)
+    if id_col not in inst_df.columns:
+        raise ValueError(f"ID column '{id_col}' not found in the labels CSV.")
+
+    label_col = find_label_column(inst_df, endpoint)
+    inst_df = inst_df[[id_col, label_col]].copy()
+
+    dfs = OrderedDict()
+    if patho_path:
+        dfs["path"] = _load_mimm_pathology_df(patho_path, inst_df, id_col)
+    if radio_path:
+        dfs["radio"] = _load_mimm_radio_df(radio_path, inst_df, id_col)
+    if clin_path:
+        dfs["clin"] = _load_mimm_prefixed_df(clin_path, inst_df, "clin", id_col)
+    if blood_path:
+        dfs["blood"] = _load_mimm_prefixed_df(blood_path, inst_df, "blood", id_col)
+    if radio_report_path:
+        dfs["radio_report"] = _load_mimm_prefixed_df(radio_report_path, inst_df, "radio_report", id_col)
+
+    if not dfs:
+        raise ValueError("No modality CSV found. Provide --dataset_dir with MIMM modality files.")
+
+    dfs = validate_and_prepare_modality_rows(dfs, id_col, radio_aggregation_method="attention")
+    for mod in list(dfs.keys()):
+        dfs[mod] = dfs[mod].set_index(id_col, drop=False)
+
+    inst_df = inst_df.set_index(id_col, drop=False)
+    return inst_df, dfs, label_col, id_col
+
+
+def load_or_preprocess_dataset(args):
+    """Load a generic processed bundle or a legacy raw MIMM dataset."""
+    dataset_dir = getattr(args, "dataset_dir", None)
+    if not dataset_dir:
+        raise ValueError("Dataset loading requires --dataset_dir.")
+
+    processed_bundle = _load_processed_dataset_bundle(dataset_dir, endpoint=args.endpoint)
+    if processed_bundle is not None:
+        return processed_bundle
+
+    dataset_name = str(args.dataset).strip().lower()
+    if dataset_name == "mimm":
+        return _load_legacy_mimm_raw_bundle(dataset_dir=dataset_dir, endpoint=args.endpoint)
+
+    raise NotImplementedError(
+        f"Dataset '{args.dataset}' is not available as a generic processed bundle and has no legacy raw loader. "
+        "Run m3trics first and pass --dataset_dir pointing to the processed_data directory (or its parent results root)."
+    )
