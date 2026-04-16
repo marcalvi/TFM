@@ -124,7 +124,7 @@ class MultimodalBaseDataset(Dataset):
     def __init__(self, dfs, label_df, label_col, id_col="patient"):
         self.label_col = label_col
 
-        # `label_df` is indexed by patient ids in main.py
+        # `label_df` is indexed by patient ids in the training launcher
         self.label_df = label_df
         self.patient_ids = sorted(self.label_df.index.tolist())
         self.patient_id_to_index = {pid: i for i, pid in enumerate(self.patient_ids)}
@@ -504,7 +504,7 @@ def build_loaders(
     train_batch_size = int(batch_size)
     eval_batch_size = 1 if model_name_l == "healnet" else train_batch_size
     n_train = len(train_ds)
-    if model_name_l in {"mlp", "dyam", "distill_dyam"} and n_train < 2:
+    if model_name_l in {"mlp", "pam", "di_pam"} and n_train < 2:
         raise ValueError(
             f"Inner-train split has only {n_train} sample(s). "
             "At least 2 are required with BatchNorm."
@@ -524,7 +524,7 @@ def build_loaders(
             collate_fn=multimodal_collate,
         )
     else:
-        drop_last_train = model_name_l in {"mlp", "dyam", "distill_dyam"} and (n_train % train_batch_size) == 1
+        drop_last_train = model_name_l in {"mlp", "pam", "di_pam"} and (n_train % train_batch_size) == 1
         train_loader = DataLoader(
             train_ds,
             batch_size=train_batch_size,
