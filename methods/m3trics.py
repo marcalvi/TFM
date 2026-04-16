@@ -502,7 +502,6 @@ def run_training_from_args(args):
         for prop in train_missing_props
     )
     print(f"Total training runs to execute: {combo_count}")
-    print(f"Total test missingness evaluations across all runs: {test_eval_total}")
 
     wandb_project_name = f"{args.wandb_project}_{args.dataset}"
     wandb_enabled_flag = bool(args.wandb and args.wandb_mode != "disabled")
@@ -735,7 +734,7 @@ def _run_selected_models(args, modality_configs):
             model_config=model_config,
             modality_pooling=training_modality_pooling,
         )
-        print(f"Launching {model_config['display_name']}...")
+        print(f"\nLaunching {model_config['display_name']}...")
         run_training_from_args(training_args)
 
 
