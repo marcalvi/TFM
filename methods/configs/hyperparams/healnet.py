@@ -23,7 +23,7 @@ MODEL_CONFIG = {
         "healnet_latent_dim_head": ATTENTION_HEAD_DIMS,
         "healnet_attn_dropout": "0.2",
         "healnet_ff_dropout": "0.2",
-        "healnet_self_per_cross_attn": "1",
+        "healnet_self_per_cross_attn": "0,1",
     },
     "paired_hp_grid_args": [
         ("healnet_num_latents", "healnet_latent_dim"),

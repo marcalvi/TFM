@@ -27,7 +27,7 @@ WANDB_MODE="online"
 
 # Osiris cluster paths (VHIO)
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
-DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs"
+DATA_ROOT="/nfs/rnas/projects/M3TRICS/data/inputs"
 
 # Local paths (macOS)
 # PROJECT_ROOT="/Users/marcalbesa/Desktop/TFM/git_exp/methods"
@@ -100,14 +100,14 @@ RADIO_REPORT_CSV="radioreports_mimm.csv"
 # Available methods: ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-pAM, HealNet, SMILe
 # -----------------------------------------------------------------------------------------
 
-RUN_MODELS="ZI_MLP,KNN_MLP,VAE_MLP,pAM,Di-pAM"
+RUN_MODELS="HealNet"
 RETRAIN_OUTER="false"
 k=5
 INNER_SPLITS=${k}
 OUTER_SPLITS=${k}
 MISSING_LOCATION="global"
-TRAIN_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
-TEST_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
+TRAIN_MISSING_PROP="0.0"
+TEST_MISSING_PROP="0.0"
 
 # Proposed seeds for reproducibility
 SEEDS="22,2002,4,18473,55602"

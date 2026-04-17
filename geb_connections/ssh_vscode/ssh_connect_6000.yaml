@@ -16,6 +16,5 @@ openports:
     - external: 9999
       internal: 22
 env:
-  MY_VAR1: "value1"
   PUBLIC_KEY: "password123"
 max_runtime_minutes: 100000

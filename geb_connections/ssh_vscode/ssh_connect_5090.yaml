@@ -9,8 +9,8 @@ args:
     . /start.sh
 worker_type: 5090
 use_gpu: true
-max_cpus: 8.0
-max_memory_mb: 20000
+max_cpus: 16
+max_memory_mb: 64000
 docker_image: harbor.vhio.net/geb-env-gpu:0.1.2
 openports: 
     - external: 9999
