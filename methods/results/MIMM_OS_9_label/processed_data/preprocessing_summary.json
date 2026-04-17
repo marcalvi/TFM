@@ -1,7 +1,7 @@
 {
   "dataset": "MIMM",
   "results_root": "/home/osiris-user/Desktop/TFM/methods/results/MIMM_OS_9_label",
-  "endpoint_csv": "/nfs/rnas/projects/M3BENCH/data/inputs/MIMM/patients_mimm.csv",
+  "endpoint_csv": "/nfs/rnas/projects/M3TRICS/data/inputs/MIMM/patients_mimm.csv",
   "endpoint_col": "OS_9_label",
   "patient_id_col": "patient",
   "modality_imputation_config": {
