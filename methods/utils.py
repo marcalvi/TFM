@@ -132,11 +132,18 @@ def parse_paired_hp_groups(raw_value):
         groups.append(group)
     return groups
 
+
+def _format_training_control_suffix(cfg):
+    wd_str = f"{float(cfg['weight_decay']):.0e}"
+    return f"_wd{wd_str}"
+
+
 # Format hp_name for runs' names
 def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
     model_name = normalize_model_name(model_name)
     lr_str = f"{cfg['learning_rate']:.0e}"
     bs_str = str(cfg["batch_size"])
+    training_suffix = _format_training_control_suffix(cfg)
     if model_name in {"pam"}:
         dropout_str = str(cfg["pam_dropout"]).replace(".", "p")
         temp_str = str(cfg["pam_temperature"]).replace(".", "p")
@@ -145,6 +152,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"bs{bs_str}_"
             f"drop{dropout_str}_"
             f"temp{temp_str}_"
+            f"{training_suffix}"
             f"trmiss{train_missing_pct}_"
             f"trloc{missing_location}"
         )
@@ -160,6 +168,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"temp{temp_str}_"
             f"a{alpha_str}_"
             f"b{beta_str}_"
+            f"{training_suffix}"
             f"trmiss{train_missing_pct}_"
             f"trloc{missing_location}"
         )
@@ -179,6 +188,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"drop{dropout_str}_"
             f"alpha{alpha_str}_"
             f"beta{beta_str}_"
+            f"{training_suffix}"
             f"trmiss{train_missing_pct}_"
             f"trloc{missing_location}"
         )
@@ -208,6 +218,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"adrop{adrop_str}_"
             f"fdrop{fdrop_str}_"
             f"selfx{selfx_str}_"
+            f"{training_suffix}"
             f"trmiss{train_missing_pct}_"
             f"trloc{missing_location}"
         )
@@ -225,6 +236,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
         f"fusionL{fusion_layers_str}_"
         f"fusionBN{fusion_bn_str}_"
         f"drop{dropout_str}_"
+        f"{training_suffix}"
         f"trmiss{train_missing_pct}_"
         f"trloc{missing_location}"
     )
@@ -239,6 +251,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
     # hp configs
     batch_sizes = parse_value_or_list(args.batch_size, int)
     learning_rates = parse_value_or_list(args.learning_rate, float)
+    weight_decays = parse_value_or_list(args.weight_decay, float)
 
     hp_configs = []
     seen = set()
@@ -247,21 +260,24 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
         pam_dropouts = parse_value_or_list(args.pam_dropout, float)
         temperatures = parse_value_or_list(args.pam_temperature, float)
 
-        for bs, lr, dropout, temp in product(
+        for bs, lr, weight_decay, dropout, temp in product(
             batch_sizes,
             learning_rates,
+            weight_decays,
             pam_dropouts,
             temperatures,
         ):
             cfg = {
                 "batch_size": int(bs),
                 "learning_rate": float(lr),
+                "weight_decay": float(weight_decay),
                 "pam_dropout": float(dropout),
                 "pam_temperature": float(temp),
             }
             key = (
                 cfg["batch_size"],
                 cfg["learning_rate"],
+                cfg["weight_decay"],
                 cfg["pam_dropout"],
                 cfg["pam_temperature"],
             )
@@ -278,9 +294,10 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
         distill_alphas = parse_value_or_list(args.distill_alpha, float)
         distill_betas = parse_value_or_list(args.distill_beta, float)
 
-        for bs, lr, dropout, temp, alpha, beta in product(
+        for bs, lr, weight_decay, dropout, temp, alpha, beta in product(
             batch_sizes,
             learning_rates,
+            weight_decays,
             pam_dropouts,
             temperatures,
             distill_alphas,
@@ -289,6 +306,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
             cfg = {
                 "batch_size": int(bs),
                 "learning_rate": float(lr),
+                "weight_decay": float(weight_decay),
                 "pam_dropout": float(dropout),
                 "pam_temperature": float(temp),
                 "distill_alpha": float(alpha),
@@ -297,6 +315,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
             key = (
                 cfg["batch_size"],
                 cfg["learning_rate"],
+                cfg["weight_decay"],
                 cfg["pam_dropout"],
                 cfg["pam_temperature"],
                 cfg["distill_alpha"],
@@ -316,9 +335,10 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
         fusion_batchnorm_values = parse_bool_value_or_list(args.fusion_batchnorm)
         dropouts = parse_value_or_list(args.dropout, float)
 
-        for bs, lr, mod_layers, fusion_dim, fusion_layers, fusion_batchnorm, dropout in product(
+        for bs, lr, weight_decay, mod_layers, fusion_dim, fusion_layers, fusion_batchnorm, dropout in product(
             batch_sizes,
             learning_rates,
+            weight_decays,
             modality_hidden_layers,
             fusion_hidden_dims,
             fusion_hidden_layers,
@@ -328,6 +348,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
             cfg = {
                 "batch_size": int(bs),
                 "learning_rate": float(lr),
+                "weight_decay": float(weight_decay),
                 "modality_hidden_layers": int(mod_layers),
                 "fusion_hidden_dim": int(fusion_dim),
                 "fusion_hidden_layers": int(fusion_layers),
@@ -337,6 +358,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
             key = (
                 cfg["batch_size"],
                 cfg["learning_rate"],
+                cfg["weight_decay"],
                 cfg["modality_hidden_layers"],
                 cfg["fusion_hidden_dim"],
                 cfg["fusion_hidden_layers"],
@@ -358,9 +380,10 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
         smil_e_alphas = parse_value_or_list(args.smil_e_alpha, float)
         smil_e_betas = parse_value_or_list(args.smil_e_beta, float)
 
-        for bs, lr, latent_dim, num_priors, num_heads, dropout, alpha, beta in product(
+        for bs, lr, weight_decay, latent_dim, num_priors, num_heads, dropout, alpha, beta in product(
             batch_sizes,
             learning_rates,
+            weight_decays,
             smil_e_latent_dims,
             smil_e_num_priors,
             smil_e_num_heads,
@@ -373,6 +396,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
             cfg = {
                 "batch_size": int(bs),
                 "learning_rate": float(lr),
+                "weight_decay": float(weight_decay),
                 "smil_e_latent_dim": int(latent_dim),
                 "smil_e_num_priors": int(num_priors),
                 "smil_e_num_heads": int(num_heads),
@@ -383,6 +407,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
             key = (
                 cfg["batch_size"],
                 cfg["learning_rate"],
+                cfg["weight_decay"],
                 cfg["smil_e_latent_dim"],
                 cfg["smil_e_num_priors"],
                 cfg["smil_e_num_heads"],
@@ -442,6 +467,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
             lr,
             depth,
             num_freq_bands,
+            weight_decay,
             latent_bottleneck_pair,
             cross_heads,
             latent_heads,
@@ -454,6 +480,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
             learning_rates,
             healnet_depths,
             healnet_num_freq_bands,
+            weight_decays,
             latent_bottleneck_options,
             healnet_cross_heads,
             healnet_latent_heads,
@@ -467,6 +494,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
             cfg = {
                 "batch_size": int(bs),
                 "learning_rate": float(lr),
+                "weight_decay": float(weight_decay),
                 "healnet_depth": int(depth),
                 "healnet_num_freq_bands": int(num_freq_bands),
                 "healnet_num_latents": int(num_latents),
@@ -482,6 +510,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
             key = (
                 cfg["batch_size"],
                 cfg["learning_rate"],
+                cfg["weight_decay"],
                 cfg["healnet_depth"],
                 cfg["healnet_num_freq_bands"],
                 cfg["healnet_num_latents"],

@@ -1,13 +1,18 @@
-LATENT_BOTTLENECK_DIMS = "16,32,64"
-ATTENTION_HEAD_DIMS = "64"
+LATENT_BOTTLENECK_DIMS = "8,16"
+ATTENTION_HEAD_DIMS = "8,16"
 
 MODEL_CONFIG = {
     "display_name": "HealNet",
     "model": "HealNet",
-    "epochs": 80,
-    "main_args": {
+    "fixed_args": {
+        "epochs": 80,
+        "early_stopping_patience": 20,
+        "lr_patience": 5,
+    },
+    "hp_grid_args": {
         "batch_size": "8,16,32",
-        "learning_rate": "1e-6,5e-6,1e-5,5e-5",
+        "learning_rate": "5e-6,1e-5",
+        "weight_decay": "1e-4",
         "healnet_depth": "1,2",
         "healnet_num_freq_bands": "2",
         "healnet_num_latents": LATENT_BOTTLENECK_DIMS,
@@ -20,7 +25,7 @@ MODEL_CONFIG = {
         "healnet_ff_dropout": "0.2",
         "healnet_self_per_cross_attn": "1",
     },
-    "paired_main_args": [
+    "paired_hp_grid_args": [
         ("healnet_num_latents", "healnet_latent_dim"),
         ("healnet_cross_dim_head", "healnet_latent_dim_head"),
     ],
