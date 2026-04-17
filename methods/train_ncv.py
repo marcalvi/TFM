@@ -339,6 +339,8 @@ def _log_selected_inner_models_to_wandb(
                 "selected_hp_name": candidate["hp_name"],
             }
         )
+        if model_name_l in {"healnet", "smil_e"}:
+            run_config.update(dict(candidate.get("hp_cfg", {})))
         inner_run = wandb.init(
             project=wandb_project,
             group=f"outer_fold_{outer_fold_idx}",
@@ -850,6 +852,8 @@ def nested_cv(
                         "outer_refit_epochs": int(refit_epochs),
                     }
                 )
+                if model_name_l in {"healnet", "smil_e"}:
+                    run_config.update(dict(selected_hp_cfg))
                 outer_train_run = wandb.init(
                     project=wandb_project,
                     group=f"outer_fold_{outer_fold_idx}",
