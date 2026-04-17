@@ -120,6 +120,18 @@ def parse_bool_value_or_list(raw_value):
             )
     return out
 
+
+def parse_paired_hp_groups(raw_value):
+    groups = []
+    for raw_group in [chunk.strip() for chunk in str(raw_value or "").split(";") if chunk.strip()]:
+        group = tuple(item.strip() for item in raw_group.split(",") if item.strip())
+        if len(group) < 2:
+            raise ValueError(
+                f"Invalid paired hyperparameter group '{raw_group}'. Use at least two names separated by commas."
+            )
+        groups.append(group)
+    return groups
+
 # Format hp_name for runs' names
 def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
     model_name = normalize_model_name(model_name)
@@ -397,18 +409,43 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
         healnet_attn_dropout = parse_value_or_list(args.healnet_attn_dropout, float)
         healnet_ff_dropout = parse_value_or_list(args.healnet_ff_dropout, float)
         healnet_self_per_cross_attn = parse_value_or_list(args.healnet_self_per_cross_attn, int)
+        paired_groups = {tuple(group) for group in parse_paired_hp_groups(getattr(args, "paired_hp_groups", ""))}
+
+        latent_bottleneck_options = [
+            (int(num_latents), int(latent_dim))
+            for num_latents, latent_dim in (
+                zip(healnet_num_latents, healnet_latent_dims)
+                if ("healnet_num_latents", "healnet_latent_dim") in paired_groups
+                else product(healnet_num_latents, healnet_latent_dims)
+            )
+        ]
+        attention_head_dim_options = [
+            (int(cross_dim_head), int(latent_dim_head))
+            for cross_dim_head, latent_dim_head in (
+                zip(healnet_cross_dim_head, healnet_latent_dim_head)
+                if ("healnet_cross_dim_head", "healnet_latent_dim_head") in paired_groups
+                else product(healnet_cross_dim_head, healnet_latent_dim_head)
+            )
+        ]
+
+        if ("healnet_num_latents", "healnet_latent_dim") in paired_groups and len(healnet_num_latents) != len(healnet_latent_dims):
+            raise ValueError(
+                "Paired hyperparameters 'healnet_num_latents' and 'healnet_latent_dim' must define the same number of values."
+            )
+        if ("healnet_cross_dim_head", "healnet_latent_dim_head") in paired_groups and len(healnet_cross_dim_head) != len(healnet_latent_dim_head):
+            raise ValueError(
+                "Paired hyperparameters 'healnet_cross_dim_head' and 'healnet_latent_dim_head' must define the same number of values."
+            )
 
         for (
             bs,
             lr,
             depth,
             num_freq_bands,
-            num_latents,
-            latent_dim,
+            latent_bottleneck_pair,
             cross_heads,
             latent_heads,
-            cross_dim_head,
-            latent_dim_head,
+            attention_head_dim_pair,
             attn_dropout,
             ff_dropout,
             self_per_cross_attn,
@@ -417,16 +454,16 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
             learning_rates,
             healnet_depths,
             healnet_num_freq_bands,
-            healnet_num_latents,
-            healnet_latent_dims,
+            latent_bottleneck_options,
             healnet_cross_heads,
             healnet_latent_heads,
-            healnet_cross_dim_head,
-            healnet_latent_dim_head,
+            attention_head_dim_options,
             healnet_attn_dropout,
             healnet_ff_dropout,
             healnet_self_per_cross_attn,
         ):
+            num_latents, latent_dim = latent_bottleneck_pair
+            cross_dim_head, latent_dim_head = attention_head_dim_pair
             cfg = {
                 "batch_size": int(bs),
                 "learning_rate": float(lr),

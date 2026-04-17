@@ -259,6 +259,12 @@ def build_training_arg_parser():
     parser.add_argument("--healnet_ff_dropout", type=str, default="0.0")
     parser.add_argument("--healnet_self_per_cross_attn", type=str, default="1")
     parser.add_argument(
+        "--paired_hp_groups",
+        type=str,
+        default="",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
         "--train_missing_prop",
         type=str,
         default="0",
@@ -726,6 +732,16 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
 
     for arg_name, arg_value in model_config.get("main_args", {}).items():
         arg_list.extend([f"--{arg_name}", str(arg_value)])
+
+    paired_hp_groups = model_config.get("paired_main_args", [])
+    if paired_hp_groups:
+        serialized_groups = ";".join(
+            ",".join(str(name) for name in group)
+            for group in paired_hp_groups
+            if group
+        )
+        if serialized_groups:
+            arg_list.extend(["--paired_hp_groups", serialized_groups])
 
     return parse_training_args(arg_list)
 
