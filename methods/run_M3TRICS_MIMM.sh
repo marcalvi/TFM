@@ -8,12 +8,12 @@ set -euo pipefail
 # -----------------------------------------------------------------------------------------
 
 # Osiris cluster setup (VHIO)
-# source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-# conda activate TFM
+source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
+conda activate TFM
 
 # Local setup (macOS)
-source /opt/miniconda3/etc/profile.d/conda.sh
-conda activate TFM
+# source /opt/miniconda3/etc/profile.d/conda.sh
+# conda activate TFM
 
 # Optional WandB configuration
 WANDB_LOGIN_KEY="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"
@@ -26,12 +26,12 @@ WANDB_MODE="online"
 # -----------------------------------------------------------------------------------------
 
 # Osiris cluster paths (VHIO)
-# PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
-# DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs"
+PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
+DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs"
 
 # Local paths (macOS)
-PROJECT_ROOT="/Users/marcalbesa/Desktop/TFM/git_exp/methods"
-DATA_ROOT="/Users/marcalbesa/Desktop/TFM/data"
+# PROJECT_ROOT="/Users/marcalbesa/Desktop/TFM/git_exp/methods"
+# DATA_ROOT="/Users/marcalbesa/Desktop/TFM/data"
 
 # -----------------------------------------------------------------------------------------
 # 2. DATASET AND ENDPOINT
@@ -100,7 +100,7 @@ RADIO_REPORT_CSV="radioreports_mimm.csv"
 # Available methods: ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-pAM, HealNet, SMILe
 # -----------------------------------------------------------------------------------------
 
-RUN_MODELS="ZI_MLP,KNN_MLP,VAE_MLP,pAM,Di-pAM,HealNet,SMILe"
+RUN_MODELS="ZI_MLP,KNN_MLP,VAE_MLP,pAM,Di-pAM"
 RETRAIN_OUTER="false"
 k=5
 INNER_SPLITS=${k}
