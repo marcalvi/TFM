@@ -129,6 +129,9 @@ def train_smil_e_with_meta_learning(
     lr,
     model_kwargs=None,
     train_seed=0,
+    weight_decay=1e-4,
+    early_stopping_patience=8,
+    lr_scheduler_patience=5,
 ):
     """Train SMIL-E with a SMIL-style meta loop fully contained in inner-train."""
     min_best_epoch = min(5, int(epochs))
@@ -139,12 +142,12 @@ def train_smil_e_with_meta_learning(
 
     model = build_model("smil_e", input_dims, model_kwargs).to(device)
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=float(weight_decay))
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode="min",
         factor=0.5,
-        patience=5,
+        patience=int(lr_scheduler_patience),
     )
 
     train_dataset = train_loader.dataset
@@ -199,13 +202,14 @@ def train_smil_e_with_meta_learning(
     ).to(device)
     model.set_priors(priors)
 
-    best_epoch_score = (-np.inf, -np.inf)
+    best_val_auc = -np.inf
+    best_stop_loss = np.inf
     best_epoch = 1
     best_model_state = None
     best_val_targets = None
     best_val_probs = None
     early_stop = 0
-    patience = 20
+    patience = int(early_stopping_patience)
     history = []
 
     for epoch in range(1, epochs + 1):
@@ -294,18 +298,21 @@ def train_smil_e_with_meta_learning(
             }
         )
 
-        epoch_score = (float(val_metrics_epoch["AUC"]), -float(avg_val_loss))
-        if epoch >= min_best_epoch and epoch_score > best_epoch_score:
-            best_epoch_score = epoch_score
-            best_epoch = epoch
-            best_model_state = copy.deepcopy(model.state_dict())
-            best_val_targets = np.asarray(val_targets)
-            best_val_probs = np.asarray(val_probs)
-            early_stop = 0
-        else:
-            early_stop += 1
-            if early_stop >= patience:
-                break
+        if epoch >= min_best_epoch:
+            if float(val_metrics_epoch["AUC"]) > best_val_auc:
+                best_val_auc = float(val_metrics_epoch["AUC"])
+                best_epoch = epoch
+                best_model_state = copy.deepcopy(model.state_dict())
+                best_val_targets = np.asarray(val_targets)
+                best_val_probs = np.asarray(val_probs)
+
+            if float(avg_val_loss) < best_stop_loss:
+                best_stop_loss = float(avg_val_loss)
+                early_stop = 0
+            else:
+                early_stop += 1
+                if early_stop >= patience:
+                    break
 
     if best_model_state is None:
         raise RuntimeError(
@@ -329,6 +336,9 @@ def train_model_with_validation(
     imputation_method="zero",
     model_kwargs=None,
     train_seed=0,
+    weight_decay=1e-4,
+    early_stopping_patience=20,
+    lr_scheduler_patience=5,
 ):
     min_best_epoch = min(5, int(epochs))
     model_kwargs = model_kwargs or {}
@@ -344,6 +354,9 @@ def train_model_with_validation(
             lr=lr,
             model_kwargs=model_kwargs,
             train_seed=train_seed,
+            weight_decay=weight_decay,
+            early_stopping_patience=early_stopping_patience,
+            lr_scheduler_patience=lr_scheduler_patience,
         )
 
     bypass_mask = (
@@ -360,25 +373,25 @@ def train_model_with_validation(
 
         teacher_model = build_model("di_pam", input_dims, pam_kwargs).to(device)
         student_model = build_model("di_pam", input_dims, pam_kwargs).to(device)
-        teacher_optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=1e-4)
-        student_optimizer = optim.Adam(student_model.parameters(), lr=lr, weight_decay=1e-4)
+        teacher_optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=float(weight_decay))
+        student_optimizer = optim.Adam(student_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             student_optimizer,
             mode="min",
             factor=0.5,
-            patience=5,
+            patience=int(lr_scheduler_patience),
         )
         repr_criterion = nn.MSELoss()
         feat_criterion = nn.MSELoss()
         teacher_base_dataset = train_loader.dataset.base_dataset
     else:
         model = build_model(model_name, input_dims, model_kwargs).to(device)
-        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=float(weight_decay))
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode="min",
             factor=0.5,
-            patience=5,
+            patience=int(lr_scheduler_patience),
         )
 
     best_epoch_score = (-np.inf, -np.inf)
@@ -387,7 +400,7 @@ def train_model_with_validation(
     best_val_targets = None
     best_val_probs = None
     early_stop = 0
-    patience = 20
+    patience = int(early_stopping_patience)
     history = []
 
     for epoch in range(1, epochs + 1):
@@ -562,6 +575,8 @@ def train_model_on_full_dataset(
     imputation_method="zero",
     model_kwargs=None,
     train_seed=0,
+    weight_decay=1e-4,
+    lr_scheduler_patience=5,
 ):
     """Train a final model on the full outer-train split for a fixed number of epochs."""
     model_kwargs = model_kwargs or {}
@@ -582,25 +597,25 @@ def train_model_on_full_dataset(
 
         teacher_model = build_model("di_pam", input_dims, pam_kwargs).to(device)
         student_model = build_model("di_pam", input_dims, pam_kwargs).to(device)
-        teacher_optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=1e-4)
-        student_optimizer = optim.Adam(student_model.parameters(), lr=lr, weight_decay=1e-4)
+        teacher_optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=float(weight_decay))
+        student_optimizer = optim.Adam(student_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             student_optimizer,
             mode="min",
             factor=0.5,
-            patience=5,
+            patience=int(lr_scheduler_patience),
         )
         repr_criterion = nn.MSELoss()
         feat_criterion = nn.MSELoss()
         teacher_base_dataset = train_loader.dataset.base_dataset
     else:
         model = build_model(model_name, input_dims, model_kwargs).to(device)
-        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=float(weight_decay))
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode="min",
             factor=0.5,
-            patience=5,
+            patience=int(lr_scheduler_patience),
         )
 
     history = []

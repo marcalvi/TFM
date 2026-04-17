@@ -410,6 +410,8 @@ def nested_cv(
     modality_pooling=None,
     candidate_model_dir=None,
     retrain_outer=True,
+    early_stopping_patience=20,
+    lr_scheduler_patience=5,
 ):
     wandb_active = bool(wandb_enabled and wandb is not None)
     if wandb_enabled and wandb is None:
@@ -593,6 +595,9 @@ def nested_cv(
                     input_dims=input_dims,
                     epochs=epochs,
                     lr=hp_cfg["learning_rate"],
+                    weight_decay=hp_cfg["weight_decay"],
+                    early_stopping_patience=early_stopping_patience,
+                    lr_scheduler_patience=lr_scheduler_patience,
                     model_name=model_name,
                     imputation_method=imputation_method,
                     model_kwargs=model_kwargs,
@@ -814,6 +819,8 @@ def nested_cv(
                 input_dims=input_dims,
                 epochs=refit_epochs,
                 lr=selected_hp_cfg["learning_rate"],
+                weight_decay=selected_hp_cfg["weight_decay"],
+                lr_scheduler_patience=lr_scheduler_patience,
                 model_name=model_name,
                 imputation_method=imputation_method,
                 model_kwargs=selected_model_kwargs,

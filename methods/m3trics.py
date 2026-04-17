@@ -210,6 +210,9 @@ def build_training_arg_parser():
         ),
     )
     parser.add_argument("--learning_rate", type=str, default="5e-5")
+    parser.add_argument("--weight_decay", type=str, default="1e-4")
+    parser.add_argument("--early_stopping_patience", type=int, default=20)
+    parser.add_argument("--lr_patience", type=int, default=5)
     parser.add_argument("--seeds", type=str, default="123")
     parser.add_argument(
         "--missing_pattern_seed",
@@ -646,6 +649,8 @@ def run_training_from_args(args):
                         "lr": float(args.vae_imputer_lr),
                         "beta": float(args.vae_imputer_beta),
                     },
+                    early_stopping_patience=int(args.early_stopping_patience),
+                    lr_scheduler_patience=int(args.lr_patience),
                     radio_pooling_kwargs={
                         "hidden_dim": int(args.radio_attention_hidden_dim),
                         "dropout": float(args.radio_attention_dropout),
@@ -680,6 +685,7 @@ def training_cli_main(argv=None):
 # ------------------------ M3TRICS PREPROCESS CLI ---------------------
 
 def _build_training_args_from_model_config(shared_args, model_config, modality_pooling):
+    fixed_args = dict(model_config.get("fixed_args", {}))
     output_root = os.path.join(
         shared_args.results_root,
         "training_runs",
@@ -702,7 +708,7 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
         "--outer_splits",
         str(int(shared_args.outer_splits)),
         "--epochs",
-        str(int(model_config["epochs"])),
+        str(int(fixed_args.get("epochs", 80))),
         "--retrain_outer",
         str(bool(shared_args.retrain_outer)).lower(),
         "--seeds",
@@ -716,6 +722,10 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
         "--test_missing_prop",
         str(shared_args.test_missing_prop),
     ]
+    for arg_name, arg_value in fixed_args.items():
+        if arg_name == "epochs":
+            continue
+        arg_list.extend([f"--{arg_name}", str(arg_value)])
     resolved_modality_pooling = str(modality_pooling).strip()
     if resolved_modality_pooling:
         arg_list.extend(["--modality_pooling", resolved_modality_pooling])
@@ -730,10 +740,10 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
             ]
         )
 
-    for arg_name, arg_value in model_config.get("main_args", {}).items():
+    for arg_name, arg_value in model_config.get("hp_grid_args", {}).items():
         arg_list.extend([f"--{arg_name}", str(arg_value)])
 
-    paired_hp_groups = model_config.get("paired_main_args", [])
+    paired_hp_groups = model_config.get("paired_hp_grid_args", [])
     if paired_hp_groups:
         serialized_groups = ";".join(
             ",".join(str(name) for name in group)
