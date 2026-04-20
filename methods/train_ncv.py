@@ -35,6 +35,8 @@ try:
 except ImportError:
     wandb = None
 
+WANDB_INIT_TIMEOUT_SEC = int(os.getenv("WANDB_INIT_TIMEOUT_SEC", "180"))
+
 # ---------------------------- HELPER FUNCTIONS -----------------------------
 
 # Function to transform outer test with each inner train scaler
@@ -134,7 +136,6 @@ def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
         return {
             "dropout_p": hp_cfg["pam_dropout"],
             "temperature": hp_cfg["pam_temperature"],
-            "concat_masks_input": True,
             "distill_alpha": hp_cfg["distill_alpha"],
             "distill_beta": hp_cfg["distill_beta"],
         }
@@ -348,6 +349,7 @@ def _log_selected_inner_models_to_wandb(
             mode=wandb_mode,
             config=run_config,
             reinit="finish_previous",
+            settings=wandb.Settings(init_timeout=WANDB_INIT_TIMEOUT_SEC),
         )
 
         for hrow in candidate["history"]:
@@ -868,6 +870,7 @@ def nested_cv(
                     mode=wandb_mode,
                     config=run_config,
                     reinit="finish_previous",
+                    settings=wandb.Settings(init_timeout=WANDB_INIT_TIMEOUT_SEC),
                 )
 
                 for hrow in outer_refit_history:
