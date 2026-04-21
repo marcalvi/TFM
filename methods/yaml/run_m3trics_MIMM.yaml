@@ -1,11 +1,11 @@
 description: 'pim pAM (MIMM all setups)'
 executable: /bin/bash
-args: ["-c", "/home/osiris-user/Desktop/TFM/methods/run_M3TRICS_MIMM.sh"]
+args: ["-c", "/home/osiris-user/Desktop/TFM/methods/run_M3TRICS_MIMM_smile.sh"]
 env:
-worker_type: '4090-64'
+worker_type: '5090'
 use_gpu: true
-max_cpus: 32
-max_memory_mb: 128000
+max_cpus: 16
+max_memory_mb: 64000
 docker_image: harbor.vhio.net/geb-env-cpu:0.1.2
 mounts: []
 max_runtime_minutes: 10000000
