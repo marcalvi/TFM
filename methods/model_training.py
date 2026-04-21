@@ -367,12 +367,16 @@ def train_model_with_validation(
     criterion = nn.BCEWithLogitsLoss()
 
     if model_name_l in {"di_pam"}:
-        pam_kwargs = get_model_init_kwargs(model_name_l, model_kwargs)
+        student_kwargs = get_model_init_kwargs(model_name_l, model_kwargs)
+        teacher_kwargs = {
+            "dropout_p": float(model_kwargs.get("dropout_p", 0.4)),
+            "temperature": float(model_kwargs.get("temperature", 2.0)),
+        }
         distill_alpha = float(model_kwargs.get("distill_alpha", 1.0))
         distill_beta = float(model_kwargs.get("distill_beta", 0.3))
 
-        teacher_model = build_model("di_pam", input_dims, pam_kwargs).to(device)
-        student_model = build_model("di_pam", input_dims, pam_kwargs).to(device)
+        teacher_model = build_model("pam", input_dims, teacher_kwargs).to(device)
+        student_model = build_model("di_pam", input_dims, student_kwargs).to(device)
         teacher_optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         student_optimizer = optim.Adam(student_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -431,7 +435,7 @@ def train_model_with_validation(
                 teacher_optimizer.zero_grad()
                 teacher_out = teacher_model(Xs_teacher, teacher_mask, return_aux=True)
                 teacher_logits = teacher_out[0].squeeze(1)
-                teacher_repr = teacher_out[4]
+                teacher_repr = teacher_out[1] * teacher_out[3]
                 teacher_loss = _compute_supervised_bce_loss(teacher_logits, y_teacher, criterion)
                 teacher_loss.backward()
                 teacher_optimizer.step()
@@ -591,12 +595,16 @@ def train_model_on_full_dataset(
     criterion = nn.BCEWithLogitsLoss()
 
     if model_name_l in {"di_pam"}:
-        pam_kwargs = get_model_init_kwargs(model_name_l, model_kwargs)
+        student_kwargs = get_model_init_kwargs(model_name_l, model_kwargs)
+        teacher_kwargs = {
+            "dropout_p": float(model_kwargs.get("dropout_p", 0.4)),
+            "temperature": float(model_kwargs.get("temperature", 2.0)),
+        }
         distill_alpha = float(model_kwargs.get("distill_alpha", 1.0))
         distill_beta = float(model_kwargs.get("distill_beta", 0.3))
 
-        teacher_model = build_model("di_pam", input_dims, pam_kwargs).to(device)
-        student_model = build_model("di_pam", input_dims, pam_kwargs).to(device)
+        teacher_model = build_model("pam", input_dims, teacher_kwargs).to(device)
+        student_model = build_model("di_pam", input_dims, student_kwargs).to(device)
         teacher_optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         student_optimizer = optim.Adam(student_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -651,7 +659,7 @@ def train_model_on_full_dataset(
                 teacher_optimizer.zero_grad()
                 teacher_out = teacher_model(Xs_teacher, teacher_mask, return_aux=True)
                 teacher_logits = teacher_out[0].squeeze(1)
-                teacher_repr = teacher_out[4]
+                teacher_repr = teacher_out[1] * teacher_out[3]
                 teacher_loss = _compute_supervised_bce_loss(teacher_logits, y_teacher, criterion)
                 teacher_loss.backward()
                 teacher_optimizer.step()
