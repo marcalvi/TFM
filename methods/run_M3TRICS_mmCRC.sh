@@ -7,28 +7,13 @@ set -euo pipefail
 # Optional: configure Weights & Biases for tracking purposes
 # -----------------------------------------------------------------------------------------
 
-# Auto-detect a known Conda installation.
-CONDA_SH=""
-for candidate in \
-  /home/osiris-user/anaconda3/etc/profile.d/conda.sh \
-  /opt/miniconda3/etc/profile.d/conda.sh \
-  /opt/anaconda3/etc/profile.d/conda.sh \
-  /Users/marcalbesa/anaconda3/etc/profile.d/conda.sh \
-  /Users/marcalbesa/miniconda3/etc/profile.d/conda.sh
-do
-  if [[ -f "${candidate}" ]]; then
-    CONDA_SH="${candidate}"
-    break
-  fi
-done
+# Osiris cluster setup (VHIO)
+source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
+conda activate TFM_5090
 
-if [[ -z "${CONDA_SH}" ]]; then
-  echo "Could not find conda.sh in any known location." >&2
-  exit 1
-fi
-
-source "${CONDA_SH}"
-conda activate TFM
+# Local setup (macOS)
+# source /opt/miniconda3/etc/profile.d/conda.sh
+# conda activate TFM
 
 # Optional WandB configuration
 WANDB_LOGIN_KEY="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"
@@ -98,9 +83,9 @@ RADIO_CSV="mmCRC_radiology_data.csv"
 # Clinical modality
 CLIN_NAME="clin"
 CLIN_CSV="mmCRC_clinical_data.csv"
-CLIN_CATEGORICAL_COLS="had_adj_treat_post_primary_surgery,had_adj_treat_post_met_surgery,had_neoadjuvant_treatment,had_surgery_liver,had_surgery_other_mets,had_surgery_primary,met_treatment_mechanism_qmt,met_treatment_mechanism_aag,met_treatment_mechanism_ttantiegfr,met_treatment_mechanism_ttnonantiegfr,met_treatment_mechanism_imm,sex_male,sync_met_yes,msi_status_MSI,ras_mut_wt,braf_mut_wt,met_tumor_site_liver_liver_limited,met_tumor_site_liver_liver_w_other,met_tumor_site_liver_other,primary_tumor_site_simple_Colon (unspecified),primary_tumor_site_simple_Left,primary_tumor_site_simple_Right"
+PATH_DROP_COLS="braf_mut_wt"
+CLIN_CATEGORICAL_COLS="had_adj_treat_post_primary_surgery, had_adj_treat_post_met_surgery, had_neoadjuvant_treatment, had_surgery_liver, had_surgery_other_mets,had_surgery_primary, met_treatment_mechanism_qmt, met_treatment_mechanism_aag, met_treatment_mechanism_ttantiegfr, met_treatment_mechanism_ttnonantiegfr, met_treatment_mechanism_imm, sex_male, sync_met_yes, msi_status_MSI, ras_mut_wt, met_tumor_site_liver_liver_limited, met_tumor_site_liver_liver_w_other, met_tumor_site_liver_other, primary_tumor_site_simple_Colon (unspecified), primary_tumor_site_simple_Left, primary_tumor_site_simple_Right"
 CLIN_CATEGORICAL_IMPUTATION_METHOD="knn_mode"
-CLIN_NUMERIC_IMPUTATION_METHOD="knn_mean"
 CLIN_KNN_NEIGHBORS=5
 
 # Blood modality
