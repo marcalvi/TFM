@@ -9,7 +9,7 @@ set -euo pipefail
 
 # Osiris cluster setup (VHIO)
 source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-conda activate TFM_5090
+conda activate TFM
 
 # Local setup (macOS)
 # source /opt/miniconda3/etc/profile.d/conda.sh
