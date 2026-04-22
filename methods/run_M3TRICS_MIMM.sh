@@ -100,7 +100,7 @@ RADIO_REPORT_CSV="radioreports_mimm.csv"
 # Available methods: ZI_MLP, KNN_MLP, VAE_MLP, pAM, PAMDiPAM, MLPDiPAM, HealNet, SMILe
 # -----------------------------------------------------------------------------------------
 
-RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-pAM, HealNet, SMILe"
+RUN_MODELS="PAMDiPAM"
 RETRAIN_OUTER="false"
 k=5
 INNER_SPLITS=${k}

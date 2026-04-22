@@ -1,8 +1,8 @@
 description: 'pim pAM (MIMM all setups)'
 executable: /bin/bash
-args: ["-c", "/home/osiris-user/Desktop/TFM/methods/run_M3TRICS_MIMM_dipam.sh"]
+args: ["-c", "/home/osiris-user/Desktop/TFM/methods/run_M3TRICS_MIMM.sh"]
 env:
-worker_type: '4090-128'
+worker_type: '5090'
 use_gpu: true
 max_cpus: 16
 max_memory_mb: 64000
