@@ -252,7 +252,7 @@ def build_training_arg_parser():
     parser.add_argument("--smil_e_beta", type=str, default="1e-2")
     parser.add_argument("--meta_inner_lr", type=float, default=1e-3)
     parser.add_argument("--meta_val_fraction", type=float, default=0.25)
-    parser.add_argument("--classifier_hidden_dim", type=int, default=64)
+    parser.add_argument("--classifier_hidden_dim", type=str, default="64")
     parser.add_argument("--healnet_depth", type=str, default="3")
     parser.add_argument("--healnet_num_freq_bands", type=str, default="2")
     parser.add_argument("--healnet_num_latents", type=str, default="128")
