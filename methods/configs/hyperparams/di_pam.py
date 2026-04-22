@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 MODEL_CONFIG = {
     "display_name": "Di-pAM",
     "model": "Di-pAM",
@@ -16,3 +17,6 @@ MODEL_CONFIG = {
         "distill_beta": "0.1,0.3",
     },
 }
+=======
+from .mlp_di_pam import MODEL_CONFIG
+>>>>>>> 258c07901894698d7aceb4b6454a44203554deee

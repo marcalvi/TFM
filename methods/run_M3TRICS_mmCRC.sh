@@ -95,10 +95,10 @@ BLOOD_CSV="mmCRC_blood_data.csv"
 # -----------------------------------------------------------------------------------------
 # 4. TRAINING CONFIGURATION
 # Select the models to run after preprocessing.
-# Available methods: ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-pAM, HealNet, SMILe
+# Available methods: ZI_MLP, KNN_MLP, VAE_MLP, pAM, pAM-Di-pAM, MLP-Di-pAM, HealNet, SMILe
 # -----------------------------------------------------------------------------------------
 
-RUN_MODELS="ZI_MLP,KNN_MLP,VAE_MLP,pAM,Di-pAM,HealNet,SMILe"
+RUN_MODELS="ZI_MLP,KNN_MLP,VAE_MLP,pAM,pAM-Di-pAM,MLP-Di-pAM,HealNet,SMILe"
 RETRAIN_OUTER="false"
 k=5
 INNER_SPLITS=${k}

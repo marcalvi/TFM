@@ -3,7 +3,7 @@ import torch
 import pandas as pd
 import random
 from itertools import product
-from models import MultimodalMLP, PAM, DiPAM, SMILE, HealNetBinaryWrapper
+from models import MultimodalMLP, PAM, PAMDiPAM, MLPDiPAM, DiPAM, SMILE, HealNetBinaryWrapper
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import average_precision_score, roc_auc_score
 
@@ -17,8 +17,10 @@ def normalize_model_name(model_name):
         return "mlp"
     if compact == "pam":
         return "pam"
-    if compact == "dipam":
-        return "di_pam"
+    if compact == "pamdipam":
+        return "pam_di_pam"
+    if compact in {"mlpdipam", "dipam"}:
+        return "mlp_di_pam"
     if compact in {"smile", "smilee", "smilextended"}:
         return "smil_e"
     if compact == "healnet":
@@ -156,7 +158,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"trmiss{train_missing_pct}_"
             f"trloc{missing_location}"
         )
-    if model_name in {"di_pam"}:
+    if model_name in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
         dropout_str = str(cfg["pam_dropout"]).replace(".", "p")
         temp_str = str(cfg["pam_temperature"]).replace(".", "p")
         alpha_str = str(cfg["distill_alpha"]).replace(".", "p")
@@ -288,7 +290,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 cfg, train_missing_pct, missing_location, model_name=model_name
             )
             hp_configs.append(cfg)
-    if model_name in {"di_pam"}:
+    if model_name in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
         pam_dropouts = parse_value_or_list(args.pam_dropout, float)
         temperatures = parse_value_or_list(args.pam_temperature, float)
         distill_alphas = parse_value_or_list(args.distill_alpha, float)
@@ -545,14 +547,16 @@ def build_model(model_name, input_dims, model_kwargs):
         return MultimodalMLP(input_dims, **model_kwargs)
     if model_name in {"pam"}:
         return PAM(input_dims, **model_kwargs)
-    if model_name in {"di_pam"}:
-        return DiPAM(input_dims, **model_kwargs)
+    if model_name in {"pam_di_pam"}:
+        return PAMDiPAM(input_dims, **model_kwargs)
+    if model_name in {"mlp_di_pam", "di_pam"}:
+        return MLPDiPAM(input_dims, **model_kwargs)
     if model_name in {"smil_e"}:
         return SMILE(input_dims, **model_kwargs)
     if model_name in {"healnet"}:
         return HealNetBinaryWrapper(input_dims, **model_kwargs)
     raise ValueError(
-        f"Unsupported model '{model_name}'. Supported: mlp, pam, di_pam, smile, healnet"
+        f"Unsupported model '{model_name}'. Supported: mlp, pam, pam_di_pam, mlp_di_pam, smile, healnet"
     )
 
 # -------------------------- 5. EVALUATION ----------------------------
