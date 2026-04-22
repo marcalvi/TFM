@@ -132,7 +132,7 @@ def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
             "dropout_p": hp_cfg["pam_dropout"],
             "temperature": hp_cfg["pam_temperature"],
         }
-    if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+    if model_name_l in {"pam_dipam", "mlp_dipam"}:
         return {
             "dropout_p": hp_cfg["pam_dropout"],
             "temperature": hp_cfg["pam_temperature"],
@@ -163,7 +163,7 @@ def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
             "self_per_cross_attn": hp_cfg["healnet_self_per_cross_attn"],
         }
     raise ValueError(
-        f"Unsupported model '{model_name_l}'. Supported: mlp, pam, pam_di_pam, mlp_di_pam, smile, healnet"
+        f"Unsupported model '{model_name_l}'. Supported: mlp, pam, pam_dipam, mlp_dipam, smile, healnet"
     )
 
 
@@ -283,10 +283,10 @@ def _predict_model_probabilities(
             if collect_pam_details:
                 model_out = model(Xs, model_mask, return_aux=True)
                 logits = model_out[0].squeeze(1)
-                if model_name not in {"pam", "pam_di_pam", "mlp_di_pam", "di_pam"}:
+                if model_name not in {"pam", "pam_dipam", "mlp_dipam"}:
                     raise ValueError(
                         "collect_pam_details=True is only supported for model_name in "
-                        "{'pam', 'pam_di_pam', 'mlp_di_pam', 'di_pam'}."
+                        "{'pam', 'pam_dipam', 'mlp_dipam'}."
                     )
                 pam_alpha.append(model_out[2].detach().cpu().numpy())
                 pam_r_scores.append(model_out[3].detach().cpu().numpy())
@@ -361,7 +361,7 @@ def _log_selected_inner_models_to_wandb(
                 "best_inner_model/val_aucpr": float(hrow["val_aucpr"]),
                 "best_inner_model/val_acc": float(hrow["val_acc"]),
             }
-            if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+            if model_name_l in {"pam_dipam", "mlp_dipam"}:
                 log_payload.update(
                     {
                         "best_inner_model/teacher_loss": float(hrow["teacher_loss"]),
@@ -882,7 +882,7 @@ def nested_cv(
                         "outer_train_model/train_acc": float(hrow["train_acc"]),
                     }
 
-                    if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+                    if model_name_l in {"pam_dipam", "mlp_dipam"}:
                         log_payload.update(
                             {
                                 "outer_train_model/teacher_loss": float(hrow["teacher_loss"]),
@@ -946,7 +946,7 @@ def nested_cv(
                     data_loader=outer_eval_loader,
                     device=device,
                     bypass_mask=predict_bypass_mask,
-                    collect_pam_details=model_name_l in {"pam", "pam_di_pam", "mlp_di_pam", "di_pam"},
+                    collect_pam_details=model_name_l in {"pam", "pam_dipam", "mlp_dipam"},
                     model_name=model_name_l,
                 )
                 outer_metrics = safe_binary_metrics(y_true_outer, y_prob_outer)
@@ -971,7 +971,7 @@ def nested_cv(
                     row["inner_model_1_logit"] = logit_value
                     row["inner_model_1_prob"] = prob_value
                     row["inner_model_1_pred_label"] = pred_label
-                    if model_name_l in {"pam", "pam_di_pam", "mlp_di_pam", "di_pam"} and pam_details_outer is not None:
+                    if model_name_l in {"pam", "pam_dipam", "mlp_dipam"} and pam_details_outer is not None:
                         for modality_idx, modality_name in enumerate(modality_names):
                             row[f"inner_model_1_{modality_name}_alpha"] = float(
                                 pam_details_outer["alpha"][patient_idx, modality_idx]
@@ -1092,7 +1092,7 @@ def nested_cv(
                         data_loader=outer_eval_loader,
                         device=device,
                         bypass_mask=predict_bypass_mask,
-                        collect_pam_details=model_name_l in {"pam", "pam_di_pam", "mlp_di_pam", "di_pam"},
+                        collect_pam_details=model_name_l in {"pam", "pam_dipam", "mlp_dipam"},
                         model_name=model_name_l,
                     )
 
@@ -1141,7 +1141,7 @@ def nested_cv(
                         row[f"inner_model_{model_idx}_logit"] = float(logits_arr[patient_idx])
                         row[f"inner_model_{model_idx}_prob"] = float(probs_arr[patient_idx])
                         row[f"inner_model_{model_idx}_pred_label"] = int(logits_arr[patient_idx] >= 0.0)
-                        if model_name_l in {"pam", "pam_di_pam", "mlp_di_pam", "di_pam"} and details_arr is not None:
+                        if model_name_l in {"pam", "pam_dipam", "mlp_dipam"} and details_arr is not None:
                             for modality_idx, modality_name in enumerate(modality_names):
                                 row[f"inner_model_{model_idx}_{modality_name}_alpha"] = float(
                                     details_arr["alpha"][patient_idx, modality_idx]

@@ -1,8 +1,7 @@
 from .mlp import MultimodalMLP
 from .pam import PAM
-from .pam_di_pam import PAMDiPAM
-from .mlp_di_pam import MLPDiPAM
-from .di_pam import DiPAM
+from .pam_dipam import PAMDiPAM
+from .mlp_dipam import MLPDiPAM
 from .smil_e import SMILE, learn_priors, smile_alignment_loss, meta_train_step
 _HEALNET_IMPORT_ERROR = None
 try:
@@ -23,7 +22,6 @@ __all__ = [
     "PAM",
     "PAMDiPAM",
     "MLPDiPAM",
-    "DiPAM",
     "SMILE",
     "learn_priors",
     "smile_alignment_loss",

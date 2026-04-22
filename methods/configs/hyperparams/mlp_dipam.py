@@ -1,6 +1,6 @@
 MODEL_CONFIG = {
-    "display_name": "MLP-Di-pAM",
-    "model": "MLP-Di-pAM",
+    "display_name": "MLPDiPAM",
+    "model": "MLPDiPAM",
     "fixed_args": {
         "epochs": 80,
         "early_stopping_patience": 20,
