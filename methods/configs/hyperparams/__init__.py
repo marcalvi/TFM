@@ -1,5 +1,6 @@
 from .healnet import MODEL_CONFIG as HEALNET_CONFIG
 from .knn_mlp import MODEL_CONFIG as KNN_MLP_CONFIG
+from .meta_smile import MODEL_CONFIG as META_SMILE_CONFIG
 from .mlp_dipam import MODEL_CONFIG as MLP_DIPAM_CONFIG
 from .pam import MODEL_CONFIG as PAM_CONFIG
 from .pam_dipam import MODEL_CONFIG as PAM_DIPAM_CONFIG
@@ -16,6 +17,7 @@ MODEL_CONFIGS = {
     "mlp_dipam": MLP_DIPAM_CONFIG,
     "healnet": HEALNET_CONFIG,
     "smile": SMILE_CONFIG,
+    "meta_smile": META_SMILE_CONFIG,
 }
 
 MODEL_NAME_ALIASES = {
@@ -34,6 +36,9 @@ MODEL_NAME_ALIASES = {
     "healnet": "healnet",
     "smile": "smile",
     "smilee": "smile",
+    "meta_smile": "meta_smile",
+    "metasmile": "meta_smile",
+    "metasmilee": "meta_smile",
 }
 
 

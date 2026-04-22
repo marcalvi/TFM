@@ -185,7 +185,7 @@ def build_training_arg_parser():
         "--model",
         type=str,
         required=True,
-        choices=["MLP", "pAM", "PAMDiPAM", "MLPDiPAM", "HealNet", "SMILe"],
+        choices=["MLP", "pAM", "PAMDiPAM", "MLPDiPAM", "HealNet", "SMILe", "MetaSMILe"],
     )
     parser.add_argument(
         "--dataset_dir",
@@ -250,6 +250,9 @@ def build_training_arg_parser():
     parser.add_argument("--smil_e_dropout", type=str, default="0.1")
     parser.add_argument("--smil_e_alpha", type=str, default="1e-2")
     parser.add_argument("--smil_e_beta", type=str, default="1e-2")
+    parser.add_argument("--meta_inner_lr", type=float, default=1e-3)
+    parser.add_argument("--meta_val_fraction", type=float, default=0.25)
+    parser.add_argument("--classifier_hidden_dim", type=int, default=64)
     parser.add_argument("--healnet_depth", type=str, default="3")
     parser.add_argument("--healnet_num_freq_bands", type=str, default="2")
     parser.add_argument("--healnet_num_latents", type=str, default="128")
@@ -361,6 +364,8 @@ def _build_output_dir(
         model_label = "MLPDiPAM"
     elif model_name_norm == "smil_e":
         model_label = "SMILE"
+    elif model_name_norm == "meta_smil_e":
+        model_label = "METASMILE"
     else:
         model_label = model_name_norm.upper().replace("_", "-")
     dataset_label = str(dataset_name).strip().upper()

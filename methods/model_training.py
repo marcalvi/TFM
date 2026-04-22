@@ -338,6 +338,177 @@ def train_smil_e_with_meta_learning(
     return model, history, best_metrics
 
 
+def train_meta_smil_e_on_full_dataset(
+    train_loader,
+    device,
+    input_dims,
+    epochs,
+    lr,
+    model_kwargs=None,
+    train_seed=0,
+    weight_decay=1e-4,
+    lr_scheduler_patience=5,
+):
+    """Train MetaSMILe on the full outer-train split with an internal meta split."""
+    model_kwargs = dict(model_kwargs or {})
+    inner_steps = int(model_kwargs.pop("meta_inner_steps", 1))
+    inner_lr = float(model_kwargs.pop("meta_inner_lr", 1e-3))
+    meta_val_fraction = float(model_kwargs.pop("meta_val_fraction", 0.25))
+    min_best_epoch = min(5, int(epochs))
+
+    model = build_model("meta_smil_e", input_dims, model_kwargs).to(device)
+    criterion = nn.BCEWithLogitsLoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=float(weight_decay))
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="min",
+        factor=0.5,
+        patience=int(lr_scheduler_patience),
+    )
+
+    train_dataset = train_loader.dataset
+    base_dataset = train_dataset.base_dataset
+    meta_train_idx, meta_val_idx = _split_meta_indices(
+        base_dataset,
+        seed=int(train_seed),
+        meta_val_fraction=meta_val_fraction,
+    )
+
+    meta_train_incomplete_ds = Subset(train_dataset, meta_train_idx.tolist())
+    meta_val_incomplete_ds = Subset(train_dataset, meta_val_idx.tolist())
+    meta_complete_base_ds = MultimodalDatasetWithMissing(
+        base_dataset=base_dataset,
+        simulator=train_dataset.simulator,
+        apply_missing=False,
+        imputation_method="zero",
+        missing_pattern_seed=train_dataset.missing_pattern_seed,
+    )
+    meta_val_complete_ds = Subset(meta_complete_base_ds, meta_val_idx.tolist())
+
+    meta_batch_size = _loader_batch_size(train_loader, fallback=16)
+    meta_train_loader = DataLoader(
+        meta_train_incomplete_ds,
+        batch_size=min(meta_batch_size, max(len(meta_train_incomplete_ds), 1)),
+        shuffle=True,
+        collate_fn=multimodal_collate,
+        drop_last=False,
+    )
+    meta_val_incomplete_loader = DataLoader(
+        meta_val_incomplete_ds,
+        batch_size=min(meta_batch_size, max(len(meta_val_incomplete_ds), 1)),
+        shuffle=False,
+        collate_fn=multimodal_collate,
+        drop_last=False,
+    )
+    meta_val_complete_loader = DataLoader(
+        meta_val_complete_ds,
+        batch_size=min(meta_batch_size, max(len(meta_val_complete_ds), 1)),
+        shuffle=False,
+        collate_fn=multimodal_collate,
+        drop_last=False,
+    )
+
+    priors = learn_smil_priors(
+        base_dataset=base_dataset,
+        encoders=model.encoders,
+        num_modalities=model.num_modalities,
+        num_priors=model.num_priors,
+        device=device,
+    ).to(device)
+    model.set_priors(priors)
+
+    best_meta_val_loss = np.inf
+    best_model_state = None
+    history = []
+
+    for epoch in range(1, int(epochs) + 1):
+        model.train()
+        meta_train_losses = []
+        meta_val_losses = []
+        meta_align_fusion = []
+        meta_align_hidden = []
+        meta_val_ce = []
+
+        incomplete_val_cycle = cycle(meta_val_incomplete_loader)
+        complete_val_cycle = cycle(meta_val_complete_loader)
+
+        for incomplete_train_batch in meta_train_loader:
+            incomplete_val_batch = next(incomplete_val_cycle)
+            complete_val_batch = next(complete_val_cycle)
+
+            stats = smil_meta_train_step(
+                model=model,
+                optimizer=optimizer,
+                incomplete_train_batch=_move_batch_to_device(incomplete_train_batch, device),
+                incomplete_val_batch=_move_batch_to_device(incomplete_val_batch, device),
+                complete_val_batch=_move_batch_to_device(complete_val_batch, device),
+                inner_steps=inner_steps,
+                inner_lr=inner_lr,
+                alpha=model.alpha,
+                beta=model.beta,
+            )
+            meta_train_losses.append(float(stats["meta_train_loss"]))
+            meta_val_losses.append(float(stats["meta_val_loss"]))
+            meta_align_fusion.append(float(stats["align_fusion"]))
+            meta_align_hidden.append(float(stats["align_hidden"]))
+            meta_val_ce.append(float(stats["ce_noise"]))
+
+        avg_meta_train_loss = float(np.mean(meta_train_losses)) if meta_train_losses else 0.0
+        avg_meta_val_loss = float(np.mean(meta_val_losses)) if meta_val_losses else 0.0
+        avg_align_fusion = float(np.mean(meta_align_fusion)) if meta_align_fusion else 0.0
+        avg_align_hidden = float(np.mean(meta_align_hidden)) if meta_align_hidden else 0.0
+        avg_meta_val_ce = float(np.mean(meta_val_ce)) if meta_val_ce else 0.0
+
+        model.eval()
+        train_loss = 0.0
+        train_targets = []
+        train_probs = []
+        with torch.no_grad():
+            for Xs, present_mask, y, _ in train_loader:
+                Xs = [x.to(device) for x in Xs]
+                present_mask = present_mask.to(device)
+                y = y.to(device)
+                logits_out = model(Xs, present_mask, mode="incomplete", meta_train=False)
+                logits = logits_out.squeeze(1)
+                loss = criterion(logits, y)
+                train_loss += float(loss.item())
+                train_probs.extend(torch.sigmoid(logits).cpu().numpy().tolist())
+                train_targets.extend(y.cpu().numpy())
+
+        avg_train_loss = train_loss / max(len(train_loader), 1)
+        scheduler.step(avg_meta_val_loss)
+        train_metrics_epoch = safe_binary_metrics(train_targets, train_probs)
+
+        history.append(
+            {
+                "epoch": epoch,
+                "train_loss": float(avg_train_loss),
+                "train_auc": float(train_metrics_epoch["AUC"]),
+                "train_aucpr": float(train_metrics_epoch["AUCPR"]),
+                "train_acc": float(train_metrics_epoch["ACC"]),
+                "teacher_loss": 0.0,
+                "student_survival_loss": 0.0,
+                "student_repr_loss": 0.0,
+                "student_feature_loss": 0.0,
+                "smil_meta_train_loss": float(avg_meta_train_loss),
+                "smil_meta_val_loss": float(avg_meta_val_loss),
+                "smil_meta_val_ce": float(avg_meta_val_ce),
+                "smil_align_fusion": float(avg_align_fusion),
+                "smil_align_hidden": float(avg_align_hidden),
+            }
+        )
+
+        if epoch >= min_best_epoch and avg_meta_val_loss < best_meta_val_loss:
+            best_meta_val_loss = avg_meta_val_loss
+            best_model_state = copy.deepcopy(model.state_dict())
+
+    if best_model_state is None:
+        best_model_state = copy.deepcopy(model.state_dict())
+
+    model.load_state_dict(best_model_state)
+    return model, history
+
+
 def train_model_with_validation(
     train_loader,
     val_loader,
@@ -357,7 +528,7 @@ def train_model_with_validation(
     model_kwargs = model_kwargs or {}
     model_name_l = normalize_model_name(model_name)
 
-    if model_name_l in {"smil_e"}:
+    if model_name_l in {"meta_smil_e"}:
         return train_smil_e_with_meta_learning(
             train_loader=train_loader,
             val_loader=val_loader,
@@ -378,6 +549,19 @@ def train_model_with_validation(
     )
 
     criterion = nn.BCEWithLogitsLoss()
+
+    if model_name_l in {"meta_smil_e"}:
+        return train_meta_smil_e_on_full_dataset(
+            train_loader=train_loader,
+            device=device,
+            input_dims=input_dims,
+            epochs=epochs,
+            lr=lr,
+            model_kwargs=model_kwargs,
+            train_seed=train_seed,
+            weight_decay=weight_decay,
+            lr_scheduler_patience=lr_scheduler_patience,
+        )
 
     if model_name_l in {"pam_dipam", "mlp_dipam"}:
         student_kwargs = get_model_init_kwargs(model_name_l, model_kwargs)
@@ -403,6 +587,16 @@ def train_model_with_validation(
         teacher_base_dataset = train_loader.dataset.base_dataset
     else:
         model = build_model(model_name, input_dims, model_kwargs).to(device)
+        if model_name_l in {"smil_e"}:
+            base_dataset = train_loader.dataset.base_dataset
+            priors = learn_smil_priors(
+                base_dataset=base_dataset,
+                encoders=model.encoders,
+                num_modalities=model.num_modalities,
+                num_priors=model.num_priors,
+                device=device,
+            ).to(device)
+            model.set_priors(priors)
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=float(weight_decay))
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
@@ -629,6 +823,16 @@ def train_model_on_full_dataset(
         teacher_base_dataset = train_loader.dataset.base_dataset
     else:
         model = build_model(model_name, input_dims, model_kwargs).to(device)
+        if model_name_l in {"smil_e"}:
+            base_dataset = train_loader.dataset.base_dataset
+            priors = learn_smil_priors(
+                base_dataset=base_dataset,
+                encoders=model.encoders,
+                num_modalities=model.num_modalities,
+                num_priors=model.num_priors,
+                device=device,
+            ).to(device)
+            model.set_priors(priors)
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=float(weight_decay))
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
