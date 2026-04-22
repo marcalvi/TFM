@@ -1,5 +1,7 @@
 from .mlp import MultimodalMLP
 from .pam import PAM
+from .pam_di_pam import PAMDiPAM
+from .mlp_di_pam import MLPDiPAM
 from .di_pam import DiPAM
 from .smil_e import SMILE, learn_priors, smile_alignment_loss, meta_train_step
 _HEALNET_IMPORT_ERROR = None
@@ -19,6 +21,8 @@ except Exception as _healnet_import_error:
 __all__ = [
     "MultimodalMLP",
     "PAM",
+    "PAMDiPAM",
+    "MLPDiPAM",
     "DiPAM",
     "SMILE",
     "learn_priors",

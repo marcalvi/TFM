@@ -18,7 +18,7 @@ def get_model_init_kwargs(model_name, model_kwargs=None):
     """Keep only constructor kwargs needed to instantiate the model itself."""
     model_kwargs = dict(model_kwargs or {})
     model_name_l = normalize_model_name(model_name)
-    if model_name_l == "di_pam":
+    if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
         return {
             key: value
             for key, value in model_kwargs.items()
@@ -118,6 +118,19 @@ def _compute_distill_student_loss(
     loss_feature = feat_criterion(student_logits, teacher_logits)
     total = loss_survival + (alpha_repr * loss_repr) + (beta_feat * loss_feature)
     return total, loss_survival, loss_repr, loss_feature
+
+
+def _extract_distill_outputs(model_name, model_out):
+    model_name_l = normalize_model_name(model_name)
+    if model_name_l in {"pam_di_pam"}:
+        logits = model_out[0].squeeze(1)
+        repr_vec = model_out[1] * model_out[3]
+        return logits, repr_vec
+    if model_name_l in {"mlp_di_pam", "di_pam"}:
+        logits = model_out[0].squeeze(1)
+        repr_vec = model_out[4]
+        return logits, repr_vec
+    raise ValueError(f"Unsupported distillation model '{model_name_l}'.")
 
 
 def train_smil_e_with_meta_learning(
@@ -366,7 +379,7 @@ def train_model_with_validation(
 
     criterion = nn.BCEWithLogitsLoss()
 
-    if model_name_l in {"di_pam"}:
+    if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
         student_kwargs = get_model_init_kwargs(model_name_l, model_kwargs)
         teacher_kwargs = {
             "dropout_p": float(model_kwargs.get("dropout_p", 0.4)),
@@ -376,7 +389,7 @@ def train_model_with_validation(
         distill_beta = float(model_kwargs.get("distill_beta", 0.3))
 
         teacher_model = build_model("pam", input_dims, teacher_kwargs).to(device)
-        student_model = build_model("di_pam", input_dims, student_kwargs).to(device)
+        student_model = build_model(model_name_l, input_dims, student_kwargs).to(device)
         teacher_optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         student_optimizer = optim.Adam(student_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -408,7 +421,7 @@ def train_model_with_validation(
     history = []
 
     for epoch in range(1, epochs + 1):
-        if model_name_l in {"di_pam"}:
+        if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
             teacher_model.train()
             student_model.train()
         else:
@@ -425,7 +438,7 @@ def train_model_with_validation(
             present_mask = present_mask.to(device)
             y = y.to(device)
 
-            if model_name_l in {"di_pam"}:
+            if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
                 Xs_teacher, teacher_mask, y_teacher = _build_full_batch_from_patient_ids(
                     teacher_base_dataset,
                     pids,
@@ -434,16 +447,14 @@ def train_model_with_validation(
 
                 teacher_optimizer.zero_grad()
                 teacher_out = teacher_model(Xs_teacher, teacher_mask, return_aux=True)
-                teacher_logits = teacher_out[0].squeeze(1)
-                teacher_repr = teacher_out[1] * teacher_out[3]
+                teacher_logits, teacher_repr = _extract_distill_outputs("pam_di_pam", teacher_out)
                 teacher_loss = _compute_supervised_bce_loss(teacher_logits, y_teacher, criterion)
                 teacher_loss.backward()
                 teacher_optimizer.step()
 
                 student_optimizer.zero_grad()
                 student_out = student_model(Xs, present_mask, return_aux=True)
-                student_logits = student_out[0].squeeze(1)
-                student_repr = student_out[4]
+                student_logits, student_repr = _extract_distill_outputs(model_name_l, student_out)
                 student_loss, student_survival, student_repr_loss, student_feature_loss = _compute_distill_student_loss(
                     student_logits=student_logits,
                     student_repr=student_repr,
@@ -485,7 +496,7 @@ def train_model_with_validation(
         avg_student_repr = train_student_repr / max(train_steps, 1)
         avg_student_feature = train_student_feature / max(train_steps, 1)
 
-        if model_name_l in {"di_pam"}:
+        if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
             student_model.eval()
         else:
             model.eval()
@@ -499,7 +510,7 @@ def train_model_with_validation(
                 present_mask = present_mask.to(device)
                 y = y.to(device)
 
-                if model_name_l in {"di_pam"}:
+                if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
                     logits = student_model(Xs, present_mask).squeeze(1)
                     loss = _compute_supervised_bce_loss(logits, y, criterion)
                 else:
@@ -539,7 +550,7 @@ def train_model_with_validation(
         if epoch >= min_best_epoch and epoch_score > best_epoch_score:
             best_epoch_score = epoch_score
             best_epoch = epoch
-            if model_name_l in {"di_pam"}:
+            if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
                 best_model_state = copy.deepcopy(student_model.state_dict())
             else:
                 best_model_state = copy.deepcopy(model.state_dict())
@@ -556,7 +567,7 @@ def train_model_with_validation(
             f"No best epoch was selected. Check epochs={epochs} and min_best_epoch={min_best_epoch}."
         )
 
-    if model_name_l in {"di_pam"}:
+    if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
         student_model.load_state_dict(best_model_state)
     else:
         model.load_state_dict(best_model_state)
@@ -564,7 +575,7 @@ def train_model_with_validation(
     best_metrics = safe_binary_metrics(best_val_targets, best_val_probs)
     best_metrics["best_epoch"] = int(best_epoch)
 
-    if model_name_l in {"di_pam"}:
+    if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
         return student_model, history, best_metrics
     return model, history, best_metrics
 
@@ -594,7 +605,7 @@ def train_model_on_full_dataset(
 
     criterion = nn.BCEWithLogitsLoss()
 
-    if model_name_l in {"di_pam"}:
+    if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
         student_kwargs = get_model_init_kwargs(model_name_l, model_kwargs)
         teacher_kwargs = {
             "dropout_p": float(model_kwargs.get("dropout_p", 0.4)),
@@ -604,7 +615,7 @@ def train_model_on_full_dataset(
         distill_beta = float(model_kwargs.get("distill_beta", 0.3))
 
         teacher_model = build_model("pam", input_dims, teacher_kwargs).to(device)
-        student_model = build_model("di_pam", input_dims, student_kwargs).to(device)
+        student_model = build_model(model_name_l, input_dims, student_kwargs).to(device)
         teacher_optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         student_optimizer = optim.Adam(student_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -629,7 +640,7 @@ def train_model_on_full_dataset(
     history = []
 
     for epoch in range(1, int(epochs) + 1):
-        if model_name_l in {"di_pam"}:
+        if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
             teacher_model.train()
             student_model.train()
         else:
@@ -649,7 +660,7 @@ def train_model_on_full_dataset(
             present_mask = present_mask.to(device)
             y = y.to(device)
 
-            if model_name_l in {"di_pam"}:
+            if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
                 Xs_teacher, teacher_mask, y_teacher = _build_full_batch_from_patient_ids(
                     teacher_base_dataset,
                     pids,
@@ -658,16 +669,14 @@ def train_model_on_full_dataset(
 
                 teacher_optimizer.zero_grad()
                 teacher_out = teacher_model(Xs_teacher, teacher_mask, return_aux=True)
-                teacher_logits = teacher_out[0].squeeze(1)
-                teacher_repr = teacher_out[1] * teacher_out[3]
+                teacher_logits, teacher_repr = _extract_distill_outputs("pam_di_pam", teacher_out)
                 teacher_loss = _compute_supervised_bce_loss(teacher_logits, y_teacher, criterion)
                 teacher_loss.backward()
                 teacher_optimizer.step()
 
                 student_optimizer.zero_grad()
                 student_out = student_model(Xs, present_mask, return_aux=True)
-                student_logits = student_out[0].squeeze(1)
-                student_repr = student_out[4]
+                student_logits, student_repr = _extract_distill_outputs(model_name_l, student_out)
                 student_loss, student_survival, student_repr_loss, student_feature_loss = _compute_distill_student_loss(
                     student_logits=student_logits,
                     student_repr=student_repr,
@@ -727,6 +736,6 @@ def train_model_on_full_dataset(
             }
         )
 
-    if model_name_l in {"di_pam"}:
+    if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
         return student_model, history
     return model, history
