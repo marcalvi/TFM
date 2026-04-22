@@ -397,8 +397,9 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
         smil_e_num_priors = parse_value_or_list(args.smil_e_num_priors, int)
         smil_e_num_heads = parse_value_or_list(args.smil_e_num_heads, int)
         smil_e_dropouts = parse_value_or_list(args.smil_e_dropout, float)
+        classifier_hidden_dims = parse_value_or_list(args.classifier_hidden_dim, int)
 
-        for bs, lr, weight_decay, latent_dim, num_priors, num_heads, dropout in product(
+        for bs, lr, weight_decay, latent_dim, num_priors, num_heads, dropout, classifier_hidden_dim in product(
             batch_sizes,
             learning_rates,
             weight_decays,
@@ -406,6 +407,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
             smil_e_num_priors,
             smil_e_num_heads,
             smil_e_dropouts,
+            classifier_hidden_dims,
         ):
             if int(latent_dim) % int(num_heads) != 0:
                 continue
@@ -417,7 +419,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 "smil_e_num_priors": int(num_priors),
                 "smil_e_num_heads": int(num_heads),
                 "smil_e_dropout": float(dropout),
-                "classifier_hidden_dim": int(args.classifier_hidden_dim),
+                "classifier_hidden_dim": int(classifier_hidden_dim),
             }
             key = (
                 cfg["batch_size"],
@@ -443,8 +445,9 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
         smil_e_dropouts = parse_value_or_list(args.smil_e_dropout, float)
         smil_e_alphas = parse_value_or_list(args.smil_e_alpha, float)
         smil_e_betas = parse_value_or_list(args.smil_e_beta, float)
+        classifier_hidden_dims = parse_value_or_list(args.classifier_hidden_dim, int)
 
-        for bs, lr, weight_decay, latent_dim, num_priors, num_heads, dropout, alpha, beta in product(
+        for bs, lr, weight_decay, latent_dim, num_priors, num_heads, dropout, alpha, beta, classifier_hidden_dim in product(
             batch_sizes,
             learning_rates,
             weight_decays,
@@ -454,6 +457,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
             smil_e_dropouts,
             smil_e_alphas,
             smil_e_betas,
+            classifier_hidden_dims,
         ):
             if int(latent_dim) % int(num_heads) != 0:
                 continue
@@ -467,7 +471,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 "smil_e_dropout": float(dropout),
                 "smil_e_alpha": float(alpha),
                 "smil_e_beta": float(beta),
-                "classifier_hidden_dim": int(args.classifier_hidden_dim),
+                "classifier_hidden_dim": int(classifier_hidden_dim),
             }
             cfg["meta_inner_lr"] = float(args.meta_inner_lr)
             cfg["meta_val_fraction"] = float(args.meta_val_fraction)
