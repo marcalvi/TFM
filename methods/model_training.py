@@ -18,7 +18,7 @@ def get_model_init_kwargs(model_name, model_kwargs=None):
     """Keep only constructor kwargs needed to instantiate the model itself."""
     model_kwargs = dict(model_kwargs or {})
     model_name_l = normalize_model_name(model_name)
-    if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+    if model_name_l in {"pam_dipam", "mlp_dipam"}:
         return {
             key: value
             for key, value in model_kwargs.items()
@@ -122,11 +122,11 @@ def _compute_distill_student_loss(
 
 def _extract_distill_outputs(model_name, model_out):
     model_name_l = normalize_model_name(model_name)
-    if model_name_l in {"pam_di_pam"}:
+    if model_name_l in {"pam_dipam"}:
         logits = model_out[0].squeeze(1)
         repr_vec = model_out[1] * model_out[3]
         return logits, repr_vec
-    if model_name_l in {"mlp_di_pam", "di_pam"}:
+    if model_name_l in {"mlp_dipam"}:
         logits = model_out[0].squeeze(1)
         repr_vec = model_out[4]
         return logits, repr_vec
@@ -379,7 +379,7 @@ def train_model_with_validation(
 
     criterion = nn.BCEWithLogitsLoss()
 
-    if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+    if model_name_l in {"pam_dipam", "mlp_dipam"}:
         student_kwargs = get_model_init_kwargs(model_name_l, model_kwargs)
         teacher_kwargs = {
             "dropout_p": float(model_kwargs.get("dropout_p", 0.4)),
@@ -421,7 +421,7 @@ def train_model_with_validation(
     history = []
 
     for epoch in range(1, epochs + 1):
-        if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+        if model_name_l in {"pam_dipam", "mlp_dipam"}:
             teacher_model.train()
             student_model.train()
         else:
@@ -438,7 +438,7 @@ def train_model_with_validation(
             present_mask = present_mask.to(device)
             y = y.to(device)
 
-            if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+            if model_name_l in {"pam_dipam", "mlp_dipam"}:
                 Xs_teacher, teacher_mask, y_teacher = _build_full_batch_from_patient_ids(
                     teacher_base_dataset,
                     pids,
@@ -447,7 +447,7 @@ def train_model_with_validation(
 
                 teacher_optimizer.zero_grad()
                 teacher_out = teacher_model(Xs_teacher, teacher_mask, return_aux=True)
-                teacher_logits, teacher_repr = _extract_distill_outputs("pam_di_pam", teacher_out)
+                teacher_logits, teacher_repr = _extract_distill_outputs("pam_dipam", teacher_out)
                 teacher_loss = _compute_supervised_bce_loss(teacher_logits, y_teacher, criterion)
                 teacher_loss.backward()
                 teacher_optimizer.step()
@@ -496,7 +496,7 @@ def train_model_with_validation(
         avg_student_repr = train_student_repr / max(train_steps, 1)
         avg_student_feature = train_student_feature / max(train_steps, 1)
 
-        if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+        if model_name_l in {"pam_dipam", "mlp_dipam"}:
             student_model.eval()
         else:
             model.eval()
@@ -510,7 +510,7 @@ def train_model_with_validation(
                 present_mask = present_mask.to(device)
                 y = y.to(device)
 
-                if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+                if model_name_l in {"pam_dipam", "mlp_dipam"}:
                     logits = student_model(Xs, present_mask).squeeze(1)
                     loss = _compute_supervised_bce_loss(logits, y, criterion)
                 else:
@@ -550,7 +550,7 @@ def train_model_with_validation(
         if epoch >= min_best_epoch and epoch_score > best_epoch_score:
             best_epoch_score = epoch_score
             best_epoch = epoch
-            if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+            if model_name_l in {"pam_dipam", "mlp_dipam"}:
                 best_model_state = copy.deepcopy(student_model.state_dict())
             else:
                 best_model_state = copy.deepcopy(model.state_dict())
@@ -567,7 +567,7 @@ def train_model_with_validation(
             f"No best epoch was selected. Check epochs={epochs} and min_best_epoch={min_best_epoch}."
         )
 
-    if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+    if model_name_l in {"pam_dipam", "mlp_dipam"}:
         student_model.load_state_dict(best_model_state)
     else:
         model.load_state_dict(best_model_state)
@@ -575,7 +575,7 @@ def train_model_with_validation(
     best_metrics = safe_binary_metrics(best_val_targets, best_val_probs)
     best_metrics["best_epoch"] = int(best_epoch)
 
-    if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+    if model_name_l in {"pam_dipam", "mlp_dipam"}:
         return student_model, history, best_metrics
     return model, history, best_metrics
 
@@ -605,7 +605,7 @@ def train_model_on_full_dataset(
 
     criterion = nn.BCEWithLogitsLoss()
 
-    if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+    if model_name_l in {"pam_dipam", "mlp_dipam"}:
         student_kwargs = get_model_init_kwargs(model_name_l, model_kwargs)
         teacher_kwargs = {
             "dropout_p": float(model_kwargs.get("dropout_p", 0.4)),
@@ -640,7 +640,7 @@ def train_model_on_full_dataset(
     history = []
 
     for epoch in range(1, int(epochs) + 1):
-        if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+        if model_name_l in {"pam_dipam", "mlp_dipam"}:
             teacher_model.train()
             student_model.train()
         else:
@@ -660,7 +660,7 @@ def train_model_on_full_dataset(
             present_mask = present_mask.to(device)
             y = y.to(device)
 
-            if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+            if model_name_l in {"pam_dipam", "mlp_dipam"}:
                 Xs_teacher, teacher_mask, y_teacher = _build_full_batch_from_patient_ids(
                     teacher_base_dataset,
                     pids,
@@ -669,7 +669,7 @@ def train_model_on_full_dataset(
 
                 teacher_optimizer.zero_grad()
                 teacher_out = teacher_model(Xs_teacher, teacher_mask, return_aux=True)
-                teacher_logits, teacher_repr = _extract_distill_outputs("pam_di_pam", teacher_out)
+                teacher_logits, teacher_repr = _extract_distill_outputs("pam_dipam", teacher_out)
                 teacher_loss = _compute_supervised_bce_loss(teacher_logits, y_teacher, criterion)
                 teacher_loss.backward()
                 teacher_optimizer.step()
@@ -736,6 +736,6 @@ def train_model_on_full_dataset(
             }
         )
 
-    if model_name_l in {"pam_di_pam", "mlp_di_pam", "di_pam"}:
+    if model_name_l in {"pam_dipam", "mlp_dipam"}:
         return student_model, history
     return model, history

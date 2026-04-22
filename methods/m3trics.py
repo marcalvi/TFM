@@ -185,7 +185,7 @@ def build_training_arg_parser():
         "--model",
         type=str,
         required=True,
-        choices=["MLP", "pAM", "pAM-Di-pAM", "MLP-Di-pAM", "Di-pAM", "HealNet", "SMILe"],
+        choices=["MLP", "pAM", "PAMDiPAM", "MLPDiPAM", "HealNet", "SMILe"],
     )
     parser.add_argument(
         "--dataset_dir",
@@ -236,13 +236,13 @@ def build_training_arg_parser():
         "--distill_alpha",
         type=str,
         default="1.0",
-        help="Weight a for representation distillation loss in pAM-Di-pAM / MLP-Di-pAM. Supports scalar or comma-separated list.",
+        help="Weight a for representation distillation loss in PAMDiPAM / MLPDiPAM. Supports scalar or comma-separated list.",
     )
     parser.add_argument(
         "--distill_beta",
         type=str,
         default="0.3",
-        help="Weight b for feature/logit distillation loss in pAM-Di-pAM / MLP-Di-pAM. Supports scalar or comma-separated list.",
+        help="Weight b for feature/logit distillation loss in PAMDiPAM / MLPDiPAM. Supports scalar or comma-separated list.",
     )
     parser.add_argument("--smil_e_latent_dim", type=str, default="64")
     parser.add_argument("--smil_e_num_priors", type=str, default="64")
@@ -355,10 +355,10 @@ def _build_output_dir(
         )
     elif model_name_norm == "pam":
         model_label = "PAM"
-    elif model_name_norm == "pam_di_pam":
-        model_label = "PAM-DI-PAM"
-    elif model_name_norm in {"mlp_di_pam", "di_pam"}:
-        model_label = "MLP-DI-PAM"
+    elif model_name_norm == "pam_dipam":
+        model_label = "PAMDiPAM"
+    elif model_name_norm == "mlp_dipam":
+        model_label = "MLPDiPAM"
     elif model_name_norm == "smil_e":
         model_label = "SMILE"
     else:
