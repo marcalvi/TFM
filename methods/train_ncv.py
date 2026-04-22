@@ -145,8 +145,19 @@ def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
             "num_priors": hp_cfg["smil_e_num_priors"],
             "num_heads": hp_cfg["smil_e_num_heads"],
             "dropout": hp_cfg["smil_e_dropout"],
+            "classifier_hidden_dim": hp_cfg["classifier_hidden_dim"],
+        }
+    if model_name_l in {"meta_smil_e"}:
+        return {
+            "latent_dim": hp_cfg["smil_e_latent_dim"],
+            "num_priors": hp_cfg["smil_e_num_priors"],
+            "num_heads": hp_cfg["smil_e_num_heads"],
+            "dropout": hp_cfg["smil_e_dropout"],
             "alpha": hp_cfg["smil_e_alpha"],
             "beta": hp_cfg["smil_e_beta"],
+            "classifier_hidden_dim": hp_cfg["classifier_hidden_dim"],
+            "meta_inner_lr": hp_cfg["meta_inner_lr"],
+            "meta_val_fraction": hp_cfg["meta_val_fraction"],
         }
     if model_name_l in {"healnet"}:
         return {
@@ -163,7 +174,7 @@ def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
             "self_per_cross_attn": hp_cfg["healnet_self_per_cross_attn"],
         }
     raise ValueError(
-        f"Unsupported model '{model_name_l}'. Supported: mlp, pam, pam_dipam, mlp_dipam, smile, healnet"
+        f"Unsupported model '{model_name_l}'. Supported: mlp, pam, pam_dipam, mlp_dipam, smile, metasmile, healnet"
     )
 
 
@@ -340,7 +351,7 @@ def _log_selected_inner_models_to_wandb(
                 "selected_hp_name": candidate["hp_name"],
             }
         )
-        if model_name_l in {"healnet", "smil_e"}:
+        if model_name_l in {"healnet", "smil_e", "meta_smil_e"}:
             run_config.update(dict(candidate.get("hp_cfg", {})))
         inner_run = wandb.init(
             project=wandb_project,
@@ -370,7 +381,7 @@ def _log_selected_inner_models_to_wandb(
                         "best_inner_model/student_feature_loss": float(hrow["student_feature_loss"]),
                     }
                 )
-            elif model_name_l == "smil_e":
+            elif model_name_l == "meta_smil_e":
                 log_payload.update(
                     {
                         "best_inner_model/smil_meta_train_loss": float(hrow["smil_meta_train_loss"]),
@@ -861,7 +872,7 @@ def nested_cv(
                         "outer_refit_epochs": int(refit_epochs),
                     }
                 )
-                if model_name_l in {"healnet", "smil_e"}:
+                if model_name_l in {"healnet", "smil_e", "meta_smil_e"}:
                     run_config.update(dict(selected_hp_cfg))
                 outer_train_run = wandb.init(
                     project=wandb_project,
@@ -889,6 +900,16 @@ def nested_cv(
                                 "outer_train_model/student_survival_loss": float(hrow["student_survival_loss"]),
                                 "outer_train_model/student_repr_loss": float(hrow["student_repr_loss"]),
                                 "outer_train_model/student_feature_loss": float(hrow["student_feature_loss"]),
+                            }
+                        )
+                    elif model_name_l == "meta_smil_e":
+                        log_payload.update(
+                            {
+                                "outer_train_model/smil_meta_train_loss": float(hrow["smil_meta_train_loss"]),
+                                "outer_train_model/smil_meta_val_loss": float(hrow["smil_meta_val_loss"]),
+                                "outer_train_model/smil_meta_val_ce": float(hrow["smil_meta_val_ce"]),
+                                "outer_train_model/smil_align_fusion": float(hrow["smil_align_fusion"]),
+                                "outer_train_model/smil_align_hidden": float(hrow["smil_align_hidden"]),
                             }
                         )
 

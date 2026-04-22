@@ -23,6 +23,8 @@ def normalize_model_name(model_name):
         return "mlp_dipam"
     if compact in {"smile", "smilee", "smilextended"}:
         return "smil_e"
+    if compact in {"metasmile", "metasmilee", "metasmilextended"}:
+        return "meta_smil_e"
     if compact == "healnet":
         return "healnet"
     return name
@@ -175,6 +177,22 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"trloc{missing_location}"
         )
     if model_name in {"smil_e"}:
+        latent_str = str(cfg["smil_e_latent_dim"])
+        priors_str = str(cfg["smil_e_num_priors"])
+        heads_str = str(cfg["smil_e_num_heads"])
+        dropout_str = str(cfg["smil_e_dropout"]).replace(".", "p")
+        return (
+            f"lr{lr_str}_"
+            f"bs{bs_str}_"
+            f"lat{latent_str}_"
+            f"pri{priors_str}_"
+            f"heads{heads_str}_"
+            f"drop{dropout_str}_"
+            f"{training_suffix}"
+            f"trmiss{train_missing_pct}_"
+            f"trloc{missing_location}"
+        )
+    if model_name in {"meta_smil_e"}:
         latent_str = str(cfg["smil_e_latent_dim"])
         priors_str = str(cfg["smil_e_num_priors"])
         heads_str = str(cfg["smil_e_num_heads"])
@@ -379,6 +397,50 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
         smil_e_num_priors = parse_value_or_list(args.smil_e_num_priors, int)
         smil_e_num_heads = parse_value_or_list(args.smil_e_num_heads, int)
         smil_e_dropouts = parse_value_or_list(args.smil_e_dropout, float)
+
+        for bs, lr, weight_decay, latent_dim, num_priors, num_heads, dropout in product(
+            batch_sizes,
+            learning_rates,
+            weight_decays,
+            smil_e_latent_dims,
+            smil_e_num_priors,
+            smil_e_num_heads,
+            smil_e_dropouts,
+        ):
+            if int(latent_dim) % int(num_heads) != 0:
+                continue
+            cfg = {
+                "batch_size": int(bs),
+                "learning_rate": float(lr),
+                "weight_decay": float(weight_decay),
+                "smil_e_latent_dim": int(latent_dim),
+                "smil_e_num_priors": int(num_priors),
+                "smil_e_num_heads": int(num_heads),
+                "smil_e_dropout": float(dropout),
+                "classifier_hidden_dim": int(args.classifier_hidden_dim),
+            }
+            key = (
+                cfg["batch_size"],
+                cfg["learning_rate"],
+                cfg["weight_decay"],
+                cfg["smil_e_latent_dim"],
+                cfg["smil_e_num_priors"],
+                cfg["smil_e_num_heads"],
+                cfg["smil_e_dropout"],
+                cfg["classifier_hidden_dim"],
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            cfg["name"] = _format_hp_name(
+                cfg, train_missing_pct, missing_location, model_name=model_name
+            )
+            hp_configs.append(cfg)
+    if model_name in {"meta_smil_e"}:
+        smil_e_latent_dims = parse_value_or_list(args.smil_e_latent_dim, int)
+        smil_e_num_priors = parse_value_or_list(args.smil_e_num_priors, int)
+        smil_e_num_heads = parse_value_or_list(args.smil_e_num_heads, int)
+        smil_e_dropouts = parse_value_or_list(args.smil_e_dropout, float)
         smil_e_alphas = parse_value_or_list(args.smil_e_alpha, float)
         smil_e_betas = parse_value_or_list(args.smil_e_beta, float)
 
@@ -405,7 +467,10 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 "smil_e_dropout": float(dropout),
                 "smil_e_alpha": float(alpha),
                 "smil_e_beta": float(beta),
+                "classifier_hidden_dim": int(args.classifier_hidden_dim),
             }
+            cfg["meta_inner_lr"] = float(args.meta_inner_lr)
+            cfg["meta_val_fraction"] = float(args.meta_val_fraction)
             key = (
                 cfg["batch_size"],
                 cfg["learning_rate"],
@@ -416,6 +481,9 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 cfg["smil_e_dropout"],
                 cfg["smil_e_alpha"],
                 cfg["smil_e_beta"],
+                cfg["classifier_hidden_dim"],
+                cfg["meta_inner_lr"],
+                cfg["meta_val_fraction"],
             )
             if key in seen:
                 continue
@@ -551,12 +619,12 @@ def build_model(model_name, input_dims, model_kwargs):
         return PAMDiPAM(input_dims, **model_kwargs)
     if model_name in {"mlp_dipam"}:
         return MLPDiPAM(input_dims, **model_kwargs)
-    if model_name in {"smil_e"}:
+    if model_name in {"smil_e", "meta_smil_e"}:
         return SMILE(input_dims, **model_kwargs)
     if model_name in {"healnet"}:
         return HealNetBinaryWrapper(input_dims, **model_kwargs)
     raise ValueError(
-        f"Unsupported model '{model_name}'. Supported: mlp, pam, pam_dipam, mlp_dipam, smile, healnet"
+        f"Unsupported model '{model_name}'. Supported: mlp, pam, pam_dipam, mlp_dipam, smile, metasmile, healnet"
     )
 
 # -------------------------- 5. EVALUATION ----------------------------

@@ -231,7 +231,7 @@ class SMILE(nn.Module):
             encoded_modalities.append(h)
         return torch.stack(encoded_modalities, dim=1)
 
-    def reconstruct_missing_modalities(self, h_encoded, present_mask):
+    def reconstruct_missing_modalities(self, h_encoded, present_mask, meta_train=False):
         sigma_all, attended_present = self.reconstruction_net(h_encoded, present_mask)
         reconstructed = h_encoded.clone()
         missing_mask = ~present_mask
@@ -241,7 +241,12 @@ class SMILE(nn.Module):
             if not torch.any(modality_missing):
                 continue
             sigma = sigma_all[modality_missing, modality_idx, :].clamp_min(1e-6)
-            omega = torch.randn_like(sigma) * sigma + 1.0
+            # Match the original SMIL behavior: sample only during meta-train,
+            # use the mean at validation/test time.
+            if meta_train:
+                omega = torch.randn_like(sigma) * sigma + 1.0
+            else:
+                omega = torch.ones_like(sigma)
             priors_m = self.priors[modality_idx]
             reconstructed_vals = omega @ priors_m
             reconstructed[modality_missing, modality_idx, :] = reconstructed_vals
@@ -284,6 +289,7 @@ class SMILE(nn.Module):
             h_modalities, sigma_all, attended_present = self.reconstruct_missing_modalities(
                 h_encoded,
                 masks,
+                meta_train=meta_train,
             )
             add_noise = True
         else:
