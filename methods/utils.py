@@ -181,6 +181,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
         priors_str = str(cfg["smil_e_num_priors"])
         heads_str = str(cfg["smil_e_num_heads"])
         dropout_str = str(cfg["smil_e_dropout"]).replace(".", "p")
+        cls_hidden_str = str(cfg["classifier_hidden_dim"])
         return (
             f"lr{lr_str}_"
             f"bs{bs_str}_"
@@ -188,6 +189,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"pri{priors_str}_"
             f"heads{heads_str}_"
             f"drop{dropout_str}_"
+            f"clf{cls_hidden_str}_"
             f"{training_suffix}"
             f"trmiss{train_missing_pct}_"
             f"trloc{missing_location}"
@@ -199,6 +201,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
         dropout_str = str(cfg["smil_e_dropout"]).replace(".", "p")
         alpha_str = str(cfg["smil_e_alpha"]).replace(".", "p")
         beta_str = str(cfg["smil_e_beta"]).replace(".", "p")
+        cls_hidden_str = str(cfg["classifier_hidden_dim"])
         return (
             f"lr{lr_str}_"
             f"bs{bs_str}_"
@@ -208,6 +211,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"drop{dropout_str}_"
             f"alpha{alpha_str}_"
             f"beta{beta_str}_"
+            f"clf{cls_hidden_str}_"
             f"{training_suffix}"
             f"trmiss{train_missing_pct}_"
             f"trloc{missing_location}"
