@@ -83,7 +83,7 @@ RADIO_CSV="mmCRC_radiology_data.csv"
 # Clinical modality
 CLIN_NAME="clin"
 CLIN_CSV="mmCRC_clinical_data.csv"
-PATH_DROP_COLS="braf_mut_wt"
+CLIN_DROP_COLS="braf_mut_wt"
 CLIN_CATEGORICAL_COLS="had_adj_treat_post_primary_surgery, had_adj_treat_post_met_surgery, had_neoadjuvant_treatment, had_surgery_liver, had_surgery_other_mets,had_surgery_primary, met_treatment_mechanism_qmt, met_treatment_mechanism_aag, met_treatment_mechanism_ttantiegfr, met_treatment_mechanism_ttnonantiegfr, met_treatment_mechanism_imm, sex_male, sync_met_yes, msi_status_MSI, ras_mut_wt, met_tumor_site_liver_liver_limited, met_tumor_site_liver_liver_w_other, met_tumor_site_liver_other, primary_tumor_site_simple_Colon (unspecified), primary_tumor_site_simple_Left, primary_tumor_site_simple_Right"
 CLIN_CATEGORICAL_IMPUTATION_METHOD="knn_mode"
 CLIN_KNN_NEIGHBORS=5

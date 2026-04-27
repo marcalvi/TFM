@@ -28,7 +28,7 @@ def get_model_init_kwargs(model_name, model_kwargs=None):
         return {
             key: value
             for key, value in model_kwargs.items()
-            if key not in {"meta_learning", "meta_inner_lr", "meta_val_fraction", "meta_inner_steps"}
+            if key not in {"meta_inner_lr", "meta_val_fraction", "meta_inner_steps"}
         }
     return model_kwargs
 
@@ -155,7 +155,6 @@ def train_smil_e_with_meta_learning(
     """Train SMIL-E with a SMIL-style meta loop fully contained in inner-train."""
     min_best_epoch = min(5, int(epochs))
     model_kwargs = dict(model_kwargs or {})
-    model_kwargs.pop("meta_learning", None)
     inner_steps = int(model_kwargs.pop("meta_inner_steps", 1))
     inner_lr = float(model_kwargs.pop("meta_inner_lr", 1e-2))
     meta_val_fraction = float(model_kwargs.pop("meta_val_fraction", 0.2))
@@ -358,7 +357,6 @@ def train_smil_e_on_full_dataset_with_meta_learning(
 ):
     """Train SMILe on the full outer-train split with an internal meta split."""
     model_kwargs = dict(model_kwargs or {})
-    model_kwargs.pop("meta_learning", None)
     inner_steps = int(model_kwargs.pop("meta_inner_steps", 1))
     inner_lr = float(model_kwargs.pop("meta_inner_lr", 1e-3))
     meta_val_fraction = float(model_kwargs.pop("meta_val_fraction", 0.25))
@@ -536,7 +534,7 @@ def train_model_with_validation(
     model_kwargs = model_kwargs or {}
     model_name_l = normalize_model_name(model_name)
 
-    if model_name_l in {"smil_e"} and bool(model_kwargs.get("meta_learning", False)):
+    if model_name_l in {"smil_e"}:
         return train_smil_e_with_meta_learning(
             train_loader=train_loader,
             val_loader=val_loader,
@@ -787,7 +785,7 @@ def train_model_on_full_dataset(
     model_name_l = normalize_model_name(model_name)
     set_global_seed(train_seed, deterministic=True)
 
-    if model_name_l in {"smil_e"} and bool(model_kwargs.get("meta_learning", False)):
+    if model_name_l in {"smil_e"}:
         return train_smil_e_on_full_dataset_with_meta_learning(
             train_loader=train_loader,
             device=device,
