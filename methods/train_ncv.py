@@ -148,7 +148,6 @@ def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
             "classifier_hidden_dim": hp_cfg["classifier_hidden_dim"],
             "alpha": hp_cfg["smil_e_alpha"],
             "beta": hp_cfg["smil_e_beta"],
-            "meta_learning": bool(hp_cfg.get("meta_learning", False)),
             "meta_inner_lr": hp_cfg["meta_inner_lr"],
             "meta_val_fraction": hp_cfg["meta_val_fraction"],
         }
@@ -374,7 +373,7 @@ def _log_selected_inner_models_to_wandb(
                         "best_inner_model/student_feature_loss": float(hrow["student_feature_loss"]),
                     }
                 )
-            elif model_name_l == "smil_e" and bool(candidate.get("hp_cfg", {}).get("meta_learning", False)):
+            elif model_name_l == "smil_e":
                 log_payload.update(
                     {
                         "best_inner_model/smil_meta_train_loss": float(hrow["smil_meta_train_loss"]),
@@ -895,7 +894,7 @@ def nested_cv(
                                 "outer_train_model/student_feature_loss": float(hrow["student_feature_loss"]),
                             }
                         )
-                    elif model_name_l == "smil_e" and bool(selected_hp_cfg.get("meta_learning", False)):
+                    elif model_name_l == "smil_e":
                         log_payload.update(
                             {
                                 "outer_train_model/smil_meta_train_loss": float(hrow["smil_meta_train_loss"]),

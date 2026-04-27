@@ -182,8 +182,10 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
         heads_str = str(cfg["smil_e_num_heads"])
         dropout_str = str(cfg["smil_e_dropout"]).replace(".", "p")
         cls_hidden_str = str(cfg["classifier_hidden_dim"])
-        meta_learning = bool(cfg.get("meta_learning", False))
-        meta_flag = "1" if meta_learning else "0"
+        alpha_str = str(cfg["smil_e_alpha"]).replace(".", "p")
+        beta_str = str(cfg["smil_e_beta"]).replace(".", "p")
+        meta_lr_str = f"{float(cfg['meta_inner_lr']):.0e}"
+        meta_val_str = str(cfg["meta_val_fraction"]).replace(".", "p")
         name = (
             f"lr{lr_str}_"
             f"bs{bs_str}_"
@@ -192,22 +194,14 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"heads{heads_str}_"
             f"drop{dropout_str}_"
             f"clf{cls_hidden_str}_"
-            f"meta{meta_flag}_"
+            f"alpha{alpha_str}_"
+            f"beta{beta_str}_"
+            f"milr{meta_lr_str}_"
+            f"mvf{meta_val_str}_"
             f"{training_suffix}"
             f"trmiss{train_missing_pct}_"
             f"trloc{missing_location}"
         )
-        if meta_learning:
-            alpha_str = str(cfg["smil_e_alpha"]).replace(".", "p")
-            beta_str = str(cfg["smil_e_beta"]).replace(".", "p")
-            meta_lr_str = f"{float(cfg['meta_inner_lr']):.0e}"
-            meta_val_str = str(cfg["meta_val_fraction"]).replace(".", "p")
-            name += (
-                f"_alpha{alpha_str}_"
-                f"beta{beta_str}_"
-                f"milr{meta_lr_str}_"
-                f"mvf{meta_val_str}"
-            )
         return name
     if model_name in {"healnet"}:
         depth_str = str(cfg["healnet_depth"])
@@ -395,16 +389,12 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
         smil_e_num_heads = parse_value_or_list(args.smil_e_num_heads, int)
         smil_e_dropouts = parse_value_or_list(args.smil_e_dropout, float)
         classifier_hidden_dims = parse_value_or_list(args.classifier_hidden_dim, int)
-        meta_learning = bool(getattr(args, "meta_learning", False))
         smil_e_alphas = parse_value_or_list(args.smil_e_alpha, float)
         smil_e_betas = parse_value_or_list(args.smil_e_beta, float)
-        alpha_beta_options = (
-            list(product(smil_e_alphas, smil_e_betas))
-            if meta_learning
-            else [(float(smil_e_alphas[0]), float(smil_e_betas[0]))]
-        )
+        meta_inner_lrs = parse_value_or_list(args.meta_inner_lr, float)
+        meta_val_fractions = parse_value_or_list(args.meta_val_fraction, float)
 
-        for bs, lr, weight_decay, latent_dim, num_priors, num_heads, dropout, classifier_hidden_dim, alpha_beta in product(
+        for bs, lr, weight_decay, latent_dim, num_priors, num_heads, dropout, classifier_hidden_dim, alpha, beta, meta_inner_lr, meta_val_fraction in product(
             batch_sizes,
             learning_rates,
             weight_decays,
@@ -413,11 +403,13 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
             smil_e_num_heads,
             smil_e_dropouts,
             classifier_hidden_dims,
-            alpha_beta_options,
+            smil_e_alphas,
+            smil_e_betas,
+            meta_inner_lrs,
+            meta_val_fractions,
         ):
             if int(latent_dim) % int(num_heads) != 0:
                 continue
-            alpha, beta = alpha_beta
             cfg = {
                 "batch_size": int(bs),
                 "learning_rate": float(lr),
@@ -429,9 +421,8 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 "classifier_hidden_dim": int(classifier_hidden_dim),
                 "smil_e_alpha": float(alpha),
                 "smil_e_beta": float(beta),
-                "meta_learning": bool(meta_learning),
-                "meta_inner_lr": float(args.meta_inner_lr),
-                "meta_val_fraction": float(args.meta_val_fraction),
+                "meta_inner_lr": float(meta_inner_lr),
+                "meta_val_fraction": float(meta_val_fraction),
             }
             key = (
                 cfg["batch_size"],
@@ -442,11 +433,10 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 cfg["smil_e_num_heads"],
                 cfg["smil_e_dropout"],
                 cfg["classifier_hidden_dim"],
-                cfg["meta_learning"],
-                cfg["smil_e_alpha"] if cfg["meta_learning"] else None,
-                cfg["smil_e_beta"] if cfg["meta_learning"] else None,
-                cfg["meta_inner_lr"] if cfg["meta_learning"] else None,
-                cfg["meta_val_fraction"] if cfg["meta_learning"] else None,
+                cfg["smil_e_alpha"],
+                cfg["smil_e_beta"],
+                cfg["meta_inner_lr"],
+                cfg["meta_val_fraction"],
             )
             if key in seen:
                 continue
@@ -584,7 +574,7 @@ def build_model(model_name, input_dims, model_kwargs):
         return MLPDiPAM(input_dims, **model_kwargs)
     if model_name in {"smil_e"}:
         init_kwargs = dict(model_kwargs or {})
-        for key in {"meta_learning", "meta_inner_lr", "meta_val_fraction", "meta_inner_steps"}:
+        for key in {"meta_inner_lr", "meta_val_fraction", "meta_inner_steps"}:
             init_kwargs.pop(key, None)
         return SMILE(input_dims, **init_kwargs)
     if model_name in {"healnet"}:
