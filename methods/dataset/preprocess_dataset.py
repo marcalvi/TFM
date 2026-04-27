@@ -318,8 +318,31 @@ def load_endpoint_df(path, patient_id_col, endpoint_col):
             )
     if endpoint_df[patient_id_col].isna().any():
         raise ValueError(f"Endpoint CSV '{path}' has missing values in '{patient_id_col}'.")
-    if endpoint_df[endpoint_col].isna().any():
-        raise ValueError(f"Endpoint CSV '{path}' has missing values in '{endpoint_col}'.")
+
+    raw_labels = endpoint_df[endpoint_col]
+    coerced_labels = pd.to_numeric(raw_labels, errors="coerce")
+    invalid_label_mask = coerced_labels.isna()
+    if invalid_label_mask.any():
+        invalid_examples = (
+            endpoint_df.loc[invalid_label_mask, [patient_id_col, endpoint_col]]
+            .head(10)
+            .to_dict("records")
+        )
+        n_invalid = int(invalid_label_mask.sum())
+        print(
+            f"[endpoints] Dropping {n_invalid} rows with non-numeric or missing labels in "
+            f"'{endpoint_col}'. Examples: {invalid_examples}"
+        )
+        endpoint_df = endpoint_df.loc[~invalid_label_mask].copy()
+        coerced_labels = coerced_labels.loc[~invalid_label_mask].copy()
+
+    if endpoint_df.empty:
+        raise ValueError(
+            f"Endpoint CSV '{path}' has no valid rows left after filtering invalid labels "
+            f"in '{endpoint_col}'."
+        )
+
+    endpoint_df[endpoint_col] = coerced_labels.astype(np.float32)
     duplicated = endpoint_df[patient_id_col].duplicated(keep=False)
     if duplicated.any():
         preview = endpoint_df.loc[duplicated, patient_id_col].astype(str).head(10).tolist()
