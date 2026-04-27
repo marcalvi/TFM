@@ -871,7 +871,15 @@ def main(argv=None):
         )
         print("Missing values were found. Applying the configured imputation plan.")
         imputed_frames = OrderedDict()
+        modalities_with_missing = {
+            row["modality"]
+            for row in missing_summary
+            if int(row["total_missing_cells"]) > 0
+        }
         for modality_name, df in modality_frames.items():
+            if modality_name not in modalities_with_missing:
+                imputed_frames[modality_name] = df
+                continue
             imputed_frames[modality_name] = impute_modality_df(
                 df=df,
                 id_col=args.patient_id_col,

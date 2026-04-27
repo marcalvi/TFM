@@ -185,18 +185,18 @@ def impute_modality_df(
     feature_cols = [col for col in work_df.columns if col != id_col]
     categorical_cols = list(categorical_cols)
     numeric_cols = [col for col in feature_cols if col not in categorical_cols]
+    numeric_missing_cols = [col for col in numeric_cols if work_df[col].isna().any()]
+    categorical_missing_cols = [col for col in categorical_cols if work_df[col].isna().any()]
 
     validate_numeric_columns(work_df, numeric_cols, modality_name=modality_name)
 
-    if numeric_cols:
+    if numeric_missing_cols:
         if numeric_imputation == "mean":
-            for col in numeric_cols:
-                if work_df[col].isna().any():
-                    work_df[col] = work_df[col].fillna(float(work_df[col].mean()))
+            for col in numeric_missing_cols:
+                work_df[col] = work_df[col].fillna(float(work_df[col].mean()))
         elif numeric_imputation == "median":
-            for col in numeric_cols:
-                if work_df[col].isna().any():
-                    work_df[col] = work_df[col].fillna(float(work_df[col].median()))
+            for col in numeric_missing_cols:
+                work_df[col] = work_df[col].fillna(float(work_df[col].median()))
         elif numeric_imputation == "knn_mean":
             numeric_df = work_df[numeric_cols].copy()
             imputer = KNNImputer(n_neighbors=int(knn_neighbors))
@@ -209,11 +209,10 @@ def impute_modality_df(
         else:
             raise ValueError(f"Unsupported numeric imputation method: {numeric_imputation}")
 
-    if categorical_cols:
+    if categorical_missing_cols:
         if categorical_imputation == "column_mode":
-            for col in categorical_cols:
-                if work_df[col].isna().any():
-                    work_df[col] = work_df[col].fillna(mode_of_series(work_df[col]))
+            for col in categorical_missing_cols:
+                work_df[col] = work_df[col].fillna(mode_of_series(work_df[col]))
         elif categorical_imputation == "knn_mode":
             work_df = _knn_mode_impute(
                 work_df,
