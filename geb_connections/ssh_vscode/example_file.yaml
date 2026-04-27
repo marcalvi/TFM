@@ -1,0 +1,16 @@
+description: 'Functional test: open ports ssh VSCode'
+executable: /bin/bash
+args: ["-c", "/nfs/rwork/code/geb-examples/ssh_vscode/file.sh"]
+worker_type: 6000
+use_gpu: true
+max_cpus: 5
+max_memory_mb: 2880
+docker_image: harbor.vhio.net/geb-env-gpu:0.1.3
+openports: 
+    - external: 9999
+      internal: 22
+env:
+  MY_VAR1: "value1"
+  MY_VAR2: "value2"
+  PUBLIC_KEY: "password123"
+max_runtime_minutes: 100
