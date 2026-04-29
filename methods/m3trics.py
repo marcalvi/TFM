@@ -429,8 +429,17 @@ def _save_run_outputs(
     if metric_cols:
         summary = {}
         for col in metric_cols:
-            summary[f"{col}_mean"] = float(outer_df[col].mean())
-            summary[f"{col}_std"] = float(outer_df[col].std())
+            series = outer_df[col]
+            numeric_series = pd.to_numeric(series, errors="coerce")
+            if numeric_series.notna().any():
+                summary[f"{col}_mean"] = float(numeric_series.mean())
+                summary[f"{col}_std"] = float(numeric_series.std())
+            else:
+                unique_values = [str(v) for v in series.dropna().astype(str).unique()]
+                if len(unique_values) == 1:
+                    summary[col] = unique_values[0]
+                elif unique_values:
+                    summary[col] = "|".join(unique_values)
         pd.DataFrame([summary]).to_csv(os.path.join(odir, "outer_test_summary.csv"), index=False)
 
 
