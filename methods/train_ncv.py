@@ -417,6 +417,7 @@ def nested_cv(
     retrain_outer=True,
     early_stopping_patience=20,
     lr_scheduler_patience=5,
+    hp_selection_epsilon=0.02,
 ):
     wandb_active = bool(wandb_enabled and wandb is not None)
     if wandb_enabled and wandb is None:
@@ -495,7 +496,7 @@ def nested_cv(
             for name, df in dfs.items()
         }
 
-        # Train all HPs across all inner folds, then select one robust HP for the whole outer fold.
+        # Train all HPs across all inner folds, then select one HP for the whole outer fold.
         all_inner_candidates_by_hp = {}
         selected_inner_rows = []
         selected_inner_histories = []
@@ -678,7 +679,7 @@ def nested_cv(
         if not all_inner_candidates_by_hp:
             raise RuntimeError(f"No inner-fold candidates were trained for outer fold {outer_fold_idx}.")
 
-        robust_hp_rows = []
+        hp_selection_rows = []
         expected_inner_folds = int(inner_splits)
         for hp_cfg in hp_configs:
             hp_name = hp_cfg["name"]
@@ -697,9 +698,7 @@ def nested_cv(
             mean_auc = float(np.mean(aucs))
             std_auc = float(np.std(aucs))
             mean_logloss = float(np.mean(loglosses))
-            robust_score = float(mean_auc - (0.5 * std_auc))
-
-            robust_hp_rows.append(
+            hp_selection_rows.append(
                 {
                     "hp_name": hp_name,
                     "hp_cfg": hp_cfg,
@@ -707,20 +706,31 @@ def nested_cv(
                     "mean_auc": mean_auc,
                     "std_auc": std_auc,
                     "mean_logloss": mean_logloss,
-                    "robust_score": robust_score,
                 }
             )
 
-        best_hp_row = max(
-            robust_hp_rows,
-            key=lambda row: (float(row["robust_score"]), -float(row["mean_logloss"])),
+        epsilon = max(0.0, float(hp_selection_epsilon))
+        best_mean_auc = max(float(row["mean_auc"]) for row in hp_selection_rows)
+        tied_hp_rows = [
+            row
+            for row in hp_selection_rows
+            if float(row["mean_auc"]) >= (best_mean_auc - epsilon)
+        ]
+        best_hp_row = min(
+            tied_hp_rows,
+            key=lambda row: (
+                float(row["std_auc"]),
+                float(row["mean_logloss"]),
+                str(row["hp_name"]),
+            ),
         )
         selected_candidates = best_hp_row["candidates"]
 
         print(
-            f"  Selected robust hp across inner folds: {best_hp_row['hp_name']} "
-            f"(score={best_hp_row['robust_score']:.4f}, mean_AUC={best_hp_row['mean_auc']:.4f}, "
-            f"std_AUC={best_hp_row['std_auc']:.4f}, mean_LOGLOSS={best_hp_row['mean_logloss']:.4f})"
+            f"  Selected hp across inner folds: {best_hp_row['hp_name']} "
+            f"(mean_AUC={best_hp_row['mean_auc']:.4f}, std_AUC={best_hp_row['std_auc']:.4f}, "
+            f"mean_LOGLOSS={best_hp_row['mean_logloss']:.4f}, epsilon={epsilon:.4f}, "
+            f"best_mean_AUC={best_mean_auc:.4f}, tied_configs={len(tied_hp_rows)})"
         )
 
         for candidate in selected_candidates:
@@ -738,9 +748,10 @@ def nested_cv(
                     **candidate["hp_cfg"],
                     "val_best_AUC": float(candidate_metrics["AUC"]),
                     "val_best_LOGLOSS": float(candidate_metrics["LOGLOSS"]),
-                    "robust_selected_mean_AUC": float(best_hp_row["mean_auc"]),
-                    "robust_selected_std_AUC": float(best_hp_row["std_auc"]),
-                    "robust_selected_score": float(best_hp_row["robust_score"]),
+                    "selected_hp_mean_AUC": float(best_hp_row["mean_auc"]),
+                    "selected_hp_std_AUC": float(best_hp_row["std_auc"]),
+                    "hp_selection_epsilon": float(epsilon),
+                    "hp_selection_best_mean_AUC": float(best_mean_auc),
                 }
             )
             selected_inner_histories.append(candidate["history"])
@@ -975,8 +986,6 @@ def nested_cv(
                         "test_missing_location": eval_missing_location,
                         "test_missing_prop": eval_missing_prop,
                         "y_true": int(y_true_outer[patient_idx]),
-                        "ensemble_prob": float(y_prob_outer[patient_idx]),
-                        "ensemble_pred_label": int(y_prob_outer[patient_idx] >= 0.5),
                     }
                     logit_value = float(y_logits_outer[patient_idx])
                     prob_value = float(y_prob_outer[patient_idx])
@@ -1007,7 +1016,9 @@ def nested_cv(
                         "selected_inner_mean_AUC": float(np.mean([r["val_best_AUC"] for r in selected_inner_rows])),
                         "selected_inner_mean_LOGLOSS": float(np.mean([r["val_best_LOGLOSS"] for r in selected_inner_rows])),
                         "selected_inner_std_AUC": float(best_hp_row["std_auc"]),
-                        "selected_inner_robust_score": float(best_hp_row["robust_score"]),
+                        "hp_selection_epsilon": float(epsilon),
+                        "hp_selection_best_mean_AUC": float(best_mean_auc),
+                        "outer_test_metric_source": "outer_refit_model",
                         "outer_refit_epochs": int(refit_epochs),
                         "outer_test_LOGLOSS": float(outer_metrics["LOGLOSS"]),
                         "outer_test_AUC": float(outer_metrics["AUC"]),
@@ -1025,7 +1036,7 @@ def nested_cv(
                 torch.cuda.empty_cache()
         else:
             print(
-                f"  Outer test prediction will use the retained inner-fold ensemble "
+                f"  Outer test predictions will be saved for the retained inner-fold models "
                 f"for hp='{best_hp_row['hp_name']}'."
             )
 
@@ -1052,12 +1063,13 @@ def nested_cv(
                 model_logits = []
                 model_probs = []
                 model_details = []
+                model_outer_metrics = []
 
                 for candidate in selected_candidates:
                     bundle_path = candidate.get("bundle_path")
                     if not bundle_path:
                         raise RuntimeError(
-                            "Missing candidate bundle path for outer-test ensemble prediction."
+                            "Missing candidate bundle path for outer-test prediction."
                         )
 
                     loaded_bundle = _load_candidate_bundle(bundle_path, device=device)
@@ -1114,23 +1126,19 @@ def nested_cv(
                         ref_pids = list(pids_outer)
                     else:
                         if not np.array_equal(ref_y_true, y_true_outer):
-                            raise RuntimeError("Ensemble member predictions are misaligned on y_true.")
+                            raise RuntimeError("Retained inner-model predictions are misaligned on y_true.")
                         if ref_pids != list(pids_outer):
-                            raise RuntimeError("Ensemble member predictions are misaligned on patient IDs.")
+                            raise RuntimeError("Retained inner-model predictions are misaligned on patient IDs.")
 
                     model_logits.append(y_logits_outer)
                     model_probs.append(y_prob_outer)
                     model_details.append(pam_details_outer)
+                    model_outer_metrics.append(safe_binary_metrics(y_true_outer, y_prob_outer))
 
                     del loaded_bundle["model"]
                     gc.collect()
                     if device.type == "cuda":
                         torch.cuda.empty_cache()
-
-                stacked_probs = np.stack(model_probs, axis=0)
-                ensemble_prob = np.mean(stacked_probs, axis=0)
-                ensemble_pred_label = (ensemble_prob >= 0.5).astype(np.int32)
-                outer_metrics = safe_binary_metrics(ref_y_true, ensemble_prob)
 
                 per_patient_prediction_rows = []
                 for patient_idx, pid in enumerate(ref_pids):
@@ -1143,8 +1151,6 @@ def nested_cv(
                         "test_missing_location": eval_missing_location,
                         "test_missing_prop": eval_missing_prop,
                         "y_true": int(ref_y_true[patient_idx]),
-                        "ensemble_prob": float(ensemble_prob[patient_idx]),
-                        "ensemble_pred_label": int(ensemble_pred_label[patient_idx]),
                     }
 
                     for model_idx, (logits_arr, probs_arr, details_arr) in enumerate(
@@ -1167,6 +1173,12 @@ def nested_cv(
 
                 test_prediction_rows.extend(per_patient_prediction_rows)
 
+                metric_names = ["LOGLOSS", "AUC", "AUCPR", "ACC", "SEN", "SP", "MCC"]
+                mean_outer_metrics = {
+                    name: float(np.mean([float(metrics[name]) for metrics in model_outer_metrics]))
+                    for name in metric_names
+                }
+
                 outer_results.append(
                     {
                         "outer_fold": outer_fold_idx,
@@ -1178,15 +1190,17 @@ def nested_cv(
                         "selected_inner_mean_AUC": float(np.mean([r["val_best_AUC"] for r in selected_inner_rows])),
                         "selected_inner_mean_LOGLOSS": float(np.mean([r["val_best_LOGLOSS"] for r in selected_inner_rows])),
                         "selected_inner_std_AUC": float(best_hp_row["std_auc"]),
-                        "selected_inner_robust_score": float(best_hp_row["robust_score"]),
+                        "hp_selection_epsilon": float(epsilon),
+                        "hp_selection_best_mean_AUC": float(best_mean_auc),
+                        "outer_test_metric_source": "mean_retained_inner_models",
                         "outer_refit_epochs": np.nan,
-                        "outer_test_LOGLOSS": float(outer_metrics["LOGLOSS"]),
-                        "outer_test_AUC": float(outer_metrics["AUC"]),
-                        "outer_test_AUCPR": float(outer_metrics["AUCPR"]),
-                        "outer_test_ACC": float(outer_metrics["ACC"]),
-                        "outer_test_SEN": float(outer_metrics["SEN"]),
-                        "outer_test_SP": float(outer_metrics["SP"]),
-                        "outer_test_MCC": float(outer_metrics["MCC"]),
+                        "outer_test_LOGLOSS": float(mean_outer_metrics["LOGLOSS"]),
+                        "outer_test_AUC": float(mean_outer_metrics["AUC"]),
+                        "outer_test_AUCPR": float(mean_outer_metrics["AUCPR"]),
+                        "outer_test_ACC": float(mean_outer_metrics["ACC"]),
+                        "outer_test_SEN": float(mean_outer_metrics["SEN"]),
+                        "outer_test_SP": float(mean_outer_metrics["SP"]),
+                        "outer_test_MCC": float(mean_outer_metrics["MCC"]),
                     }
                 )
 
