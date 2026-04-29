@@ -9,7 +9,7 @@ set -euo pipefail
 
 # Osiris cluster setup (VHIO)
 source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-conda activate TFM
+conda activate TFM_5090
 
 # Local setup (macOS)
 # source /opt/miniconda3/etc/profile.d/conda.sh
@@ -112,7 +112,7 @@ TEST_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
 # "0.0,0.2,0.4,0.6,0.8"
 
 # Proposed seeds for reproducibility
-SEEDS="22,2002,4,18473,55602"
+SEEDS="18473,55602"
 
 # Missing pattern seed is fixed to ensure the same ablation patterns across seeds
 MISSING_PATTERN_SEED=2026
