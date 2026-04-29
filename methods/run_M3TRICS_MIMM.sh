@@ -97,10 +97,10 @@ RADIO_REPORT_CSV="radioreports_mimm.csv"
 # -----------------------------------------------------------------------------------------
 # 4. TRAINING CONFIGURATION
 # Select the models to run after preprocessing.
-# Available methods: ZI_MLP, KNN_MLP, VAE_MLP, pAM, PAMDiPAM, MLPDiPAM, HealNet, SMILe
+# Available methods: ZI_MLP, KNN_MLP, VAE_MLP, pAM, PAMDiPAM, HealNet, SMILe
 # -----------------------------------------------------------------------------------------
 
-RUN_MODELS="SMILe"
+RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, PAMDiPAM, HealNet, SMILe"
 RETRAIN_OUTER="false"
 HP_SELECTION_EPSILON="0.02"
 k=5
@@ -109,7 +109,6 @@ OUTER_SPLITS=${k}
 MISSING_LOCATION="global"
 TRAIN_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
 TEST_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
-# "0.0,0.2,0.4,0.6,0.8"
 
 # Proposed seeds for reproducibility
 SEEDS="18473,55602"
