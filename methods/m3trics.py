@@ -205,12 +205,13 @@ def build_training_arg_parser():
         type=_parse_bool_flag,
         required=True,
         help=(
-            "If true, refit one final model on the full outer-train split using the robustly selected HPs. "
-            "If false, keep the previous behavior: ensemble the retained inner-fold models on outer-test."
+            "If true, refit one final model on the full outer-train split using the selected HPs. "
+            "If false, keep the retained inner-fold models as independent predictors on outer-test."
         ),
     )
     parser.add_argument("--learning_rate", type=str, default="5e-5")
     parser.add_argument("--weight_decay", type=str, default="1e-4")
+    parser.add_argument("--hp_selection_epsilon", type=float, default=0.02)
     parser.add_argument("--early_stopping_patience", type=int, default=20)
     parser.add_argument("--lr_patience", type=int, default=5)
     parser.add_argument("--seeds", type=str, default="123")
@@ -585,6 +586,7 @@ def run_training_from_args(args):
                 print(f"Missing pattern seed: {int(args.missing_pattern_seed)}")
                 print(f"Best-epoch warmup: {best_epoch_warmup}")
                 print(f"Retrain outer train: {bool(args.retrain_outer)}")
+                print(f"HP selection epsilon: {float(args.hp_selection_epsilon):.4f}")
                 print(f"Output directory: {odir}")
                 print(f"Hyperparameter combinations to evaluate: {len(hp_configs)}")
                 print(f"Test missingness combinations to evaluate: {len(test_eval_setups)}")
@@ -601,6 +603,7 @@ def run_training_from_args(args):
                     "best_epoch_warmup": best_epoch_warmup,
                     "inner_splits": args.inner_splits,
                     "outer_splits": args.outer_splits,
+                    "hp_selection_epsilon": float(args.hp_selection_epsilon),
                     "train_missing_prop": float(train_missing_prop),
                     "missing_location": str(missing_location).lower(),
                     "missing_pattern_seed": int(args.missing_pattern_seed),
@@ -656,6 +659,7 @@ def run_training_from_args(args):
                     },
                     early_stopping_patience=int(args.early_stopping_patience),
                     lr_scheduler_patience=int(args.lr_patience),
+                    hp_selection_epsilon=float(args.hp_selection_epsilon),
                     radio_pooling_kwargs={
                         "hidden_dim": int(args.radio_attention_hidden_dim),
                         "dropout": float(args.radio_attention_dropout),
@@ -716,6 +720,8 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
         str(int(fixed_args.get("epochs", 80))),
         "--retrain_outer",
         str(bool(shared_args.retrain_outer)).lower(),
+        "--hp_selection_epsilon",
+        str(float(shared_args.hp_selection_epsilon)),
         "--seeds",
         str(shared_args.seeds),
         "--missing_pattern_seed",
@@ -775,6 +781,7 @@ def _run_selected_models(args, modality_configs):
     print(f"Inner splits: {args.inner_splits}")
     print(f"Outer splits: {args.outer_splits}")
     print(f"Retrain outer: {bool(args.retrain_outer)}")
+    print(f"HP selection epsilon: {float(args.hp_selection_epsilon):.4f}")
     print(f"Train missing prop: {args.train_missing_prop}")
     print(f"Test missing prop: {args.test_missing_prop}")
     print(f"Missing location: {args.missing_location}")
@@ -822,6 +829,7 @@ def build_preprocessing_arg_parser():
     parser.add_argument("--inner_splits", required=True, type=int)
     parser.add_argument("--outer_splits", required=True, type=int)
     parser.add_argument("--retrain_outer", required=True, type=_parse_bool_flag)
+    parser.add_argument("--hp_selection_epsilon", type=float, default=0.02)
     parser.add_argument("--missing_location", required=True, type=str)
     parser.add_argument("--train_missing_prop", required=True, type=str)
     parser.add_argument("--test_missing_prop", required=True, type=str)

@@ -102,6 +102,7 @@ RADIO_REPORT_CSV="radioreports_mimm.csv"
 
 RUN_MODELS="SMILe"
 RETRAIN_OUTER="false"
+HP_SELECTION_EPSILON="0.02"
 k=5
 INNER_SPLITS=${k}
 OUTER_SPLITS=${k}
@@ -168,6 +169,7 @@ M3TRICS_ARGS=(
   --inner_splits "${INNER_SPLITS}"
   --outer_splits "${OUTER_SPLITS}"
   --retrain_outer "${RETRAIN_OUTER}"
+  --hp_selection_epsilon "${HP_SELECTION_EPSILON}"
   --missing_location "${MISSING_LOCATION}"
   --train_missing_prop "${TRAIN_MISSING_PROP}"
   --test_missing_prop "${TEST_MISSING_PROP}"
