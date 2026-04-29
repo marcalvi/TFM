@@ -9,7 +9,7 @@ set -euo pipefail
 
 # Osiris cluster setup (VHIO)
 source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-conda activate TFM_5090
+conda activate TFM
 
 # Local setup (macOS)
 # source /opt/miniconda3/etc/profile.d/conda.sh
@@ -26,12 +26,12 @@ WANDB_MODE="online"
 # -----------------------------------------------------------------------------------------
 
 # Osiris cluster paths (VHIO)
-# PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
-# DATA_ROOT="/nfs/rnas/projects/M3BENCH/data/inputs"
+PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
+DATA_ROOT="/nfs/rnas/projects/M3TRICS/data/inputs"
 
 # Local paths (macOS)
-PROJECT_ROOT="/Users/marcalbesa/Desktop/TFM/git_exp/methods"
-DATA_ROOT="/Users/marcalbesa/Desktop/TFM/data"
+# PROJECT_ROOT="/Users/marcalbesa/Desktop/TFM/git_exp/methods"
+# DATA_ROOT="/Users/marcalbesa/Desktop/TFM/data"
 
 # -----------------------------------------------------------------------------------------
 # 2. DATASET AND ENDPOINT
@@ -98,14 +98,14 @@ BLOOD_CSV="mmCRC_blood_data.csv"
 # Available methods: ZI_MLP, KNN_MLP, VAE_MLP, pAM, PAMDiPAM, MLPDiPAM, HealNet, SMILe
 # -----------------------------------------------------------------------------------------
 
-RUN_MODELS="ZI_MLP,KNN_MLP,VAE_MLP,pAM,PAMDiPAM,MLPDiPAM,HealNet,SMILe"
+RUN_MODELS="KNN_MLP,VAE_MLP,pAM,PAMDiPAM,HealNet"
 RETRAIN_OUTER="false"
 k=5
 INNER_SPLITS=${k}
 OUTER_SPLITS=${k}
 MISSING_LOCATION="global"
-TRAIN_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
-TEST_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
+TRAIN_MISSING_PROP="0.0,0.2,0.4,0.6"
+TEST_MISSING_PROP="0.0,0.2,0.4,0.6"
 
 # Proposed seeds for reproducibility
 SEEDS="22,2002,4,18473,55602"
