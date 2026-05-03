@@ -3,7 +3,7 @@ import torch
 import pandas as pd
 import random
 from itertools import product
-from models import MultimodalMLP, PAM, PAMDiPAM, MLPDiPAM, SMILE, HealNetBinaryWrapper
+from models import MultimodalMLP, DiMMLP, PAM, PAMDiPAM, SMILE, HealNetBinaryWrapper
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import average_precision_score, roc_auc_score
 
@@ -19,8 +19,8 @@ def normalize_model_name(model_name):
         return "pam"
     if compact == "pamdipam":
         return "pam_dipam"
-    if compact == "mlpdipam":
-        return "mlp_dipam"
+    if compact == "dimmlp":
+        return "di_mmlp"
     if compact in {"smile", "smilee", "smilextended"}:
         return "smil_e"
     if compact in {"metasmile", "metasmilee", "metasmilextended"}:
@@ -160,7 +160,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"trmiss{train_missing_pct}_"
             f"trloc{missing_location}"
         )
-    if model_name in {"pam_dipam", "mlp_dipam"}:
+    if model_name in {"pam_dipam"}:
         dropout_str = str(cfg["pam_dropout"]).replace(".", "p")
         temp_str = str(cfg["pam_temperature"]).replace(".", "p")
         alpha_str = str(cfg["distill_alpha"]).replace(".", "p")
@@ -170,6 +170,28 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"bs{bs_str}_"
             f"drop{dropout_str}_"
             f"temp{temp_str}_"
+            f"a{alpha_str}_"
+            f"b{beta_str}_"
+            f"{training_suffix}"
+            f"trmiss{train_missing_pct}_"
+            f"trloc{missing_location}"
+        )
+    if model_name in {"di_mmlp"}:
+        fusion_str = str(cfg["fusion_hidden_dim"])
+        modality_layers_str = str(cfg["modality_hidden_layers"])
+        fusion_layers_str = str(cfg["fusion_hidden_layers"])
+        fusion_bn_str = "1" if bool(cfg.get("fusion_batchnorm", False)) else "0"
+        dropout_str = str(cfg["dropout"]).replace(".", "p")
+        alpha_str = str(cfg["distill_alpha"]).replace(".", "p")
+        beta_str = str(cfg["distill_beta"]).replace(".", "p")
+        return (
+            f"lr{lr_str}_"
+            f"bs{bs_str}_"
+            f"modL{modality_layers_str}_"
+            f"fusion{fusion_str}_"
+            f"fusionL{fusion_layers_str}_"
+            f"fusionBN{fusion_bn_str}_"
+            f"drop{dropout_str}_"
             f"a{alpha_str}_"
             f"b{beta_str}_"
             f"{training_suffix}"
@@ -299,7 +321,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 cfg, train_missing_pct, missing_location, model_name=model_name
             )
             hp_configs.append(cfg)
-    if model_name in {"pam_dipam", "mlp_dipam"}:
+    if model_name in {"pam_dipam"}:
         pam_dropouts = parse_value_or_list(args.pam_dropout, float)
         temperatures = parse_value_or_list(args.pam_temperature, float)
         distill_alphas = parse_value_or_list(args.distill_alpha, float)
@@ -329,6 +351,58 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 cfg["weight_decay"],
                 cfg["pam_dropout"],
                 cfg["pam_temperature"],
+                cfg["distill_alpha"],
+                cfg["distill_beta"],
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            cfg["name"] = _format_hp_name(
+                cfg, train_missing_pct, missing_location, model_name=model_name
+            )
+            hp_configs.append(cfg)
+    if model_name in {"di_mmlp"}:
+        modality_hidden_layers = parse_value_or_list(args.modality_hidden_layers, int)
+        fusion_hidden_dims = parse_value_or_list(args.fusion_hidden_dim, int)
+        fusion_hidden_layers = parse_value_or_list(args.fusion_hidden_layers, int)
+        fusion_batchnorm_values = parse_bool_value_or_list(args.fusion_batchnorm)
+        dropouts = parse_value_or_list(args.dropout, float)
+        distill_alphas = parse_value_or_list(args.distill_alpha, float)
+        distill_betas = parse_value_or_list(args.distill_beta, float)
+
+        for bs, lr, weight_decay, mod_layers, fusion_dim, fusion_layers, fusion_batchnorm, dropout, alpha, beta in product(
+            batch_sizes,
+            learning_rates,
+            weight_decays,
+            modality_hidden_layers,
+            fusion_hidden_dims,
+            fusion_hidden_layers,
+            fusion_batchnorm_values,
+            dropouts,
+            distill_alphas,
+            distill_betas,
+        ):
+            cfg = {
+                "batch_size": int(bs),
+                "learning_rate": float(lr),
+                "weight_decay": float(weight_decay),
+                "modality_hidden_layers": int(mod_layers),
+                "fusion_hidden_dim": int(fusion_dim),
+                "fusion_hidden_layers": int(fusion_layers),
+                "fusion_batchnorm": bool(fusion_batchnorm),
+                "dropout": float(dropout),
+                "distill_alpha": float(alpha),
+                "distill_beta": float(beta),
+            }
+            key = (
+                cfg["batch_size"],
+                cfg["learning_rate"],
+                cfg["weight_decay"],
+                cfg["modality_hidden_layers"],
+                cfg["fusion_hidden_dim"],
+                cfg["fusion_hidden_layers"],
+                cfg["fusion_batchnorm"],
+                cfg["dropout"],
                 cfg["distill_alpha"],
                 cfg["distill_beta"],
             )
@@ -566,12 +640,12 @@ def build_model(model_name, input_dims, model_kwargs):
     model_name = normalize_model_name(model_name)
     if model_name in {"mlp"}:
         return MultimodalMLP(input_dims, **model_kwargs)
+    if model_name in {"di_mmlp"}:
+        return DiMMLP(input_dims, **model_kwargs)
     if model_name in {"pam"}:
         return PAM(input_dims, **model_kwargs)
     if model_name in {"pam_dipam"}:
         return PAMDiPAM(input_dims, **model_kwargs)
-    if model_name in {"mlp_dipam"}:
-        return MLPDiPAM(input_dims, **model_kwargs)
     if model_name in {"smil_e"}:
         init_kwargs = dict(model_kwargs or {})
         for key in {"meta_inner_lr", "meta_val_fraction", "meta_inner_steps"}:
@@ -580,7 +654,7 @@ def build_model(model_name, input_dims, model_kwargs):
     if model_name in {"healnet"}:
         return HealNetBinaryWrapper(input_dims, **model_kwargs)
     raise ValueError(
-        f"Unsupported model '{model_name}'. Supported: mlp, pam, pam_dipam, mlp_dipam, smile, healnet"
+        f"Unsupported model '{model_name}'. Supported: mlp, di_mmlp, pam, pam_dipam, smile, healnet"
     )
 
 # -------------------------- 5. EVALUATION ----------------------------
