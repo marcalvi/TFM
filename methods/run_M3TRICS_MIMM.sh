@@ -111,7 +111,7 @@ TRAIN_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
 TEST_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
 
 # Proposed seeds for reproducibility
-SEEDS="18473,55602"
+SEEDS="22,2002,4,18473,55602"
 
 # Missing pattern seed is fixed to ensure the same ablation patterns across seeds
 MISSING_PATTERN_SEED=2026

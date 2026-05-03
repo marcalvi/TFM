@@ -1,0 +1,12 @@
+{"time":"2026-05-01T10:02:03.827747687+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-01T10:02:04.100176525+02:00","level":"INFO","msg":"stream: created new stream","id":"dwrbnb6a"}
+{"time":"2026-05-01T10:02:04.100229745+02:00","level":"INFO","msg":"handler: started","stream_id":"dwrbnb6a"}
+{"time":"2026-05-01T10:02:04.104215445+02:00","level":"INFO","msg":"stream: started","id":"dwrbnb6a"}
+{"time":"2026-05-01T10:02:04.104224935+02:00","level":"INFO","msg":"writer: started","stream_id":"dwrbnb6a"}
+{"time":"2026-05-01T10:02:04.104241505+02:00","level":"INFO","msg":"sender: started","stream_id":"dwrbnb6a"}
+{"time":"2026-05-01T10:02:05.663880899+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-01T10:02:05.890556159+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-01T10:02:05.892155445+02:00","level":"INFO","msg":"stream: closing","id":"dwrbnb6a"}
+{"time":"2026-05-01T10:02:05.892161315+02:00","level":"INFO","msg":"handler: closed","stream_id":"dwrbnb6a"}
+{"time":"2026-05-01T10:02:05.892661134+02:00","level":"INFO","msg":"sender: closed","stream_id":"dwrbnb6a"}
+{"time":"2026-05-01T10:02:05.892665604+02:00","level":"INFO","msg":"stream: closed","id":"dwrbnb6a"}
