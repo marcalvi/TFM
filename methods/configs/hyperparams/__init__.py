@@ -1,6 +1,6 @@
+from .di_mmlp import MODEL_CONFIG as DI_MMLP_CONFIG
 from .healnet import MODEL_CONFIG as HEALNET_CONFIG
 from .knn_mlp import MODEL_CONFIG as KNN_MLP_CONFIG
-from .mlp_dipam import MODEL_CONFIG as MLP_DIPAM_CONFIG
 from .pam import MODEL_CONFIG as PAM_CONFIG
 from .pam_dipam import MODEL_CONFIG as PAM_DIPAM_CONFIG
 from .smile import MODEL_CONFIG as SMILE_CONFIG
@@ -13,7 +13,7 @@ MODEL_CONFIGS = {
     "vae_mlp": VAE_MLP_CONFIG,
     "pam": PAM_CONFIG,
     "pam_dipam": PAM_DIPAM_CONFIG,
-    "mlp_dipam": MLP_DIPAM_CONFIG,
+    "di_mmlp": DI_MMLP_CONFIG,
     "healnet": HEALNET_CONFIG,
     "smile": SMILE_CONFIG,
 }
@@ -29,8 +29,9 @@ MODEL_NAME_ALIASES = {
     "p-am": "pam",
     "pam_dipam": "pam_dipam",
     "pamdipam": "pam_dipam",
-    "mlp_dipam": "mlp_dipam",
-    "mlpdipam": "mlp_dipam",
+    "di_mmlp": "di_mmlp",
+    "di-mmlp": "di_mmlp",
+    "dimmlp": "di_mmlp",
     "healnet": "healnet",
     "smile": "smile",
     "smilee": "smile",

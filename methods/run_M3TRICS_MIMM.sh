@@ -97,7 +97,7 @@ RADIO_REPORT_CSV="radioreports_mimm.csv"
 # -----------------------------------------------------------------------------------------
 # 4. TRAINING CONFIGURATION
 # Select the models to run after preprocessing.
-# Available methods: ZI_MLP, KNN_MLP, VAE_MLP, pAM, PAMDiPAM, HealNet, SMILe
+# Available methods: ZI_MLP, KNN_MLP, VAE_MLP, pAM, PAMDiPAM, Di-MMLP, HealNet, SMILe
 # -----------------------------------------------------------------------------------------
 
 RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, PAMDiPAM, HealNet, SMILe"

@@ -42,6 +42,9 @@ class MultimodalMLP(nn.Module):
         self.input_dims = list(input_dims)
         self.n_modalities = len(self.input_dims)
         self.use_mask = use_mask
+        self.fusion_hidden_layers = int(fusion_hidden_layers)
+        if self.fusion_hidden_layers < 1:
+            raise ValueError("fusion_hidden_layers must be >= 1")
 
         self.modality_blocks = nn.ModuleList(
             [
@@ -62,17 +65,20 @@ class MultimodalMLP(nn.Module):
         if self.use_mask:
             fusion_input_dim += self.n_modalities
 
-        fusion_layers = _build_hidden_stack(
-            input_dim=fusion_input_dim,
-            hidden_dim=fusion_hidden_dim,
-            n_hidden_layers=fusion_hidden_layers,
-            dropout_p=dropout_p,
-            use_batchnorm=bool(fusion_batchnorm),
-        )
-        fusion_layers.append(nn.Linear(fusion_hidden_dim, 1))
-        self.fusion = nn.Sequential(*fusion_layers)
+        self.fusion_linears = nn.ModuleList()
+        self.fusion_batchnorms = nn.ModuleList()
+        self.fusion_dropouts = nn.ModuleList()
+        in_dim = fusion_input_dim
+        for _ in range(self.fusion_hidden_layers):
+            self.fusion_linears.append(nn.Linear(in_dim, fusion_hidden_dim))
+            self.fusion_batchnorms.append(
+                nn.BatchNorm1d(fusion_hidden_dim) if bool(fusion_batchnorm) else nn.Identity()
+            )
+            self.fusion_dropouts.append(nn.Dropout(p=dropout_p))
+            in_dim = fusion_hidden_dim
+        self.fusion_output = nn.Linear(fusion_hidden_dim, 1)
 
-    def forward(self, Xs, present_mask=None):
+    def forward(self, Xs, present_mask=None, return_aux=False):
         if len(Xs) != self.n_modalities:
             raise ValueError(f"Expected {self.n_modalities} modalities, got {len(Xs)}")
 
@@ -95,4 +101,20 @@ class MultimodalMLP(nn.Module):
         if self.use_mask:
             fused = torch.cat([fused, present_mask.float()], dim=1)
 
-        return self.fusion(fused)
+        hidden = fused
+        final_pre_activation = None
+        for linear, batchnorm, dropout in zip(
+            self.fusion_linears,
+            self.fusion_batchnorms,
+            self.fusion_dropouts,
+        ):
+            hidden = linear(hidden)
+            hidden = batchnorm(hidden)
+            final_pre_activation = hidden
+            hidden = torch.relu(hidden)
+            hidden = dropout(hidden)
+
+        logits = self.fusion_output(hidden)
+        if return_aux:
+            return logits, final_pre_activation
+        return logits
