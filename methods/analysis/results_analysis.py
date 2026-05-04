@@ -101,13 +101,15 @@ def list_model_sources(results_root: Path, dataset_name: str, train_missing_loca
         if requested is not None and model_label not in requested:
             continue
 
-        candidate_dirs = [p for p in run_dir.iterdir() if p.is_dir() and not p.name.startswith('.')]
-        train_missing_dir = None
-        for candidate_dir in candidate_dirs:
-            probe = candidate_dir / dataset_name.upper() / 'TRAIN_MISSING' / train_missing_location.upper()
-            if probe.exists():
-                train_missing_dir = probe
-                break
+        preferred_train_missing_dir = run_dir / 'TRAIN_MISSING' / train_missing_location.upper()
+        train_missing_dir = preferred_train_missing_dir if preferred_train_missing_dir.exists() else None
+        if train_missing_dir is None:
+            candidate_dirs = [p for p in run_dir.iterdir() if p.is_dir() and not p.name.startswith('.')]
+            for candidate_dir in candidate_dirs:
+                probe = candidate_dir / dataset_name.upper() / 'TRAIN_MISSING' / train_missing_location.upper()
+                if probe.exists():
+                    train_missing_dir = probe
+                    break
         if train_missing_dir is None:
             continue
 
