@@ -8,7 +8,7 @@ MODEL_CONFIG = {
         "epochs": 100,
         "early_stopping_patience": 20,
         "lr_patience": 5,
-        "learning_rate": "1e-5",
+        "learning_rate": "1e-4,1e-5",
         "weight_decay": "1e-4",
         "healnet_num_freq_bands": "2",
         "healnet_cross_heads": "1",
@@ -18,7 +18,7 @@ MODEL_CONFIG = {
         "healnet_self_per_cross_attn": "0",
     },
     "hp_grid_args": {
-        "batch_size": "16,32",
+        "batch_size": "32",
         "healnet_depth": "1,2",
         "healnet_num_latents": LATENT_BOTTLENECK_DIMS,
         "healnet_latent_dim": LATENT_BOTTLENECK_DIMS,
