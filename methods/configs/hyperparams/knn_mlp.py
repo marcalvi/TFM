@@ -13,8 +13,8 @@ MODEL_CONFIG = {
     },
     "hp_grid_args": {
         "batch_size": "16,32",
-        "learning_rate": "1e-5,5e-5,1e-4",
-        "fusion_hidden_dim": "32,64",
+        "learning_rate": "1e-5,1e-4",
+        "fusion_hidden_dim": "16,32",
         "dropout": "0.2,0.1",
     },
 }

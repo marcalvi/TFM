@@ -99,7 +99,7 @@ BLOOD_CSV="mmCRC_blood_data.csv"
 # -----------------------------------------------------------------------------------------
 
 RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, PAMDiPAM, HealNet, SMILe"
-RETRAIN_OUTER="false"
+RETRAIN_OUTER="true"
 HP_SELECTION_EPSILON="0.02"
 k=5
 INNER_SPLITS=${k}
