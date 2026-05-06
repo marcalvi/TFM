@@ -1,8 +1,8 @@
 from .di_mmlp import MODEL_CONFIG as DI_MMLP_CONFIG
+from .dipam import MODEL_CONFIG as DIPAM_CONFIG
 from .healnet import MODEL_CONFIG as HEALNET_CONFIG
 from .knn_mlp import MODEL_CONFIG as KNN_MLP_CONFIG
 from .pam import MODEL_CONFIG as PAM_CONFIG
-from .pam_dipam import MODEL_CONFIG as PAM_DIPAM_CONFIG
 from .smile import MODEL_CONFIG as SMILE_CONFIG
 from .vae_mlp import MODEL_CONFIG as VAE_MLP_CONFIG
 from .zi_mlp import MODEL_CONFIG as ZI_MLP_CONFIG
@@ -12,7 +12,7 @@ MODEL_CONFIGS = {
     "knn_mlp": KNN_MLP_CONFIG,
     "vae_mlp": VAE_MLP_CONFIG,
     "pam": PAM_CONFIG,
-    "pam_dipam": PAM_DIPAM_CONFIG,
+    "dipam": DIPAM_CONFIG,
     "di_mmlp": DI_MMLP_CONFIG,
     "healnet": HEALNET_CONFIG,
     "smile": SMILE_CONFIG,
@@ -27,8 +27,8 @@ MODEL_NAME_ALIASES = {
     "vaemlp": "vae_mlp",
     "pam": "pam",
     "p-am": "pam",
-    "pam_dipam": "pam_dipam",
-    "pamdipam": "pam_dipam",
+    "dipam": "dipam",
+    "di-pam": "dipam",
     "di_mmlp": "di_mmlp",
     "di-mmlp": "di_mmlp",
     "dimmlp": "di_mmlp",
@@ -42,7 +42,7 @@ MODEL_NAME_ALIASES = {
 
 
 def list_available_model_configs():
-    return list(MODEL_CONFIGS.keys())
+    return [str(cfg.get("display_name", key)) for key, cfg in MODEL_CONFIGS.items()]
 
 
 def get_model_config(model_name):
@@ -50,5 +50,5 @@ def get_model_config(model_name):
     canonical_key = MODEL_NAME_ALIASES.get(key)
     if canonical_key is None:
         valid = ", ".join(list_available_model_configs())
-        raise ValueError(f"Unknown model config '{model_name}'. Available configs: {valid}")
+        raise ValueError(f"Unknown model config '{model_name}'. Available models: {valid}")
     return MODEL_CONFIGS[canonical_key]

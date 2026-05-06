@@ -14,7 +14,7 @@
     "--endpoint_col",
     "OS_9_label",
     "--run_models",
-    "PAMDiPAM",
+    "Di-PAM",
     "--inner_splits",
     "5",
     "--outer_splits",
