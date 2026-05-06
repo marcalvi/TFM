@@ -66,8 +66,8 @@ DISPLAY_NAME_MAP = {
     'PAM': 'pAM',
     'DIMMLP': 'Di-MMLP',
     'DI_MMLP': 'Di-MMLP',
-    'PAMDIPAM': 'PAMDiPAM',
-    'PAM_DIPAM': 'PAMDiPAM',
+    'DIPAM': 'Di-PAM',
+    'DI_PAM': 'Di-PAM',
     'HEALNET': 'HealNet',
     'SMILE': 'SMILe',
 }

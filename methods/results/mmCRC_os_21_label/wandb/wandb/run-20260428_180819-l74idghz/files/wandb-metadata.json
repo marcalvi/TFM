@@ -14,7 +14,7 @@
     "--endpoint_col",
     "os_21_label",
     "--run_models",
-    "KNN_MLP,VAE_MLP,pAM,PAMDiPAM,HealNet",
+    "KNN_MLP,VAE_MLP,pAM,Di-PAM,HealNet",
     "--inner_splits",
     "5",
     "--outer_splits",

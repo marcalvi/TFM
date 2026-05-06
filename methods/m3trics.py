@@ -185,7 +185,7 @@ def build_training_arg_parser():
         "--model",
         type=str,
         required=True,
-        choices=["MLP", "pAM", "PAMDiPAM", "DiMMLP", "Di-MMLP", "HealNet", "SMILe"],
+        choices=["MLP", "pAM", "Di-PAM", "DiPAM", "DiMMLP", "Di-MMLP", "HealNet", "SMILe"],
     )
     parser.add_argument(
         "--dataset_dir",
@@ -237,13 +237,13 @@ def build_training_arg_parser():
         "--distill_alpha",
         type=str,
         default="1.0",
-        help="Weight a for representation distillation loss in PAMDiPAM / DiMMLP. Supports scalar or comma-separated list.",
+        help="Weight a for representation distillation loss in Di-PAM / Di-MMLP. Supports scalar or comma-separated list.",
     )
     parser.add_argument(
         "--distill_beta",
         type=str,
         default="0.3",
-        help="Weight b for feature/logit distillation loss in PAMDiPAM / DiMMLP. Supports scalar or comma-separated list.",
+        help="Weight b for feature/logit distillation loss in Di-PAM / Di-MMLP. Supports scalar or comma-separated list.",
     )
     parser.add_argument("--smil_e_latent_dim", type=str, default="64")
     parser.add_argument("--smil_e_num_priors", type=str, default="64")

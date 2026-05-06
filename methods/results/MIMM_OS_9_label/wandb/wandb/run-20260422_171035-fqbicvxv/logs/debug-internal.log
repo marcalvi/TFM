@@ -5,8 +5,8 @@
 {"time":"2026-04-22T17:10:36.21927918+02:00","level":"INFO","msg":"writer: started","stream_id":"fqbicvxv"}
 {"time":"2026-04-22T17:10:36.21929719+02:00","level":"INFO","msg":"sender: started","stream_id":"fqbicvxv"}
 {"time":"2026-04-22T17:10:38.44438066+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
-{"time":"2026-04-22T17:10:47.862731274+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/PAMDiPAM_MIMM/fqbicvxv/file_stream","body":"{\"error\":\"An internal error occurred. Please contact support.\"}"}
-{"time":"2026-04-22T17:10:50.174712336+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/PAMDiPAM_MIMM/fqbicvxv/file_stream","body":"{\"error\":\"An internal error occurred. Please contact support.\"}"}
+{"time":"2026-04-22T17:10:47.862731274+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/Di-PAM_MIMM/fqbicvxv/file_stream","body":"{\"error\":\"An internal error occurred. Please contact support.\"}"}
+{"time":"2026-04-22T17:10:50.174712336+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/Di-PAM_MIMM/fqbicvxv/file_stream","body":"{\"error\":\"An internal error occurred. Please contact support.\"}"}
 {"time":"2026-04-22T17:10:55.567658144+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
 {"time":"2026-04-22T17:10:55.5688573+02:00","level":"INFO","msg":"stream: closing","id":"fqbicvxv"}
 {"time":"2026-04-22T17:10:55.5688631+02:00","level":"INFO","msg":"handler: closed","stream_id":"fqbicvxv"}

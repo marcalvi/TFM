@@ -11,10 +11,6 @@ set -euo pipefail
 source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
 conda activate TFM_5090
 
-# Local setup (macOS)
-# source /opt/miniconda3/etc/profile.d/conda.sh
-# conda activate TFM
-
 # Optional WandB configuration
 WANDB_LOGIN_KEY="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"
 WANDB_ENABLED="true"
@@ -28,10 +24,6 @@ WANDB_MODE="online"
 # Osiris cluster paths (VHIO)
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3TRICS/data/inputs"
-
-# Local paths (macOS)
-# PROJECT_ROOT="/Users/marcalbesa/Desktop/TFM/git_exp/methods"
-# DATA_ROOT="/Users/marcalbesa/Desktop/TFM/data"
 
 # -----------------------------------------------------------------------------------------
 # 2. DATASET AND ENDPOINT
@@ -95,10 +87,10 @@ BLOOD_CSV="mmCRC_blood_data.csv"
 # -----------------------------------------------------------------------------------------
 # 4. TRAINING CONFIGURATION
 # Select the models to run after preprocessing.
-# Available methods: ZI_MLP, KNN_MLP, VAE_MLP, pAM, PAMDiPAM, Di-MMLP, HealNet, SMILe
+# Available methods: ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, Di-MMLP, HealNet, SMILe
 # -----------------------------------------------------------------------------------------
 
-RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, PAMDiPAM, HealNet, SMILe"
+RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, Di-MMLP, HealNet, SMILe"
 RETRAIN_OUTER="true"
 HP_SELECTION_EPSILON="0.02"
 k=5

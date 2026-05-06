@@ -15,7 +15,7 @@ _wandb:
                     - --endpoint_col
                     - OS_9_label
                     - --run_models
-                    - PAMDiPAM
+                    - Di-PAM
                     - --inner_splits
                     - "5"
                     - --outer_splits
@@ -110,9 +110,9 @@ modality_pooling:
     value:
         radio: mean
 model:
-    value: PAMDiPAM
+    value: Di-PAM
 model_canonical:
-    value: pam_dipam
+    value: dipam
 outer_fold:
     value: 2
 outer_splits:

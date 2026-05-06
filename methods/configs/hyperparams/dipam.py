@@ -1,6 +1,6 @@
 MODEL_CONFIG = {
-    "display_name": "PAMDiPAM",
-    "model": "PAMDiPAM",
+    "display_name": "Di-PAM",
+    "model": "Di-PAM",
     "fixed_args": {
         "epochs": 80,
         "early_stopping_patience": 20,
