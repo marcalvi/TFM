@@ -15,7 +15,7 @@ _wandb:
                     - --endpoint_col
                     - os_21_label
                     - --run_models
-                    - ZI_MLP, KNN_MLP, VAE_MLP, pAM, PAMDiPAM, HealNet, SMILe
+                    - ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, HealNet, SMILe
                     - --inner_splits
                     - "5"
                     - --outer_splits
@@ -112,9 +112,9 @@ modalities:
         - path
         - radio
 model:
-    value: PAMDiPAM
+    value: Di-PAM
 model_canonical:
-    value: pam_dipam
+    value: dipam
 outer_fold:
     value: 3
 outer_splits:
