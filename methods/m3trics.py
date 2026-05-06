@@ -351,30 +351,11 @@ def _build_output_dir(
         "radio_report": "RADIO_REPORT",
         "blood": "BLOOD",
     }
-    model_name_norm = _normalize_model_name(model_name)
-    if model_name_norm == "mlp":
-        model_label = (
-            f"{str(imputation_method).strip().upper()}_"
-            f"{model_name_norm.upper().replace('_', '-')}"
-        )
-    elif model_name_norm == "pam":
-        model_label = "PAM"
-    elif model_name_norm == "pam_dipam":
-        model_label = "PAMDiPAM"
-    elif model_name_norm == "di_mmlp":
-        model_label = "Di-MMLP"
-    elif model_name_norm == "smil_e":
-        model_label = "SMILE"
-    else:
-        model_label = model_name_norm.upper().replace("_", "-")
-    dataset_label = str(dataset_name).strip().upper()
     key = str(missing_location).strip().lower()
     missing_modality_label = mapping.get(key, key.upper())
     missing_pct = str(float(train_missing_prop) * 100.0)
     return os.path.join(
         base_odir,
-        model_label,
-        dataset_label,
         "TRAIN_MISSING",
         missing_modality_label,
         missing_pct,
