@@ -92,11 +92,30 @@ def _stable_seed(*parts, base_seed=0):
     return (zlib.crc32(text.encode('utf-8')) + int(base_seed)) % (2**32 - 1)
 
 
-def list_model_sources(results_root: Path, dataset_name: str, train_missing_location: str, model_names=None):
+def _parse_retrain_flag_from_run_name(run_name: str):
+    raw = str(run_name).strip().lower()
+    marker = '_retrain'
+    if marker not in raw:
+        return None
+    suffix = raw.split(marker, 1)[1]
+    if suffix.startswith('true'):
+        return True
+    if suffix.startswith('false'):
+        return False
+    return None
+
+
+def list_model_sources(results_root: Path, dataset_name: str, train_missing_location: str, model_names=None, retrain_outer=None):
     sources = []
     requested = None if model_names is None else set(model_names)
 
     for run_dir in sorted(p for p in results_root.iterdir() if p.is_dir() and not p.name.startswith('.')):
+        run_retrain_flag = _parse_retrain_flag_from_run_name(run_dir.name)
+        if retrain_outer is not None:
+            if run_retrain_flag is None:
+                continue
+            if bool(run_retrain_flag) != bool(retrain_outer):
+                continue
         model_label = _normalize_model_label(run_dir.name)
         if requested is not None and model_label not in requested:
             continue
@@ -121,10 +140,16 @@ def list_model_sources(results_root: Path, dataset_name: str, train_missing_loca
     return sources
 
 
-def resolve_requested_model_names(results_root: Path, dataset_name: str, train_missing_location: str):
+def resolve_requested_model_names(results_root: Path, dataset_name: str, train_missing_location: str, retrain_outer=None):
     return sorted({
         source['model_name']
-        for source in list_model_sources(results_root, dataset_name, train_missing_location, model_names=None)
+        for source in list_model_sources(
+            results_root,
+            dataset_name,
+            train_missing_location,
+            model_names=None,
+            retrain_outer=retrain_outer,
+        )
     })
 
 
@@ -180,10 +205,16 @@ def normalize_prediction_df(pred_df: pd.DataFrame):
     return out.reset_index(drop=True)
 
 
-def load_all_test_predictions(results_root: Path, dataset_name: str, train_missing_location: str, model_names=None):
+def load_all_test_predictions(results_root: Path, dataset_name: str, train_missing_location: str, model_names=None, retrain_outer=None):
     frames = []
     missing_prediction_files = []
-    for source in list_model_sources(results_root, dataset_name, train_missing_location, model_names=model_names):
+    for source in list_model_sources(
+        results_root,
+        dataset_name,
+        train_missing_location,
+        model_names=model_names,
+        retrain_outer=retrain_outer,
+    ):
         found_any = False
         for path in sorted(source['train_missing_dir'].rglob('test_predictions.csv')):
             found_any = True
