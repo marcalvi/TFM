@@ -38,8 +38,8 @@ DATA_ROOT="/nfs/rnas/projects/M3TRICS/data/inputs"
 DATASET="1001P"
 DATASET_DIR="1001Prostate"
 PATIENT_ID_COL="patient"
-ENDPOINTS_CSV="endpoints_1001prostate.csv"
-ENDPOINT_COL="SET_ME"
+ENDPOINTS_CSV="endpoints_1001Prostate.csv"
+ENDPOINT_COL="OS_27_label"
 
 # Output directory
 RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}_${ENDPOINT_COL}"
@@ -113,7 +113,7 @@ MISSING_PATTERN_SEED=2026
 ENDPOINTS_PATH="${DATA_ROOT}/${DATASET_DIR}/${ENDPOINTS_CSV}"
 if [[ ! -f "${ENDPOINTS_PATH}" ]]; then
   echo "Missing endpoint CSV: ${ENDPOINTS_PATH}" >&2
-  echo "Create endpoints_1001prostate.csv first, then set ENDPOINT_COL to a real label column." >&2
+  echo "Create endpoints_1001Prostate.csv first, then set ENDPOINT_COL to a real label column." >&2
   exit 1
 fi
 

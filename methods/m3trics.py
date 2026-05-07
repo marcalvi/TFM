@@ -9,6 +9,7 @@ import pandas as pd
 
 from configs.hyperparams import get_model_config, list_available_model_configs
 from dataset.preprocess_dataset import (
+    align_complete_multimodal_cohort,
     impute_modality_df,
     load_configured_modality_frames,
     load_endpoint_df,
@@ -905,6 +906,22 @@ def main(argv=None):
         categorical_imputation_map=_parse_keyed_str_map(args.categorical_imputation, "--categorical_imputation"),
         knn_neighbors_map=_parse_keyed_str_map(args.knn_neighbors, "--knn_neighbors"),
     )
+    modality_frames, endpoint_df, cohort_alignment_summary = align_complete_multimodal_cohort(
+        modality_frames=modality_frames,
+        endpoint_df=endpoint_df,
+        patient_id_col=args.patient_id_col,
+    )
+    print("\n=== Cohort Alignment ===")
+    print(
+        f"Endpoint patients before intersection: {cohort_alignment_summary['endpoint_patients_before']} | "
+        f"after intersection: {cohort_alignment_summary['endpoint_patients_after']} | "
+        f"dropped: {cohort_alignment_summary['dropped_from_endpoints']}"
+    )
+    for row in cohort_alignment_summary["cohort_summary_by_modality"]:
+        print(
+            f"[{row['modality']}] patients_before={row['patients_before']} | "
+            f"missing_vs_endpoints={row['missing_vs_endpoints']}"
+        )
 
     missing_summary, total_missing = summarize_missing_values(
         modality_frames,
@@ -998,6 +1015,7 @@ def main(argv=None):
         "missing_summary": missing_summary,
         "duplicate_summary": duplicate_summary,
         "final_shapes": final_shapes,
+        "cohort_alignment_summary": cohort_alignment_summary,
     }
     save_processed_outputs(
         output_dir=output_dir,
