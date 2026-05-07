@@ -467,6 +467,59 @@ def load_configured_modality_frames(
     return modality_frames, modality_configs
 
 
+def align_complete_multimodal_cohort(modality_frames, endpoint_df, patient_id_col):
+    if endpoint_df.empty:
+        raise ValueError("Endpoint dataframe is empty before cohort alignment.")
+    if not modality_frames:
+        raise ValueError("At least one modality dataframe is required for cohort alignment.")
+
+    endpoint_ids = endpoint_df[patient_id_col].astype(str)
+    cohort_ids = set(endpoint_ids.tolist())
+    summary_rows = []
+
+    for modality_name, df in modality_frames.items():
+        modality_ids = set(df[patient_id_col].astype(str).tolist())
+        summary_rows.append(
+            {
+                "modality": modality_name,
+                "patients_before": int(len(modality_ids)),
+                "missing_vs_endpoints": int(len(cohort_ids - modality_ids)),
+            }
+        )
+        cohort_ids &= modality_ids
+
+    if not cohort_ids:
+        raise ValueError(
+            "The intersection between endpoints and all configured modalities is empty."
+        )
+
+    endpoint_order = endpoint_ids.drop_duplicates().tolist()
+    ordered_cohort_ids = [pid for pid in endpoint_order if pid in cohort_ids]
+
+    aligned_endpoint_df = filter_by_patients(
+        endpoint_df.assign(**{patient_id_col: endpoint_ids}),
+        ordered_cohort_ids,
+        id_col=patient_id_col,
+    )
+    aligned_modality_frames = OrderedDict()
+    for modality_name, df in modality_frames.items():
+        work_df = df.copy()
+        work_df[patient_id_col] = work_df[patient_id_col].astype(str)
+        aligned_modality_frames[modality_name] = filter_by_patients(
+            work_df,
+            ordered_cohort_ids,
+            id_col=patient_id_col,
+        )
+
+    cohort_summary = {
+        "endpoint_patients_before": int(endpoint_df[patient_id_col].nunique()),
+        "endpoint_patients_after": int(aligned_endpoint_df[patient_id_col].nunique()),
+        "dropped_from_endpoints": int(endpoint_df[patient_id_col].nunique() - aligned_endpoint_df[patient_id_col].nunique()),
+        "cohort_summary_by_modality": summary_rows,
+    }
+    return aligned_modality_frames, aligned_endpoint_df, cohort_summary
+
+
 def save_processed_outputs(output_dir, endpoint_df, patient_id_col, endpoint_col, modality_frames, summary_payload):
     os.makedirs(output_dir, exist_ok=True)
     endpoint_out = endpoint_df[[patient_id_col, endpoint_col]].copy()
