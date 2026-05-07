@@ -41,13 +41,13 @@
       "feature_columns": 10,
       "categorical_columns": 0,
       "numeric_columns": 10,
-      "total_missing_cells": 89,
+      "total_missing_cells": 58,
       "columns_with_missing": 4,
       "missing_by_column": {
-        "alkaline_phosphatase_measurement": 6,
-        "serum_psa_prostate_specific_antigen_level": 10,
-        "serum_lactate_dehydrogenase_measurement": 37,
-        "serum_testosterone_level": 36
+        "alkaline_phosphatase_measurement": 3,
+        "serum_psa_prostate_specific_antigen_level": 7,
+        "serum_lactate_dehydrogenase_measurement": 24,
+        "serum_testosterone_level": 24
       }
     },
     {
@@ -85,16 +85,38 @@
   ],
   "final_shapes": {
     "radio": {
-      "rows": 96,
+      "rows": 83,
       "columns": 2049
     },
     "blood": {
-      "rows": 117,
+      "rows": 83,
       "columns": 11
     },
     "radio_report": {
       "rows": 83,
       "columns": 4097
     }
+  },
+  "cohort_alignment_summary": {
+    "endpoint_patients_before": 117,
+    "endpoint_patients_after": 83,
+    "dropped_from_endpoints": 34,
+    "cohort_summary_by_modality": [
+      {
+        "modality": "radio",
+        "patients_before": 96,
+        "missing_vs_endpoints": 21
+      },
+      {
+        "modality": "blood",
+        "patients_before": 117,
+        "missing_vs_endpoints": 0
+      },
+      {
+        "modality": "radio_report",
+        "patients_before": 83,
+        "missing_vs_endpoints": 13
+      }
+    ]
   }
 }
