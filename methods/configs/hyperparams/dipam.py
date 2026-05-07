@@ -8,8 +8,8 @@ MODEL_CONFIG = {
         "weight_decay": "1e-4",
     },
     "hp_grid_args": {
-        "batch_size": "16,32",
-        "learning_rate": "1e-5,1e-4",
+        "batch_size": "32",
+        "learning_rate": "1e-4,5e-5,1e-5",
         "pam_dropout": "0.2,0.4",
         "pam_temperature": "1.0,2.0",
         "distill_alpha": "1.0,2.0",

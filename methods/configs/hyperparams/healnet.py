@@ -8,7 +8,7 @@ MODEL_CONFIG = {
         "epochs": 100,
         "early_stopping_patience": 20,
         "min_lr": "1e-6",
-        "learning_rate": "1e-4,1e-5",
+        "learning_rate": "1e-4,5e-5,1e-5",
         "weight_decay": "1e-4",
         "healnet_num_freq_bands": "2",
         "healnet_cross_heads": "1",
