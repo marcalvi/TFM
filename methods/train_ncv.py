@@ -398,6 +398,187 @@ def _log_selected_inner_models_to_wandb(
         inner_run.finish()
 
 
+def _evaluate_retained_inner_models_on_outer_test(
+    selected_candidates,
+    dfs_test_outer_raw,
+    inst_df_test_outer,
+    label_col,
+    patient_id_col,
+    modality_pooling,
+    radio_pooling_kwargs,
+    test_eval_setups,
+    modality_names,
+    outer_fold_idx,
+    train_missing_simulator,
+    predict_bypass_mask,
+    model_name_l,
+    outer_eval_batch_size,
+    imputation_method,
+    missing_pattern_seed,
+    device,
+    selected_inner_rows,
+    best_hp_row,
+    epsilon,
+    best_mean_auc,
+):
+    outer_results = []
+    test_prediction_rows = []
+
+    for eval_setup in test_eval_setups:
+        eval_simulator = eval_setup["simulator"]
+        eval_missing_location = str(eval_setup["missing_location"]).lower()
+        eval_missing_prop = float(eval_setup["missing_prop"])
+        apply_missing_eval = eval_missing_prop > 0.0
+
+        ref_y_true = None
+        ref_pids = None
+        model_logits = []
+        model_probs = []
+        model_details = []
+        model_outer_metrics = []
+
+        for candidate in selected_candidates:
+            bundle_path = candidate.get("bundle_path")
+            if not bundle_path:
+                raise RuntimeError(
+                    "Missing candidate bundle path for outer-test prediction."
+                )
+
+            loaded_bundle = _load_candidate_bundle(bundle_path, device=device)
+
+            dfs_outer_eval_prepared, _ = _prepare_patient_level_modalities(
+                dfs_test_outer_raw,
+                patient_id_col=patient_id_col,
+                modality_pooling=modality_pooling,
+                fit_attention_poolers=False,
+                fitted_poolers=loaded_bundle["modality_poolers"],
+                radio_pooling_kwargs=radio_pooling_kwargs,
+                labels_df=None,
+                label_col=None,
+            )
+            dfs_outer_eval_scaled = _transform_modalities_with_fitted_scalers(
+                dfs_outer_eval_prepared,
+                loaded_bundle["scalers"],
+                patient_id_col=patient_id_col,
+            )
+            outer_eval_base = MultimodalBaseDataset(
+                dfs=dfs_outer_eval_scaled,
+                label_df=inst_df_test_outer,
+                label_col=label_col,
+                id_col=patient_id_col,
+            )
+            outer_eval_ds = MultimodalDatasetWithMissing(
+                base_dataset=outer_eval_base,
+                simulator=eval_simulator,
+                apply_missing=apply_missing_eval,
+                imputation_method=imputation_method,
+                missing_pattern_seed=missing_pattern_seed,
+                prefit_imputer=loaded_bundle["imputer"],
+                imputer_kwargs=None,
+            )
+            outer_eval_loader = DataLoader(
+                outer_eval_ds,
+                batch_size=outer_eval_batch_size,
+                shuffle=False,
+                collate_fn=multimodal_collate,
+                drop_last=False,
+            )
+
+            y_true_outer, y_logits_outer, y_prob_outer, pids_outer, pam_details_outer = _predict_model_probabilities(
+                model=loaded_bundle["model"],
+                data_loader=outer_eval_loader,
+                device=device,
+                bypass_mask=predict_bypass_mask,
+                collect_pam_details=model_name_l in {"pam", "dipam"},
+                model_name=model_name_l,
+            )
+
+            if ref_y_true is None:
+                ref_y_true = y_true_outer
+                ref_pids = list(pids_outer)
+            else:
+                if not np.array_equal(ref_y_true, y_true_outer):
+                    raise RuntimeError("Retained inner-model predictions are misaligned on y_true.")
+                if ref_pids != list(pids_outer):
+                    raise RuntimeError("Retained inner-model predictions are misaligned on patient IDs.")
+
+            model_logits.append(y_logits_outer)
+            model_probs.append(y_prob_outer)
+            model_details.append(pam_details_outer)
+            model_outer_metrics.append(safe_binary_metrics(y_true_outer, y_prob_outer))
+
+            del loaded_bundle["model"]
+            gc.collect()
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
+
+        per_patient_prediction_rows = []
+        for patient_idx, pid in enumerate(ref_pids):
+            row = {
+                "outer_fold": outer_fold_idx,
+                "outer_eval_target": "test_outer",
+                "patient": pid,
+                "train_missing_location": str(getattr(train_missing_simulator, "missing_location", "global")).lower(),
+                "train_missing_prop": float(getattr(train_missing_simulator, "missing_prop", 0.0)),
+                "test_missing_location": eval_missing_location,
+                "test_missing_prop": eval_missing_prop,
+                "y_true": int(ref_y_true[patient_idx]),
+            }
+
+            for model_idx, (logits_arr, probs_arr, details_arr) in enumerate(
+                zip(model_logits, model_probs, model_details),
+                1,
+            ):
+                row[f"inner_model_{model_idx}_logit"] = float(logits_arr[patient_idx])
+                row[f"inner_model_{model_idx}_prob"] = float(probs_arr[patient_idx])
+                row[f"inner_model_{model_idx}_pred_label"] = int(logits_arr[patient_idx] >= 0.0)
+                if model_name_l in {"pam", "dipam"} and details_arr is not None:
+                    for modality_idx, modality_name in enumerate(modality_names):
+                        row[f"inner_model_{model_idx}_{modality_name}_alpha"] = float(
+                            details_arr["alpha"][patient_idx, modality_idx]
+                        )
+                        row[f"inner_model_{model_idx}_{modality_name}_R"] = float(
+                            details_arr["R"][patient_idx, modality_idx]
+                        )
+
+            per_patient_prediction_rows.append(row)
+
+        test_prediction_rows.extend(per_patient_prediction_rows)
+
+        metric_names = ["LOGLOSS", "AUC", "AUCPR", "ACC", "SEN", "SP", "MCC"]
+        mean_outer_metrics = {
+            name: float(np.mean([float(metrics[name]) for metrics in model_outer_metrics]))
+            for name in metric_names
+        }
+
+        outer_results.append(
+            {
+                "outer_fold": outer_fold_idx,
+                "outer_eval_target": "test_outer",
+                "eval_missing_location": eval_missing_location,
+                "eval_missing_prop": eval_missing_prop,
+                "inner_models_count": int(len(selected_candidates)),
+                "selected_inner_hp_names": str(best_hp_row["hp_name"]),
+                "selected_inner_mean_AUC": float(np.mean([r["val_best_AUC"] for r in selected_inner_rows])),
+                "selected_inner_mean_LOGLOSS": float(np.mean([r["val_best_LOGLOSS"] for r in selected_inner_rows])),
+                "selected_inner_std_AUC": float(best_hp_row["std_auc"]),
+                "hp_selection_epsilon": float(epsilon),
+                "hp_selection_best_mean_AUC": float(best_mean_auc),
+                "outer_test_metric_source": "mean_retained_inner_models",
+                "outer_refit_epochs": np.nan,
+                "outer_test_LOGLOSS": float(mean_outer_metrics["LOGLOSS"]),
+                "outer_test_AUC": float(mean_outer_metrics["AUC"]),
+                "outer_test_AUCPR": float(mean_outer_metrics["AUCPR"]),
+                "outer_test_ACC": float(mean_outer_metrics["ACC"]),
+                "outer_test_SEN": float(mean_outer_metrics["SEN"]),
+                "outer_test_SP": float(mean_outer_metrics["SP"]),
+                "outer_test_MCC": float(mean_outer_metrics["MCC"]),
+            }
+        )
+
+    return outer_results, test_prediction_rows
+
+
 # --------------------------- NESTED CV FUNCTION -----------------------------
 
 # Main nested cross-validation function
@@ -425,6 +606,7 @@ def nested_cv(
     modality_pooling=None,
     candidate_model_dir=None,
     retrain_outer=True,
+    save_inner=False,
     early_stopping_patience=20,
     lr_scheduler_patience=5,
     hp_selection_epsilon=0.02,
@@ -482,6 +664,8 @@ def nested_cv(
     outer_results = []
     split_rows = []
     test_prediction_rows = []
+    saved_inner_outer_results = []
+    saved_inner_test_prediction_rows = []
 
     for outer_fold_idx, (train_outer_idx, test_outer_idx) in enumerate(outer_cv.split(patients, y), 1):
         print(f"\nOuter fold {outer_fold_idx}")
@@ -651,7 +835,7 @@ def nested_cv(
                     )
 
                 bundle_path = None
-                if (not bool(retrain_outer)) and candidate_model_dir:
+                if (((not bool(retrain_outer)) or bool(save_inner)) and candidate_model_dir):
                     bundle_path = _candidate_bundle_path(
                         candidate_model_dir=candidate_model_dir,
                         outer_fold_idx=outer_fold_idx,
@@ -1044,6 +1228,37 @@ def nested_cv(
             gc.collect()
             if device.type == "cuda":
                 torch.cuda.empty_cache()
+
+            if bool(save_inner):
+                inner_outer_results, inner_test_prediction_rows = _evaluate_retained_inner_models_on_outer_test(
+                    selected_candidates=selected_candidates,
+                    dfs_test_outer_raw=dfs_test_outer_raw,
+                    inst_df_test_outer=inst_df_test_outer,
+                    label_col=label_col,
+                    patient_id_col=patient_id_col,
+                    modality_pooling=modality_pooling,
+                    radio_pooling_kwargs=radio_pooling_kwargs,
+                    test_eval_setups=test_eval_setups,
+                    modality_names=modality_names,
+                    outer_fold_idx=outer_fold_idx,
+                    train_missing_simulator=train_missing_simulator,
+                    predict_bypass_mask=predict_bypass_mask,
+                    model_name_l=model_name_l,
+                    outer_eval_batch_size=outer_eval_batch_size,
+                    imputation_method=imputation_method,
+                    missing_pattern_seed=missing_pattern_seed,
+                    device=device,
+                    selected_inner_rows=selected_inner_rows,
+                    best_hp_row=best_hp_row,
+                    epsilon=epsilon,
+                    best_mean_auc=best_mean_auc,
+                )
+                saved_inner_outer_results.extend(inner_outer_results)
+                saved_inner_test_prediction_rows.extend(inner_test_prediction_rows)
+
+            if candidate_model_dir and bool(save_inner):
+                outer_fold_cache_dir = os.path.join(candidate_model_dir, f"outer_fold_{int(outer_fold_idx)}")
+                shutil.rmtree(outer_fold_cache_dir, ignore_errors=True)
         else:
             print(
                 f"  Outer test predictions will be saved for the retained inner-fold models "
@@ -1062,161 +1277,42 @@ def nested_cv(
                     model_name_l=model_name_l,
                 )
 
-            for eval_setup in test_eval_setups:
-                eval_simulator = eval_setup["simulator"]
-                eval_missing_location = str(eval_setup["missing_location"]).lower()
-                eval_missing_prop = float(eval_setup["missing_prop"])
-                apply_missing_eval = eval_missing_prop > 0.0
-
-                ref_y_true = None
-                ref_pids = None
-                model_logits = []
-                model_probs = []
-                model_details = []
-                model_outer_metrics = []
-
-                for candidate in selected_candidates:
-                    bundle_path = candidate.get("bundle_path")
-                    if not bundle_path:
-                        raise RuntimeError(
-                            "Missing candidate bundle path for outer-test prediction."
-                        )
-
-                    loaded_bundle = _load_candidate_bundle(bundle_path, device=device)
-
-                    dfs_outer_eval_prepared, _ = _prepare_patient_level_modalities(
-                        dfs_test_outer_raw,
-                        patient_id_col=patient_id_col,
-                        modality_pooling=modality_pooling,
-                        fit_attention_poolers=False,
-                        fitted_poolers=loaded_bundle["modality_poolers"],
-                        radio_pooling_kwargs=radio_pooling_kwargs,
-                        labels_df=None,
-                        label_col=None,
-                    )
-                    dfs_outer_eval_scaled = _transform_modalities_with_fitted_scalers(
-                        dfs_outer_eval_prepared,
-                        loaded_bundle["scalers"],
-                        patient_id_col=patient_id_col,
-                    )
-                    outer_eval_base = MultimodalBaseDataset(
-                        dfs=dfs_outer_eval_scaled,
-                        label_df=inst_df_test_outer,
-                        label_col=label_col,
-                        id_col=patient_id_col,
-                    )
-                    outer_eval_ds = MultimodalDatasetWithMissing(
-                        base_dataset=outer_eval_base,
-                        simulator=eval_simulator,
-                        apply_missing=apply_missing_eval,
-                        imputation_method=imputation_method,
-                        missing_pattern_seed=missing_pattern_seed,
-                        prefit_imputer=loaded_bundle["imputer"],
-                        imputer_kwargs=imputer_kwargs,
-                    )
-                    outer_eval_loader = DataLoader(
-                        outer_eval_ds,
-                        batch_size=outer_eval_batch_size,
-                        shuffle=False,
-                        collate_fn=multimodal_collate,
-                        drop_last=False,
-                    )
-
-                    y_true_outer, y_logits_outer, y_prob_outer, pids_outer, pam_details_outer = _predict_model_probabilities(
-                        model=loaded_bundle["model"],
-                        data_loader=outer_eval_loader,
-                        device=device,
-                        bypass_mask=predict_bypass_mask,
-                        collect_pam_details=model_name_l in {"pam", "dipam"},
-                        model_name=model_name_l,
-                    )
-
-                    if ref_y_true is None:
-                        ref_y_true = y_true_outer
-                        ref_pids = list(pids_outer)
-                    else:
-                        if not np.array_equal(ref_y_true, y_true_outer):
-                            raise RuntimeError("Retained inner-model predictions are misaligned on y_true.")
-                        if ref_pids != list(pids_outer):
-                            raise RuntimeError("Retained inner-model predictions are misaligned on patient IDs.")
-
-                    model_logits.append(y_logits_outer)
-                    model_probs.append(y_prob_outer)
-                    model_details.append(pam_details_outer)
-                    model_outer_metrics.append(safe_binary_metrics(y_true_outer, y_prob_outer))
-
-                    del loaded_bundle["model"]
-                    gc.collect()
-                    if device.type == "cuda":
-                        torch.cuda.empty_cache()
-
-                per_patient_prediction_rows = []
-                for patient_idx, pid in enumerate(ref_pids):
-                    row = {
-                        "outer_fold": outer_fold_idx,
-                        "outer_eval_target": "test_outer",
-                        "patient": pid,
-                        "train_missing_location": str(getattr(train_missing_simulator, "missing_location", "global")).lower(),
-                        "train_missing_prop": float(getattr(train_missing_simulator, "missing_prop", 0.0)),
-                        "test_missing_location": eval_missing_location,
-                        "test_missing_prop": eval_missing_prop,
-                        "y_true": int(ref_y_true[patient_idx]),
-                    }
-
-                    for model_idx, (logits_arr, probs_arr, details_arr) in enumerate(
-                        zip(model_logits, model_probs, model_details),
-                        1,
-                    ):
-                        row[f"inner_model_{model_idx}_logit"] = float(logits_arr[patient_idx])
-                        row[f"inner_model_{model_idx}_prob"] = float(probs_arr[patient_idx])
-                        row[f"inner_model_{model_idx}_pred_label"] = int(logits_arr[patient_idx] >= 0.0)
-                        if model_name_l in {"pam", "dipam"} and details_arr is not None:
-                            for modality_idx, modality_name in enumerate(modality_names):
-                                row[f"inner_model_{model_idx}_{modality_name}_alpha"] = float(
-                                    details_arr["alpha"][patient_idx, modality_idx]
-                                )
-                                row[f"inner_model_{model_idx}_{modality_name}_R"] = float(
-                                    details_arr["R"][patient_idx, modality_idx]
-                                )
-
-                    per_patient_prediction_rows.append(row)
-
-                test_prediction_rows.extend(per_patient_prediction_rows)
-
-                metric_names = ["LOGLOSS", "AUC", "AUCPR", "ACC", "SEN", "SP", "MCC"]
-                mean_outer_metrics = {
-                    name: float(np.mean([float(metrics[name]) for metrics in model_outer_metrics]))
-                    for name in metric_names
-                }
-
-                outer_results.append(
-                    {
-                        "outer_fold": outer_fold_idx,
-                        "outer_eval_target": "test_outer",
-                        "eval_missing_location": eval_missing_location,
-                        "eval_missing_prop": eval_missing_prop,
-                        "inner_models_count": int(len(selected_candidates)),
-                        "selected_inner_hp_names": str(best_hp_row["hp_name"]),
-                        "selected_inner_mean_AUC": float(np.mean([r["val_best_AUC"] for r in selected_inner_rows])),
-                        "selected_inner_mean_LOGLOSS": float(np.mean([r["val_best_LOGLOSS"] for r in selected_inner_rows])),
-                        "selected_inner_std_AUC": float(best_hp_row["std_auc"]),
-                        "hp_selection_epsilon": float(epsilon),
-                        "hp_selection_best_mean_AUC": float(best_mean_auc),
-                        "outer_test_metric_source": "mean_retained_inner_models",
-                        "outer_refit_epochs": np.nan,
-                        "outer_test_LOGLOSS": float(mean_outer_metrics["LOGLOSS"]),
-                        "outer_test_AUC": float(mean_outer_metrics["AUC"]),
-                        "outer_test_AUCPR": float(mean_outer_metrics["AUCPR"]),
-                        "outer_test_ACC": float(mean_outer_metrics["ACC"]),
-                        "outer_test_SEN": float(mean_outer_metrics["SEN"]),
-                        "outer_test_SP": float(mean_outer_metrics["SP"]),
-                        "outer_test_MCC": float(mean_outer_metrics["MCC"]),
-                    }
-                )
+            inner_outer_results, inner_test_prediction_rows = _evaluate_retained_inner_models_on_outer_test(
+                selected_candidates=selected_candidates,
+                dfs_test_outer_raw=dfs_test_outer_raw,
+                inst_df_test_outer=inst_df_test_outer,
+                label_col=label_col,
+                patient_id_col=patient_id_col,
+                modality_pooling=modality_pooling,
+                radio_pooling_kwargs=radio_pooling_kwargs,
+                test_eval_setups=test_eval_setups,
+                modality_names=modality_names,
+                outer_fold_idx=outer_fold_idx,
+                train_missing_simulator=train_missing_simulator,
+                predict_bypass_mask=predict_bypass_mask,
+                model_name_l=model_name_l,
+                outer_eval_batch_size=outer_eval_batch_size,
+                imputation_method=imputation_method,
+                missing_pattern_seed=missing_pattern_seed,
+                device=device,
+                selected_inner_rows=selected_inner_rows,
+                best_hp_row=best_hp_row,
+                epsilon=epsilon,
+                best_mean_auc=best_mean_auc,
+            )
+            outer_results.extend(inner_outer_results)
+            test_prediction_rows.extend(inner_test_prediction_rows)
 
             if candidate_model_dir:
                 outer_fold_cache_dir = os.path.join(candidate_model_dir, f"outer_fold_{int(outer_fold_idx)}")
                 shutil.rmtree(outer_fold_cache_dir, ignore_errors=True)
+
+    auxiliary_outputs = None
+    if bool(retrain_outer) and bool(save_inner):
+        auxiliary_outputs = {
+            "outer_df": pd.DataFrame(saved_inner_outer_results),
+            "test_predictions_df": pd.DataFrame(saved_inner_test_prediction_rows),
+        }
 
     return (
         pd.DataFrame(inner_eval_rows),
@@ -1224,4 +1320,5 @@ def nested_cv(
         pd.DataFrame(history_rows),
         pd.DataFrame(split_rows),
         pd.DataFrame(test_prediction_rows),
+        auxiliary_outputs,
     )

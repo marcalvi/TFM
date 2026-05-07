@@ -94,6 +94,7 @@ RADIO_REPORT_CSV="radioreports_mimm.csv"
 
 RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, Di-MMLP, HealNet, SMILe"
 RETRAIN_OUTER="true"
+SAVE_INNER="true"
 HP_SELECTION_EPSILON="0.02"
 k=5
 INNER_SPLITS=${k}
@@ -160,6 +161,7 @@ M3TRICS_ARGS=(
   --inner_splits "${INNER_SPLITS}"
   --outer_splits "${OUTER_SPLITS}"
   --retrain_outer "${RETRAIN_OUTER}"
+  --save_inner "${SAVE_INNER}"
   --hp_selection_epsilon "${HP_SELECTION_EPSILON}"
   --missing_location "${MISSING_LOCATION}"
   --train_missing_prop "${TRAIN_MISSING_PROP}"
