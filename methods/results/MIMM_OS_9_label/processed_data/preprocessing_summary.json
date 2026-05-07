@@ -99,16 +99,16 @@
       "duplicated_patient_count": 211,
       "max_rows_per_patient": 30,
       "example_patient_ids": [
-        15970864,
-        19704765,
-        17958182,
-        11761851,
-        18864853,
-        13787273,
-        20047967,
-        15398979,
-        13182560,
-        12224103
+        "15970864",
+        "19704765",
+        "17958182",
+        "11761851",
+        "18864853",
+        "13787273",
+        "20047967",
+        "15398979",
+        "13182560",
+        "12224103"
       ]
     },
     {
@@ -154,5 +154,37 @@
       "rows": 281,
       "columns": 4097
     }
+  },
+  "cohort_alignment_summary": {
+    "endpoint_patients_before": 281,
+    "endpoint_patients_after": 281,
+    "dropped_from_endpoints": 0,
+    "cohort_summary_by_modality": [
+      {
+        "modality": "path",
+        "patients_before": 281,
+        "missing_vs_endpoints": 0
+      },
+      {
+        "modality": "radio",
+        "patients_before": 281,
+        "missing_vs_endpoints": 0
+      },
+      {
+        "modality": "clin",
+        "patients_before": 281,
+        "missing_vs_endpoints": 0
+      },
+      {
+        "modality": "blood",
+        "patients_before": 281,
+        "missing_vs_endpoints": 0
+      },
+      {
+        "modality": "radio_report",
+        "patients_before": 281,
+        "missing_vs_endpoints": 0
+      }
+    ]
   }
 }

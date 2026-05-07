@@ -120,5 +120,32 @@
       "rows": 148,
       "columns": 25
     }
+  },
+  "cohort_alignment_summary": {
+    "endpoint_patients_before": 148,
+    "endpoint_patients_after": 148,
+    "dropped_from_endpoints": 0,
+    "cohort_summary_by_modality": [
+      {
+        "modality": "path",
+        "patients_before": 148,
+        "missing_vs_endpoints": 0
+      },
+      {
+        "modality": "radio",
+        "patients_before": 148,
+        "missing_vs_endpoints": 0
+      },
+      {
+        "modality": "clin",
+        "patients_before": 148,
+        "missing_vs_endpoints": 0
+      },
+      {
+        "modality": "blood",
+        "patients_before": 148,
+        "missing_vs_endpoints": 0
+      }
+    ]
   }
 }
