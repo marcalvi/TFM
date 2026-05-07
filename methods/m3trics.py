@@ -223,7 +223,7 @@ def build_training_arg_parser():
     parser.add_argument("--weight_decay", type=str, default="1e-4")
     parser.add_argument("--hp_selection_epsilon", type=float, default=0.02)
     parser.add_argument("--early_stopping_patience", type=int, default=20)
-    parser.add_argument("--lr_patience", type=int, default=5)
+    parser.add_argument("--min_lr", type=float, default=1e-6)
     parser.add_argument("--seeds", type=str, default="123")
     parser.add_argument(
         "--missing_pattern_seed",
@@ -668,7 +668,7 @@ def run_training_from_args(args):
                         "beta": float(args.vae_imputer_beta),
                     },
                     early_stopping_patience=int(args.early_stopping_patience),
-                    lr_scheduler_patience=int(args.lr_patience),
+                    min_lr=float(args.min_lr),
                     hp_selection_epsilon=float(args.hp_selection_epsilon),
                     radio_pooling_kwargs={
                         "hidden_dim": int(args.radio_attention_hidden_dim),

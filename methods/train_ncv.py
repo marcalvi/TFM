@@ -349,6 +349,7 @@ def _log_selected_inner_models_to_wandb(
                 "seed": seed,
                 "outer_fold": outer_fold_idx,
                 "inner_fold": int(candidate["inner_fold"]),
+                "model_type": "inner",
                 "phase": "selected_inner_model",
                 "selected_hp_name": candidate["hp_name"],
             }
@@ -608,7 +609,7 @@ def nested_cv(
     retrain_outer=True,
     save_inner=False,
     early_stopping_patience=20,
-    lr_scheduler_patience=5,
+    min_lr=1e-6,
     hp_selection_epsilon=0.02,
 ):
     wandb_active = bool(wandb_enabled and wandb is not None)
@@ -797,7 +798,7 @@ def nested_cv(
                     lr=hp_cfg["learning_rate"],
                     weight_decay=hp_cfg["weight_decay"],
                     early_stopping_patience=early_stopping_patience,
-                    lr_scheduler_patience=lr_scheduler_patience,
+                    min_lr=min_lr,
                     model_name=model_name,
                     imputation_method=imputation_method,
                     model_kwargs=model_kwargs,
@@ -1030,7 +1031,7 @@ def nested_cv(
                 epochs=refit_epochs,
                 lr=selected_hp_cfg["learning_rate"],
                 weight_decay=selected_hp_cfg["weight_decay"],
-                lr_scheduler_patience=lr_scheduler_patience,
+                min_lr=min_lr,
                 model_name=model_name,
                 imputation_method=imputation_method,
                 model_kwargs=selected_model_kwargs,
@@ -1064,6 +1065,7 @@ def nested_cv(
                     {
                         "seed": seed,
                         "outer_fold": outer_fold_idx,
+                        "model_type": "outer",
                         "phase": "outer_train_refit",
                         "selected_hp_name": best_hp_row["hp_name"],
                         "outer_refit_epochs": int(refit_epochs),
@@ -1230,6 +1232,17 @@ def nested_cv(
                 torch.cuda.empty_cache()
 
             if bool(save_inner):
+                if wandb_active:
+                    _log_selected_inner_models_to_wandb(
+                        selected_candidates=selected_candidates,
+                        seed=seed,
+                        outer_fold_idx=outer_fold_idx,
+                        train_missing_simulator=train_missing_simulator,
+                        wandb_project=wandb_project,
+                        wandb_mode=wandb_mode,
+                        wandb_base_config=wandb_base_config,
+                        model_name_l=model_name_l,
+                    )
                 inner_outer_results, inner_test_prediction_rows = _evaluate_retained_inner_models_on_outer_test(
                     selected_candidates=selected_candidates,
                     dfs_test_outer_raw=dfs_test_outer_raw,

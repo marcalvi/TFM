@@ -4,7 +4,7 @@ MODEL_CONFIG = {
     "fixed_args": {
         "epochs": 80,
         "early_stopping_patience": 20,
-        "lr_patience": 5,
+        "min_lr": "1e-6",
         "weight_decay": "1e-4",
     },
     "hp_grid_args": {
