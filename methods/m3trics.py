@@ -209,6 +209,15 @@ def build_training_arg_parser():
             "If false, keep the retained inner-fold models as independent predictors on outer-test."
         ),
     )
+    parser.add_argument(
+        "--save_inner",
+        type=_parse_bool_flag,
+        default=False,
+        help=(
+            "If true and retrain_outer=true, also save the retained inner-fold outer-test results "
+            "under the sibling retrainfalse directory. Has no effect when retrain_outer=false."
+        ),
+    )
     parser.add_argument("--learning_rate", type=str, default="5e-5")
     parser.add_argument("--weight_decay", type=str, default="1e-4")
     parser.add_argument("--hp_selection_epsilon", type=float, default=0.02)
@@ -361,6 +370,13 @@ def _build_output_dir(
         missing_pct,
         f"seed_{seed}",
     )
+
+
+def _derive_save_inner_base_odir(primary_base_odir):
+    marker = "_retraintrue_"
+    if marker not in str(primary_base_odir):
+        return None
+    return str(primary_base_odir).replace(marker, "_retrainfalse_", 1)
 
 
 def _save_run_outputs(
@@ -576,6 +592,7 @@ def run_training_from_args(args):
                 print(f"Missing pattern seed: {int(args.missing_pattern_seed)}")
                 print(f"Best-epoch warmup: {best_epoch_warmup}")
                 print(f"Retrain outer train: {bool(args.retrain_outer)}")
+                print(f"Save inner outputs: {bool(args.save_inner)}")
                 print(f"HP selection epsilon: {float(args.hp_selection_epsilon):.4f}")
                 print(f"Output directory: {odir}")
                 print(f"Hyperparameter combinations to evaluate: {len(hp_configs)}")
@@ -590,6 +607,7 @@ def run_training_from_args(args):
                     "hp_grid_size": len(hp_configs),
                     "epochs": args.epochs,
                     "retrain_outer": bool(args.retrain_outer),
+                    "save_inner": bool(args.save_inner),
                     "best_epoch_warmup": best_epoch_warmup,
                     "inner_splits": args.inner_splits,
                     "outer_splits": args.outer_splits,
@@ -619,7 +637,7 @@ def run_training_from_args(args):
                         }
                     )
 
-                inner_df, outer_df, history_df, split_df, test_predictions_df = nested_cv(
+                inner_df, outer_df, history_df, split_df, test_predictions_df, auxiliary_outputs = nested_cv(
                     dfs=dfs,
                     inst_df=inst_df,
                     label_col=label_col,
@@ -627,6 +645,7 @@ def run_training_from_args(args):
                     seed=seed,
                     hp_configs=hp_configs,
                     retrain_outer=bool(args.retrain_outer),
+                    save_inner=bool(args.save_inner),
                     train_missing_simulator=train_missing_simulator,
                     model_name=args.model,
                     imputation_method=args.imputation_method,
@@ -673,6 +692,34 @@ def run_training_from_args(args):
                     train_missing_prop=float(train_missing_prop),
                 )
 
+                if auxiliary_outputs is not None:
+                    save_inner_base_odir = _derive_save_inner_base_odir(args.odir)
+                    if save_inner_base_odir is None:
+                        raise RuntimeError(
+                            f"Could not derive retrainfalse output root from '{args.odir}'."
+                        )
+                    auxiliary_odir = _build_output_dir(
+                        base_odir=save_inner_base_odir,
+                        model_name=args.model,
+                        imputation_method=args.imputation_method,
+                        dataset_name=args.dataset,
+                        missing_location=missing_location,
+                        train_missing_prop=train_missing_prop,
+                        seed=seed,
+                    )
+                    _save_run_outputs(
+                        odir=auxiliary_odir,
+                        inner_df=inner_df,
+                        outer_df=auxiliary_outputs["outer_df"],
+                        history_df=history_df,
+                        split_df=split_df,
+                        test_predictions_df=auxiliary_outputs["test_predictions_df"],
+                        seed=seed,
+                        missing_location=missing_location,
+                        train_missing_prop=float(train_missing_prop),
+                    )
+                    print(f"Saved retained-inner outputs to: {auxiliary_odir}")
+
                 print(f"Run finished in {time.time() - start_time:.2f} seconds.")
 
 
@@ -710,6 +757,8 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
         str(int(fixed_args.get("epochs", 80))),
         "--retrain_outer",
         str(bool(shared_args.retrain_outer)).lower(),
+        "--save_inner",
+        str(bool(shared_args.save_inner)).lower(),
         "--hp_selection_epsilon",
         str(float(shared_args.hp_selection_epsilon)),
         "--seeds",
@@ -771,6 +820,7 @@ def _run_selected_models(args, modality_configs):
     print(f"Inner splits: {args.inner_splits}")
     print(f"Outer splits: {args.outer_splits}")
     print(f"Retrain outer: {bool(args.retrain_outer)}")
+    print(f"Save inner outputs: {bool(args.save_inner)}")
     print(f"HP selection epsilon: {float(args.hp_selection_epsilon):.4f}")
     print(f"Train missing prop: {args.train_missing_prop}")
     print(f"Test missing prop: {args.test_missing_prop}")
@@ -819,6 +869,7 @@ def build_preprocessing_arg_parser():
     parser.add_argument("--inner_splits", required=True, type=int)
     parser.add_argument("--outer_splits", required=True, type=int)
     parser.add_argument("--retrain_outer", required=True, type=_parse_bool_flag)
+    parser.add_argument("--save_inner", type=_parse_bool_flag, default=False)
     parser.add_argument("--hp_selection_epsilon", type=float, default=0.02)
     parser.add_argument("--missing_location", required=True, type=str)
     parser.add_argument("--train_missing_prop", required=True, type=str)
