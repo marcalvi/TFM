@@ -9,7 +9,7 @@ set -euo pipefail
 
 # Osiris cluster setup (VHIO)
 source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-conda activate TFM_5090
+conda activate TFM
 
 # Local setup (macOS)
 # source /opt/miniconda3/etc/profile.d/conda.sh
@@ -29,7 +29,6 @@ WANDB_MODE="online"
 PROJECT_ROOT="/home/osiris-user/Desktop/TFM/methods"
 DATA_ROOT="/nfs/rnas/projects/M3TRICS/data/inputs"
 
-
 # -----------------------------------------------------------------------------------------
 # 2. DATASET AND ENDPOINT
 # DATASET is the label used in outputs; DATASET_DIR is the actual input folder name.
@@ -38,8 +37,8 @@ DATA_ROOT="/nfs/rnas/projects/M3TRICS/data/inputs"
 DATASET="1001P"
 DATASET_DIR="1001Prostate"
 PATIENT_ID_COL="patient"
-ENDPOINTS_CSV="endpoints_1001prostate.csv"
-ENDPOINT_COL="SET_ME"
+ENDPOINTS_CSV="endpoints_1001Prostate.csv"
+ENDPOINT_COL="OS_27_label"
 
 # Output directory
 RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}_${ENDPOINT_COL}"
