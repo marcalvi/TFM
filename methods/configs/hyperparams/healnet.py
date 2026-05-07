@@ -7,7 +7,7 @@ MODEL_CONFIG = {
     "fixed_args": {
         "epochs": 100,
         "early_stopping_patience": 20,
-        "lr_patience": 5,
+        "min_lr": "1e-6",
         "learning_rate": "1e-4,1e-5",
         "weight_decay": "1e-4",
         "healnet_num_freq_bands": "2",

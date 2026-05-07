@@ -139,6 +139,14 @@ def _extract_distill_outputs(model_name, model_out):
     raise ValueError(f"Unsupported distillation model '{model_name_l}'.")
 
 
+def _build_cosine_scheduler(optimizer, epochs, min_lr):
+    return optim.lr_scheduler.CosineAnnealingLR(
+        optimizer,
+        T_max=max(int(epochs), 1),
+        eta_min=float(min_lr),
+    )
+
+
 def train_smil_e_with_meta_learning(
     train_loader,
     val_loader,
@@ -150,7 +158,7 @@ def train_smil_e_with_meta_learning(
     train_seed=0,
     weight_decay=1e-4,
     early_stopping_patience=8,
-    lr_scheduler_patience=5,
+    min_lr=1e-6,
 ):
     """Train SMIL-E with a SMIL-style meta loop fully contained in inner-train."""
     min_best_epoch = min(5, int(epochs))
@@ -162,12 +170,7 @@ def train_smil_e_with_meta_learning(
     model = build_model("smil_e", input_dims, model_kwargs).to(device)
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=float(weight_decay))
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        mode="min",
-        factor=0.5,
-        patience=int(lr_scheduler_patience),
-    )
+    scheduler = _build_cosine_scheduler(optimizer, epochs=epochs, min_lr=min_lr)
 
     train_dataset = train_loader.dataset
     base_dataset = train_dataset.base_dataset
@@ -294,7 +297,7 @@ def train_smil_e_with_meta_learning(
                 val_targets.extend(y.cpu().numpy())
 
         avg_val_loss = val_loss / max(len(val_loader), 1)
-        scheduler.step(avg_val_loss)
+        scheduler.step()
 
         val_metrics_epoch = safe_binary_metrics(val_targets, val_probs)
         history.append(
@@ -353,7 +356,7 @@ def train_smil_e_on_full_dataset_with_meta_learning(
     model_kwargs=None,
     train_seed=0,
     weight_decay=1e-4,
-    lr_scheduler_patience=5,
+    min_lr=1e-6,
 ):
     """Train SMILe on the full outer-train split with an internal meta split."""
     model_kwargs = dict(model_kwargs or {})
@@ -365,12 +368,7 @@ def train_smil_e_on_full_dataset_with_meta_learning(
     model = build_model("smil_e", input_dims, model_kwargs).to(device)
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=float(weight_decay))
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        mode="min",
-        factor=0.5,
-        patience=int(lr_scheduler_patience),
-    )
+    scheduler = _build_cosine_scheduler(optimizer, epochs=epochs, min_lr=min_lr)
 
     train_dataset = train_loader.dataset
     base_dataset = train_dataset.base_dataset
@@ -482,7 +480,7 @@ def train_smil_e_on_full_dataset_with_meta_learning(
                 train_targets.extend(y.cpu().numpy())
 
         avg_train_loss = train_loss / max(len(train_loader), 1)
-        scheduler.step(avg_meta_val_loss)
+        scheduler.step()
         train_metrics_epoch = safe_binary_metrics(train_targets, train_probs)
 
         history.append(
@@ -528,7 +526,7 @@ def train_model_with_validation(
     train_seed=0,
     weight_decay=1e-4,
     early_stopping_patience=20,
-    lr_scheduler_patience=5,
+    min_lr=1e-6,
 ):
     min_best_epoch = min(5, int(epochs))
     model_kwargs = model_kwargs or {}
@@ -546,7 +544,7 @@ def train_model_with_validation(
             train_seed=train_seed,
             weight_decay=weight_decay,
             early_stopping_patience=early_stopping_patience,
-            lr_scheduler_patience=lr_scheduler_patience,
+            min_lr=min_lr,
         )
 
     bypass_mask = (
@@ -571,12 +569,7 @@ def train_model_with_validation(
         student_model = build_model(model_name_l, input_dims, student_kwargs).to(device)
         teacher_optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         student_optimizer = optim.Adam(student_model.parameters(), lr=lr, weight_decay=float(weight_decay))
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            student_optimizer,
-            mode="min",
-            factor=0.5,
-            patience=int(lr_scheduler_patience),
-        )
+        scheduler = _build_cosine_scheduler(student_optimizer, epochs=epochs, min_lr=min_lr)
         repr_criterion = nn.MSELoss()
         feat_criterion = nn.MSELoss()
         teacher_base_dataset = train_loader.dataset.base_dataset
@@ -593,12 +586,7 @@ def train_model_with_validation(
             ).to(device)
             model.set_priors(priors)
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=float(weight_decay))
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            mode="min",
-            factor=0.5,
-            patience=int(lr_scheduler_patience),
-        )
+        scheduler = _build_cosine_scheduler(optimizer, epochs=epochs, min_lr=min_lr)
 
     best_epoch_score = (-np.inf, -np.inf)
     best_epoch = 1
@@ -715,7 +703,7 @@ def train_model_with_validation(
                 val_targets.extend(y.cpu().numpy())
 
         avg_val_loss = val_loss / max(len(val_loader), 1)
-        scheduler.step(avg_val_loss)
+        scheduler.step()
 
         val_metrics_epoch = safe_binary_metrics(val_targets, val_probs)
         history.append(
@@ -783,7 +771,7 @@ def train_model_on_full_dataset(
     model_kwargs=None,
     train_seed=0,
     weight_decay=1e-4,
-    lr_scheduler_patience=5,
+    min_lr=1e-6,
 ):
     """Train a final model on the full outer-train split for a fixed number of epochs."""
     model_kwargs = model_kwargs or {}
@@ -800,7 +788,7 @@ def train_model_on_full_dataset(
             model_kwargs=model_kwargs,
             train_seed=train_seed,
             weight_decay=weight_decay,
-            lr_scheduler_patience=lr_scheduler_patience,
+            min_lr=min_lr,
         )
 
     bypass_mask = (
@@ -825,12 +813,7 @@ def train_model_on_full_dataset(
         student_model = build_model(model_name_l, input_dims, student_kwargs).to(device)
         teacher_optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         student_optimizer = optim.Adam(student_model.parameters(), lr=lr, weight_decay=float(weight_decay))
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            student_optimizer,
-            mode="min",
-            factor=0.5,
-            patience=int(lr_scheduler_patience),
-        )
+        scheduler = _build_cosine_scheduler(student_optimizer, epochs=epochs, min_lr=min_lr)
         repr_criterion = nn.MSELoss()
         feat_criterion = nn.MSELoss()
         teacher_base_dataset = train_loader.dataset.base_dataset
@@ -847,12 +830,7 @@ def train_model_on_full_dataset(
             ).to(device)
             model.set_priors(priors)
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=float(weight_decay))
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            mode="min",
-            factor=0.5,
-            patience=int(lr_scheduler_patience),
-        )
+        scheduler = _build_cosine_scheduler(optimizer, epochs=epochs, min_lr=min_lr)
 
     history = []
 
@@ -939,7 +917,7 @@ def train_model_on_full_dataset(
                 train_steps += 1
 
         avg_train_loss = train_loss / max(train_steps, 1)
-        scheduler.step(avg_train_loss)
+        scheduler.step()
         train_metrics_epoch = safe_binary_metrics(train_targets, train_probs)
 
         history.append(
