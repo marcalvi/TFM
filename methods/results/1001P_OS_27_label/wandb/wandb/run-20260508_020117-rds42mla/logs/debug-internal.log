@@ -1,0 +1,12 @@
+{"time":"2026-05-08T02:01:17.977092066+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-08T02:01:18.257036177+02:00","level":"INFO","msg":"stream: created new stream","id":"rds42mla"}
+{"time":"2026-05-08T02:01:18.257092534+02:00","level":"INFO","msg":"handler: started","stream_id":"rds42mla"}
+{"time":"2026-05-08T02:01:18.261067513+02:00","level":"INFO","msg":"stream: started","id":"rds42mla"}
+{"time":"2026-05-08T02:01:18.261088363+02:00","level":"INFO","msg":"writer: started","stream_id":"rds42mla"}
+{"time":"2026-05-08T02:01:18.2611081+02:00","level":"INFO","msg":"sender: started","stream_id":"rds42mla"}
+{"time":"2026-05-08T02:01:19.814082164+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-08T02:01:20.06292173+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-08T02:01:20.065821298+02:00","level":"INFO","msg":"stream: closing","id":"rds42mla"}
+{"time":"2026-05-08T02:01:20.065833892+02:00","level":"INFO","msg":"handler: closed","stream_id":"rds42mla"}
+{"time":"2026-05-08T02:01:20.090235564+02:00","level":"INFO","msg":"sender: closed","stream_id":"rds42mla"}
+{"time":"2026-05-08T02:01:20.090248478+02:00","level":"INFO","msg":"stream: closed","id":"rds42mla"}

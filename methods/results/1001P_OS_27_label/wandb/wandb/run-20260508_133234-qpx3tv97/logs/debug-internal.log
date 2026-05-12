@@ -1,0 +1,13 @@
+{"time":"2026-05-08T13:32:34.699053041+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-08T13:32:35.042351104+02:00","level":"INFO","msg":"stream: created new stream","id":"qpx3tv97"}
+{"time":"2026-05-08T13:32:35.042420104+02:00","level":"INFO","msg":"handler: started","stream_id":"qpx3tv97"}
+{"time":"2026-05-08T13:32:35.046472364+02:00","level":"INFO","msg":"stream: started","id":"qpx3tv97"}
+{"time":"2026-05-08T13:32:35.046519763+02:00","level":"INFO","msg":"writer: started","stream_id":"qpx3tv97"}
+{"time":"2026-05-08T13:32:35.046556483+02:00","level":"INFO","msg":"sender: started","stream_id":"qpx3tv97"}
+{"time":"2026-05-08T13:32:35.994480025+02:00","level":"ERROR","msg":"runfiles: called UploadNow() after Finish()","path":"wandb-metadata.json"}
+{"time":"2026-05-08T13:32:36.502296976+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-08T13:32:36.879223743+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-08T13:32:36.883114047+02:00","level":"INFO","msg":"stream: closing","id":"qpx3tv97"}
+{"time":"2026-05-08T13:32:36.883131891+02:00","level":"INFO","msg":"handler: closed","stream_id":"qpx3tv97"}
+{"time":"2026-05-08T13:32:36.883846512+02:00","level":"INFO","msg":"sender: closed","stream_id":"qpx3tv97"}
+{"time":"2026-05-08T13:32:36.883860799+02:00","level":"INFO","msg":"stream: closed","id":"qpx3tv97"}

@@ -1,0 +1,12 @@
+{"time":"2026-05-08T10:24:43.576979611+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-08T10:24:43.862712313+02:00","level":"INFO","msg":"stream: created new stream","id":"pwpsyspt"}
+{"time":"2026-05-08T10:24:43.862762568+02:00","level":"INFO","msg":"handler: started","stream_id":"pwpsyspt"}
+{"time":"2026-05-08T10:24:43.865998721+02:00","level":"INFO","msg":"stream: started","id":"pwpsyspt"}
+{"time":"2026-05-08T10:24:43.866012587+02:00","level":"INFO","msg":"writer: started","stream_id":"pwpsyspt"}
+{"time":"2026-05-08T10:24:43.866027595+02:00","level":"INFO","msg":"sender: started","stream_id":"pwpsyspt"}
+{"time":"2026-05-08T10:24:45.501729653+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-08T10:24:45.771063317+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-08T10:24:45.780299634+02:00","level":"INFO","msg":"stream: closing","id":"pwpsyspt"}
+{"time":"2026-05-08T10:24:45.780315504+02:00","level":"INFO","msg":"handler: closed","stream_id":"pwpsyspt"}
+{"time":"2026-05-08T10:24:45.781198763+02:00","level":"INFO","msg":"sender: closed","stream_id":"pwpsyspt"}
+{"time":"2026-05-08T10:24:45.781210565+02:00","level":"INFO","msg":"stream: closed","id":"pwpsyspt"}

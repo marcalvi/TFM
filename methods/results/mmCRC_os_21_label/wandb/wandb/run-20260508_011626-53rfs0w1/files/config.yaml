@@ -1,0 +1,153 @@
+_wandb:
+    value:
+        cli_version: 0.25.0
+        e:
+            7oqx2aab5gk5j6ns7rhp6havsdbwvvy5:
+                args:
+                    - --dataset
+                    - mmCRC
+                    - --results_root
+                    - /home/osiris-user/Desktop/TFM/methods/results/mmCRC_os_21_label
+                    - --endpoint_csv
+                    - /nfs/rnas/projects/M3TRICS/data/inputs/mmCRC/mmCRC_endpoints.csv
+                    - --patient_id_col
+                    - sap
+                    - --endpoint_col
+                    - os_21_label
+                    - --run_models
+                    - ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, Di-MMLP, HealNet, SMILe
+                    - --inner_splits
+                    - "5"
+                    - --outer_splits
+                    - "5"
+                    - --retrain_outer
+                    - "true"
+                    - --save_inner
+                    - "true"
+                    - --hp_selection_epsilon
+                    - "0.02"
+                    - --missing_location
+                    - global
+                    - --train_missing_prop
+                    - 0.0,0.25,0.5,0.75
+                    - --test_missing_prop
+                    - 0.0,0.25,0.5,0.75
+                    - --seeds
+                    - 22,2002,4,18473,55602
+                    - --missing_pattern_seed
+                    - "2026"
+                    - --wandb_mode
+                    - online
+                    - --wandb
+                    - --modality_csv
+                    - path=/nfs/rnas/projects/M3TRICS/data/inputs/mmCRC/mmCRC_pathology_data.csv
+                    - --modality_csv
+                    - radio=/nfs/rnas/projects/M3TRICS/data/inputs/mmCRC/mmCRC_radiology_data.csv
+                    - --modality_csv
+                    - clin=/nfs/rnas/projects/M3TRICS/data/inputs/mmCRC/mmCRC_clinical_data.csv
+                    - --drop_cols
+                    - clin=braf_mut_wt
+                    - --categorical_cols
+                    - clin=had_adj_treat_post_primary_surgery, had_adj_treat_post_met_surgery, had_neoadjuvant_treatment, had_surgery_liver, had_surgery_other_mets,had_surgery_primary, met_treatment_mechanism_qmt, met_treatment_mechanism_aag, met_treatment_mechanism_ttantiegfr, met_treatment_mechanism_ttnonantiegfr, met_treatment_mechanism_imm, sex_male, sync_met_yes, msi_status_MSI, ras_mut_wt, met_tumor_site_liver_liver_limited, met_tumor_site_liver_liver_w_other, met_tumor_site_liver_other, primary_tumor_site_simple_Colon (unspecified), primary_tumor_site_simple_Left, primary_tumor_site_simple_Right
+                    - --categorical_imputation
+                    - clin=knn_mode
+                    - --knn_neighbors
+                    - clin=5
+                    - --modality_csv
+                    - blood=/nfs/rnas/projects/M3TRICS/data/inputs/mmCRC/mmCRC_blood_data.csv
+                executable: /home/osiris-user/anaconda3/envs/TFM_5090/bin/python
+                host: 622037a535a4
+                os: Linux-6.13.0-061300-generic-x86_64-with-glibc2.39
+                program: /home/osiris-user/Desktop/TFM/methods/m3trics.py
+                python: CPython 3.9.18
+                root: /home/osiris-user/Desktop/TFM/methods/results/mmCRC_os_21_label/wandb
+                startedAt: "2026-05-07T23:16:26.846586Z"
+                writerId: 7oqx2aab5gk5j6ns7rhp6havsdbwvvy5
+        m: []
+        python_version: 3.9.18
+        t:
+            "1":
+                - 1
+                - 5
+                - 53
+            "2":
+                - 1
+                - 5
+                - 53
+            "3":
+                - 2
+                - 13
+                - 16
+                - 61
+            "4": 3.9.18
+            "5": 0.25.0
+            "12": 0.25.0
+            "13": linux-x86_64
+best_epoch_warmup:
+    value: 5
+dataset:
+    value: mmCRC
+endpoint:
+    value: os_21_label
+epochs:
+    value: 80
+eval_missing_locations_grid:
+    value: global,global,global,global
+hp_grid_size:
+    value: 12
+hp_selection_epsilon:
+    value: 0.02
+imputation_method:
+    value: vae
+inner_splits:
+    value: 5
+missing_location:
+    value: global
+missing_pattern_seed:
+    value: 2026
+modalities:
+    value:
+        - blood
+        - clin
+        - path
+        - radio
+model:
+    value: MLP
+model_canonical:
+    value: mlp
+model_type:
+    value: outer
+outer_fold:
+    value: 3
+outer_refit_epochs:
+    value: 35
+outer_splits:
+    value: 5
+phase:
+    value: outer_train_refit
+retrain_outer:
+    value: true
+save_inner:
+    value: true
+seed:
+    value: 18473
+selected_hp_name:
+    value: lr5e-05_bs32_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss75_trlocglobal
+test_eval_combinations:
+    value: 4
+test_missing_props_grid:
+    value: 0.0,0.25,0.5,0.75
+train_missing_prop:
+    value: 0.75
+vae_imputer_batch_size:
+    value: 64
+vae_imputer_beta:
+    value: 0.001
+vae_imputer_epochs:
+    value: 30
+vae_imputer_hidden_dim:
+    value: 128
+vae_imputer_latent_dim:
+    value: 16
+vae_imputer_lr:
+    value: 0.001
