@@ -1,0 +1,12 @@
+{"time":"2026-04-30T01:45:03.93306375+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-30T01:45:04.199123337+02:00","level":"INFO","msg":"stream: created new stream","id":"fs7csgis"}
+{"time":"2026-04-30T01:45:04.199162116+02:00","level":"INFO","msg":"handler: started","stream_id":"fs7csgis"}
+{"time":"2026-04-30T01:45:04.203142499+02:00","level":"INFO","msg":"stream: started","id":"fs7csgis"}
+{"time":"2026-04-30T01:45:04.203157679+02:00","level":"INFO","msg":"writer: started","stream_id":"fs7csgis"}
+{"time":"2026-04-30T01:45:04.203168409+02:00","level":"INFO","msg":"sender: started","stream_id":"fs7csgis"}
+{"time":"2026-04-30T01:45:05.456305883+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-30T01:45:05.693941903+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-30T01:45:05.695745055+02:00","level":"INFO","msg":"stream: closing","id":"fs7csgis"}
+{"time":"2026-04-30T01:45:05.695751575+02:00","level":"INFO","msg":"handler: closed","stream_id":"fs7csgis"}
+{"time":"2026-04-30T01:45:05.696226013+02:00","level":"INFO","msg":"sender: closed","stream_id":"fs7csgis"}
+{"time":"2026-04-30T01:45:05.696229583+02:00","level":"INFO","msg":"stream: closed","id":"fs7csgis"}

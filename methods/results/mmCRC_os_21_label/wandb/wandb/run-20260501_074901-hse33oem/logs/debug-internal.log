@@ -1,0 +1,12 @@
+{"time":"2026-05-01T07:49:01.327909519+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-01T07:49:01.597981414+02:00","level":"INFO","msg":"stream: created new stream","id":"hse33oem"}
+{"time":"2026-05-01T07:49:01.598026064+02:00","level":"INFO","msg":"handler: started","stream_id":"hse33oem"}
+{"time":"2026-05-01T07:49:01.601764753+02:00","level":"INFO","msg":"stream: started","id":"hse33oem"}
+{"time":"2026-05-01T07:49:01.601980442+02:00","level":"INFO","msg":"writer: started","stream_id":"hse33oem"}
+{"time":"2026-05-01T07:49:01.601983122+02:00","level":"INFO","msg":"sender: started","stream_id":"hse33oem"}
+{"time":"2026-05-01T07:49:02.794387613+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-01T07:49:03.002300372+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-01T07:49:03.003908677+02:00","level":"INFO","msg":"stream: closing","id":"hse33oem"}
+{"time":"2026-05-01T07:49:03.003915027+02:00","level":"INFO","msg":"handler: closed","stream_id":"hse33oem"}
+{"time":"2026-05-01T07:49:03.004275706+02:00","level":"INFO","msg":"sender: closed","stream_id":"hse33oem"}
+{"time":"2026-05-01T07:49:03.004280846+02:00","level":"INFO","msg":"stream: closed","id":"hse33oem"}

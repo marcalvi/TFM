@@ -1,0 +1,16 @@
+{"time":"2026-04-17T02:15:16.447904515+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-17T02:15:16.719330256+02:00","level":"INFO","msg":"api: retrying HTTP error","status":503,"url":"https://api.wandb.ai/graphql","body":"upstream connect error or disconnect/reset before headers. reset reason: remote connection failure, transport failure reason: delayed connect error: Connection refused"}
+{"time":"2026-04-17T02:15:19.113876002+02:00","level":"INFO","msg":"stream: created new stream","id":"u96l2g9g"}
+{"time":"2026-04-17T02:15:19.113932672+02:00","level":"INFO","msg":"handler: started","stream_id":"u96l2g9g"}
+{"time":"2026-04-17T02:15:19.11789464+02:00","level":"INFO","msg":"stream: started","id":"u96l2g9g"}
+{"time":"2026-04-17T02:15:19.1179+02:00","level":"INFO","msg":"writer: started","stream_id":"u96l2g9g"}
+{"time":"2026-04-17T02:15:19.11790638+02:00","level":"INFO","msg":"sender: started","stream_id":"u96l2g9g"}
+{"time":"2026-04-17T02:15:19.235540997+02:00","level":"INFO","msg":"api: retrying HTTP error","status":503,"url":"https://api.wandb.ai/graphql","body":"upstream connect error or disconnect/reset before headers. reset reason: remote connection failure, transport failure reason: delayed connect error: Connection refused"}
+{"time":"2026-04-17T02:15:21.560579169+02:00","level":"INFO","msg":"api: retrying HTTP error","status":503,"url":"https://api.wandb.ai/graphql","body":"upstream connect error or disconnect/reset before headers. reset reason: remote connection failure, transport failure reason: delayed connect error: Connection refused"}
+{"time":"2026-04-17T02:15:25.899617593+02:00","level":"INFO","msg":"api: retrying HTTP error","status":503,"url":"https://api.wandb.ai/graphql","body":"upstream connect error or disconnect/reset before headers. reset reason: remote connection failure, transport failure reason: delayed connect error: Connection refused"}
+{"time":"2026-04-17T02:15:36.263551126+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-17T02:15:36.970986773+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-17T02:15:36.972261182+02:00","level":"INFO","msg":"stream: closing","id":"u96l2g9g"}
+{"time":"2026-04-17T02:15:36.972267602+02:00","level":"INFO","msg":"handler: closed","stream_id":"u96l2g9g"}
+{"time":"2026-04-17T02:15:36.973299752+02:00","level":"INFO","msg":"sender: closed","stream_id":"u96l2g9g"}
+{"time":"2026-04-17T02:15:36.973303632+02:00","level":"INFO","msg":"stream: closed","id":"u96l2g9g"}

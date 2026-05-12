@@ -1,0 +1,12 @@
+{"time":"2026-04-23T06:52:01.206506859+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-23T06:52:01.496789828+02:00","level":"INFO","msg":"stream: created new stream","id":"cng4pay5"}
+{"time":"2026-04-23T06:52:01.496879028+02:00","level":"INFO","msg":"handler: started","stream_id":"cng4pay5"}
+{"time":"2026-04-23T06:52:01.50109347+02:00","level":"INFO","msg":"stream: started","id":"cng4pay5"}
+{"time":"2026-04-23T06:52:01.501144658+02:00","level":"INFO","msg":"writer: started","stream_id":"cng4pay5"}
+{"time":"2026-04-23T06:52:01.501180025+02:00","level":"INFO","msg":"sender: started","stream_id":"cng4pay5"}
+{"time":"2026-04-23T06:52:03.236119097+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-23T06:52:03.532165638+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-23T06:52:03.535865751+02:00","level":"INFO","msg":"stream: closing","id":"cng4pay5"}
+{"time":"2026-04-23T06:52:03.535884126+02:00","level":"INFO","msg":"handler: closed","stream_id":"cng4pay5"}
+{"time":"2026-04-23T06:52:03.53716265+02:00","level":"INFO","msg":"sender: closed","stream_id":"cng4pay5"}
+{"time":"2026-04-23T06:52:03.537175805+02:00","level":"INFO","msg":"stream: closed","id":"cng4pay5"}

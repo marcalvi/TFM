@@ -1,0 +1,14 @@
+{"time":"2026-04-30T19:40:09.558926599+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-30T19:40:14.33137678+02:00","level":"INFO","msg":"api: retrying HTTP error","status":503,"url":"https://api.wandb.ai/graphql","body":"upstream connect error or disconnect/reset before headers. reset reason: connection timeout"}
+{"time":"2026-04-30T19:40:16.518656751+02:00","level":"INFO","msg":"stream: created new stream","id":"8zeaegj8"}
+{"time":"2026-04-30T19:40:16.51869973+02:00","level":"INFO","msg":"handler: started","stream_id":"8zeaegj8"}
+{"time":"2026-04-30T19:40:16.52263261+02:00","level":"INFO","msg":"stream: started","id":"8zeaegj8"}
+{"time":"2026-04-30T19:40:16.52264942+02:00","level":"INFO","msg":"writer: started","stream_id":"8zeaegj8"}
+{"time":"2026-04-30T19:40:16.52266634+02:00","level":"INFO","msg":"sender: started","stream_id":"8zeaegj8"}
+{"time":"2026-04-30T19:40:18.219068068+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-30T19:40:21.659070117+02:00","level":"INFO","msg":"api: retrying HTTP error","status":503,"url":"https://api.wandb.ai/files/marc_albesa/KNN_MLP_mmCRC/8zeaegj8/file_stream","body":"upstream connect error or disconnect/reset before headers. reset reason: connection timeout"}
+{"time":"2026-04-30T19:40:24.679622135+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-30T19:40:24.680801982+02:00","level":"INFO","msg":"stream: closing","id":"8zeaegj8"}
+{"time":"2026-04-30T19:40:24.680809422+02:00","level":"INFO","msg":"handler: closed","stream_id":"8zeaegj8"}
+{"time":"2026-04-30T19:40:24.68143876+02:00","level":"INFO","msg":"sender: closed","stream_id":"8zeaegj8"}
+{"time":"2026-04-30T19:40:24.68144258+02:00","level":"INFO","msg":"stream: closed","id":"8zeaegj8"}

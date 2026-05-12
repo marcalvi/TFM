@@ -1,0 +1,12 @@
+{"time":"2026-04-23T20:37:10.219538809+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-23T20:37:10.486527819+02:00","level":"INFO","msg":"stream: created new stream","id":"mq34pinp"}
+{"time":"2026-04-23T20:37:10.486577449+02:00","level":"INFO","msg":"handler: started","stream_id":"mq34pinp"}
+{"time":"2026-04-23T20:37:10.489431371+02:00","level":"INFO","msg":"stream: started","id":"mq34pinp"}
+{"time":"2026-04-23T20:37:10.489478511+02:00","level":"INFO","msg":"writer: started","stream_id":"mq34pinp"}
+{"time":"2026-04-23T20:37:10.489504031+02:00","level":"INFO","msg":"sender: started","stream_id":"mq34pinp"}
+{"time":"2026-04-23T20:37:11.882590369+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-23T20:37:12.107388495+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-23T20:37:12.109096281+02:00","level":"INFO","msg":"stream: closing","id":"mq34pinp"}
+{"time":"2026-04-23T20:37:12.109102181+02:00","level":"INFO","msg":"handler: closed","stream_id":"mq34pinp"}
+{"time":"2026-04-23T20:37:12.10954326+02:00","level":"INFO","msg":"sender: closed","stream_id":"mq34pinp"}
+{"time":"2026-04-23T20:37:12.10954673+02:00","level":"INFO","msg":"stream: closed","id":"mq34pinp"}

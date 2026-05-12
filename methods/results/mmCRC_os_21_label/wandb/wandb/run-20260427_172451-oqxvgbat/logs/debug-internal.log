@@ -1,0 +1,14 @@
+{"time":"2026-04-27T17:24:51.078397634Z","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-27T17:24:51.401441632Z","level":"INFO","msg":"stream: created new stream","id":"oqxvgbat"}
+{"time":"2026-04-27T17:24:51.401609943Z","level":"INFO","msg":"handler: started","stream_id":"oqxvgbat"}
+{"time":"2026-04-27T17:24:51.405338043Z","level":"INFO","msg":"stream: started","id":"oqxvgbat"}
+{"time":"2026-04-27T17:24:51.405397707Z","level":"INFO","msg":"writer: started","stream_id":"oqxvgbat"}
+{"time":"2026-04-27T17:24:51.405440879Z","level":"INFO","msg":"sender: started","stream_id":"oqxvgbat"}
+{"time":"2026-04-27T17:24:51.927840321Z","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":40}
+{"time":"2026-04-27T17:24:51.929017222Z","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":67}
+{"time":"2026-04-27T17:24:53.511811524Z","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-27T17:24:53.74091459Z","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-27T17:24:53.744656005Z","level":"INFO","msg":"stream: closing","id":"oqxvgbat"}
+{"time":"2026-04-27T17:24:53.74468439Z","level":"INFO","msg":"handler: closed","stream_id":"oqxvgbat"}
+{"time":"2026-04-27T17:24:53.745429539Z","level":"INFO","msg":"sender: closed","stream_id":"oqxvgbat"}
+{"time":"2026-04-27T17:24:53.745458804Z","level":"INFO","msg":"stream: closed","id":"oqxvgbat"}
