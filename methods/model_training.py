@@ -11,7 +11,19 @@ from torch.utils.data import DataLoader, Subset
 from dataset import MultimodalDatasetWithMissing, multimodal_collate
 from models import learn_priors as learn_smil_priors
 from models import meta_train_step as smil_meta_train_step
-from utils import build_model, normalize_model_name, safe_binary_metrics, set_global_seed
+from survival_utils import (
+    compute_survival_loss_from_logits,
+    normalize_task_type,
+    survival_logits_to_outputs,
+)
+from utils import (
+    build_model,
+    normalize_model_name,
+    primary_metric_name,
+    safe_binary_metrics,
+    safe_task_metrics,
+    set_global_seed,
+)
 
 
 def get_model_init_kwargs(model_name, model_kwargs=None):
@@ -81,7 +93,15 @@ def _move_batch_to_device(batch, device):
     Xs, present_mask, y, _ = batch
     Xs = [x.to(device) for x in Xs]
     present_mask = present_mask.to(device)
-    y = y.to(device)
+    if isinstance(y, dict):
+        y = {
+            "event_time": y["event_time"].to(device),
+            "event": y["event"].to(device),
+            "censorship": y["censorship"].to(device),
+            "y_disc": y["y_disc"].to(device),
+        }
+    else:
+        y = y.to(device)
     return Xs, present_mask, y
 
 
@@ -98,13 +118,72 @@ def _build_full_batch_from_patient_ids(base_dataset, pid_batch, device):
     xs_full = []
     for modality_idx in range(n_modalities):
         xs_full.append(torch.stack([row[modality_idx] for row in xs_rows], dim=0).to(device))
-    y_full = torch.stack(ys, dim=0).to(dtype=torch.float32, device=device)
+    if isinstance(ys[0], dict):
+        y_full = {
+            "event_time": torch.stack([item["event_time"] for item in ys], dim=0).to(device=device),
+            "event": torch.stack([item["event"] for item in ys], dim=0).to(device=device),
+            "censorship": torch.stack([item["censorship"] for item in ys], dim=0).to(device=device),
+            "y_disc": torch.stack([item["y_disc"] for item in ys], dim=0).to(device=device),
+        }
+    else:
+        y_full = torch.stack(ys, dim=0).to(dtype=torch.float32, device=device)
     full_mask = torch.ones((len(pid_batch), n_modalities), dtype=torch.bool, device=device)
     return xs_full, full_mask, y_full
 
 
-def _compute_supervised_bce_loss(logits, targets, bce_criterion):
-    return bce_criterion(logits, targets)
+def _task_type(task_config):
+    return normalize_task_type((task_config or {}).get("task_type", "binary_classification"))
+
+
+def _prepare_logits_for_task(logits):
+    if logits.ndim == 2 and logits.size(1) == 1:
+        return logits.squeeze(1)
+    return logits
+
+
+def _compute_supervised_task_loss(logits, targets, task_config, bce_criterion):
+    if _task_type(task_config) == "survival":
+        return compute_survival_loss_from_logits(
+            logits=_prepare_logits_for_task(logits),
+            y_disc=targets["y_disc"],
+            censorship=targets["censorship"],
+            loss_name=str((task_config or {}).get("survival_loss", "nll")).strip().lower(),
+        )
+    return bce_criterion(_prepare_logits_for_task(logits), targets)
+
+
+def _accumulate_eval_batch(task_config, logits, targets, probs_or_logits_store):
+    task_type = _task_type(task_config)
+    logits_prepared = _prepare_logits_for_task(logits)
+    if task_type == "survival":
+        probs_or_logits_store["logits"].append(logits_prepared.detach().cpu().numpy())
+        probs_or_logits_store["event_times"].extend(targets["event_time"].detach().cpu().numpy().tolist())
+        probs_or_logits_store["event_observed"].extend(targets["event"].detach().cpu().numpy().tolist())
+        probs_or_logits_store["censorship"].extend(targets["censorship"].detach().cpu().numpy().tolist())
+        probs_or_logits_store["y_disc"].extend(targets["y_disc"].detach().cpu().numpy().tolist())
+        return
+    probs = torch.sigmoid(logits_prepared).detach().cpu().numpy().reshape(-1)
+    probs_or_logits_store["probs"].extend(probs.tolist())
+    probs_or_logits_store["y_true"].extend(targets.detach().cpu().numpy().tolist())
+
+
+def _finalize_task_metrics(task_config, store):
+    task_type = _task_type(task_config)
+    if task_type == "survival":
+        logits = np.concatenate(store["logits"], axis=0) if store["logits"] else np.zeros((0, 0), dtype=np.float32)
+        return safe_task_metrics(
+            task_config,
+            event_times=np.asarray(store["event_times"], dtype=np.float32),
+            event_observed=np.asarray(store["event_observed"], dtype=np.int64),
+            censorship=np.asarray(store["censorship"], dtype=np.float32),
+            y_disc=np.asarray(store["y_disc"], dtype=np.int64),
+            logits=logits,
+        )
+    return safe_task_metrics(
+        task_config,
+        y_true=np.asarray(store["y_true"], dtype=np.int64),
+        y_prob=np.asarray(store["probs"], dtype=np.float32),
+    )
 
 
 def _compute_distill_student_loss(
@@ -118,8 +197,9 @@ def _compute_distill_student_loss(
     feat_criterion,
     alpha_repr,
     beta_feat,
+    task_config,
 ):
-    loss_survival = bce_criterion(student_logits, targets)
+    loss_survival = _compute_supervised_task_loss(student_logits, targets, task_config, bce_criterion)
     loss_repr = repr_criterion(student_repr, teacher_repr)
     loss_feature = feat_criterion(student_logits, teacher_logits)
     total = loss_survival + (alpha_repr * loss_repr) + (beta_feat * loss_feature)
@@ -129,11 +209,13 @@ def _compute_distill_student_loss(
 def _extract_distill_outputs(model_name, model_out):
     model_name_l = normalize_model_name(model_name)
     if model_name_l in {"dipam"}:
-        logits = model_out[0].squeeze(1)
-        repr_vec = model_out[1] * model_out[3]
+        logits = _prepare_logits_for_task(model_out[0])
+        attn_weights = model_out[1]
+        risk_tensor = model_out[3]
+        repr_vec = (attn_weights.unsqueeze(-1) * risk_tensor).reshape(risk_tensor.shape[0], -1)
         return logits, repr_vec
     if model_name_l in {"mlp", "di_mmlp"}:
-        logits = model_out[0].squeeze(1)
+        logits = _prepare_logits_for_task(model_out[0])
         repr_vec = model_out[1]
         return logits, repr_vec
     raise ValueError(f"Unsupported distillation model '{model_name_l}'.")
@@ -159,6 +241,7 @@ def train_smil_e_with_meta_learning(
     weight_decay=1e-4,
     early_stopping_patience=8,
     min_lr=1e-6,
+    task_config=None,
 ):
     """Train SMIL-E with a SMIL-style meta loop fully contained in inner-train."""
     min_best_epoch = min(5, int(epochs))
@@ -224,7 +307,8 @@ def train_smil_e_with_meta_learning(
     ).to(device)
     model.set_priors(priors)
 
-    best_val_auc = -np.inf
+    best_metric_key = primary_metric_name(task_config)
+    best_val_score = -np.inf
     best_stop_loss = np.inf
     best_epoch = 1
     best_model_state = None
@@ -259,6 +343,7 @@ def train_smil_e_with_meta_learning(
                 inner_lr=inner_lr,
                 alpha=model.alpha,
                 beta=model.beta,
+                task_config=task_config,
             )
             meta_train_losses.append(float(stats["meta_train_loss"]))
             meta_val_losses.append(float(stats["meta_val_loss"]))
@@ -274,14 +359,24 @@ def train_smil_e_with_meta_learning(
 
         model.eval()
         val_loss = 0.0
-        val_targets = []
-        val_probs = []
+        val_store = {
+            "probs": [],
+            "y_true": [],
+            "logits": [],
+            "event_times": [],
+            "event_observed": [],
+            "censorship": [],
+            "y_disc": [],
+        }
 
         with torch.no_grad():
             for Xs, present_mask, y, _ in val_loader:
                 Xs = [x.to(device) for x in Xs]
                 present_mask = present_mask.to(device)
-                y = y.to(device)
+                if isinstance(y, dict):
+                    y = {k: v.to(device) for k, v in y.items()}
+                else:
+                    y = y.to(device)
 
                 logits_out = model(
                     Xs,
@@ -289,25 +384,25 @@ def train_smil_e_with_meta_learning(
                     mode="incomplete",
                     meta_train=False,
                 )
-                logits = logits_out.squeeze(1)
-                loss = criterion(logits, y)
+                logits = _prepare_logits_for_task(logits_out)
+                loss = _compute_supervised_task_loss(logits, y, task_config, criterion)
 
                 val_loss += float(loss.item())
-                val_probs.extend(torch.sigmoid(logits).cpu().numpy().tolist())
-                val_targets.extend(y.cpu().numpy())
+                _accumulate_eval_batch(task_config, logits, y, val_store)
 
         avg_val_loss = val_loss / max(len(val_loader), 1)
         scheduler.step()
 
-        val_metrics_epoch = safe_binary_metrics(val_targets, val_probs)
+        val_metrics_epoch = _finalize_task_metrics(task_config, val_store)
         history.append(
             {
                 "epoch": epoch,
                 "train_loss": float(avg_meta_train_loss),
                 "val_loss": float(avg_val_loss),
-                "val_auc": float(val_metrics_epoch["AUC"]),
-                "val_aucpr": float(val_metrics_epoch["AUCPR"]),
-                "val_acc": float(val_metrics_epoch["ACC"]),
+                "val_auc": float(val_metrics_epoch.get("AUC", 0.0)),
+                "val_aucpr": float(val_metrics_epoch.get("AUCPR", 0.0)),
+                "val_acc": float(val_metrics_epoch.get("ACC", 0.0)),
+                "val_cindex": float(val_metrics_epoch.get("CINDEX", 0.0)),
                 "teacher_loss": 0.0,
                 "student_survival_loss": 0.0,
                 "student_repr_loss": 0.0,
@@ -321,12 +416,12 @@ def train_smil_e_with_meta_learning(
         )
 
         if epoch >= min_best_epoch:
-            if float(val_metrics_epoch["AUC"]) > best_val_auc:
-                best_val_auc = float(val_metrics_epoch["AUC"])
+            current_score = float(val_metrics_epoch[best_metric_key])
+            if current_score > best_val_score:
+                best_val_score = current_score
                 best_epoch = epoch
                 best_model_state = copy.deepcopy(model.state_dict())
-                best_val_targets = np.asarray(val_targets)
-                best_val_probs = np.asarray(val_probs)
+                best_val_targets = copy.deepcopy(val_store)
 
             if float(avg_val_loss) < best_stop_loss:
                 best_stop_loss = float(avg_val_loss)
@@ -342,7 +437,7 @@ def train_smil_e_with_meta_learning(
         )
 
     model.load_state_dict(best_model_state)
-    best_metrics = safe_binary_metrics(best_val_targets, best_val_probs)
+    best_metrics = _finalize_task_metrics(task_config, best_val_targets)
     best_metrics["best_epoch"] = int(best_epoch)
     return model, history, best_metrics
 
@@ -357,6 +452,7 @@ def train_smil_e_on_full_dataset_with_meta_learning(
     train_seed=0,
     weight_decay=1e-4,
     min_lr=1e-6,
+    task_config=None,
 ):
     """Train SMILe on the full outer-train split with an internal meta split."""
     model_kwargs = dict(model_kwargs or {})
@@ -450,6 +546,7 @@ def train_smil_e_on_full_dataset_with_meta_learning(
                 inner_lr=inner_lr,
                 alpha=model.alpha,
                 beta=model.beta,
+                task_config=task_config,
             )
             meta_train_losses.append(float(stats["meta_train_loss"]))
             meta_val_losses.append(float(stats["meta_val_loss"]))
@@ -465,31 +562,41 @@ def train_smil_e_on_full_dataset_with_meta_learning(
 
         model.eval()
         train_loss = 0.0
-        train_targets = []
-        train_probs = []
+        train_store = {
+            "probs": [],
+            "y_true": [],
+            "logits": [],
+            "event_times": [],
+            "event_observed": [],
+            "censorship": [],
+            "y_disc": [],
+        }
         with torch.no_grad():
             for Xs, present_mask, y, _ in train_loader:
                 Xs = [x.to(device) for x in Xs]
                 present_mask = present_mask.to(device)
-                y = y.to(device)
+                if isinstance(y, dict):
+                    y = {k: v.to(device) for k, v in y.items()}
+                else:
+                    y = y.to(device)
                 logits_out = model(Xs, present_mask, mode="incomplete", meta_train=False)
-                logits = logits_out.squeeze(1)
-                loss = criterion(logits, y)
+                logits = _prepare_logits_for_task(logits_out)
+                loss = _compute_supervised_task_loss(logits, y, task_config, criterion)
                 train_loss += float(loss.item())
-                train_probs.extend(torch.sigmoid(logits).cpu().numpy().tolist())
-                train_targets.extend(y.cpu().numpy())
+                _accumulate_eval_batch(task_config, logits, y, train_store)
 
         avg_train_loss = train_loss / max(len(train_loader), 1)
         scheduler.step()
-        train_metrics_epoch = safe_binary_metrics(train_targets, train_probs)
+        train_metrics_epoch = _finalize_task_metrics(task_config, train_store)
 
         history.append(
             {
                 "epoch": epoch,
                 "train_loss": float(avg_train_loss),
-                "train_auc": float(train_metrics_epoch["AUC"]),
-                "train_aucpr": float(train_metrics_epoch["AUCPR"]),
-                "train_acc": float(train_metrics_epoch["ACC"]),
+                "train_auc": float(train_metrics_epoch.get("AUC", 0.0)),
+                "train_aucpr": float(train_metrics_epoch.get("AUCPR", 0.0)),
+                "train_acc": float(train_metrics_epoch.get("ACC", 0.0)),
+                "train_cindex": float(train_metrics_epoch.get("CINDEX", 0.0)),
                 "teacher_loss": 0.0,
                 "student_survival_loss": 0.0,
                 "student_repr_loss": 0.0,
@@ -527,6 +634,7 @@ def train_model_with_validation(
     weight_decay=1e-4,
     early_stopping_patience=20,
     min_lr=1e-6,
+    task_config=None,
 ):
     min_best_epoch = min(5, int(epochs))
     model_kwargs = model_kwargs or {}
@@ -545,6 +653,7 @@ def train_model_with_validation(
             weight_decay=weight_decay,
             early_stopping_patience=early_stopping_patience,
             min_lr=min_lr,
+            task_config=task_config,
         )
 
     bypass_mask = (
@@ -553,6 +662,7 @@ def train_model_with_validation(
     )
 
     criterion = nn.BCEWithLogitsLoss()
+    best_metric_key = primary_metric_name(task_config)
 
     if model_name_l in {"dipam", "di_mmlp"}:
         student_kwargs = get_model_init_kwargs(model_name_l, model_kwargs)
@@ -613,7 +723,10 @@ def train_model_with_validation(
         for Xs, present_mask, y, pids in train_loader:
             Xs = [x.to(device) for x in Xs]
             present_mask = present_mask.to(device)
-            y = y.to(device)
+            if isinstance(y, dict):
+                y = {k: v.to(device) for k, v in y.items()}
+            else:
+                y = y.to(device)
 
             if model_name_l in {"dipam", "di_mmlp"}:
                 Xs_teacher, teacher_mask, y_teacher = _build_full_batch_from_patient_ids(
@@ -628,7 +741,7 @@ def train_model_with_validation(
                     "di_mmlp" if model_name_l == "di_mmlp" else "dipam",
                     teacher_out,
                 )
-                teacher_loss = _compute_supervised_bce_loss(teacher_logits, y_teacher, criterion)
+                teacher_loss = _compute_supervised_task_loss(teacher_logits, y_teacher, task_config, criterion)
                 teacher_loss.backward()
                 teacher_optimizer.step()
 
@@ -646,6 +759,7 @@ def train_model_with_validation(
                     feat_criterion=feat_criterion,
                     alpha_repr=distill_alpha,
                     beta_feat=distill_beta,
+                    task_config=task_config,
                 )
                 student_loss.backward()
                 student_optimizer.step()
@@ -662,8 +776,8 @@ def train_model_with_validation(
                 logits_out = model(Xs, model_mask)
                 if logits_out is None:
                     continue
-                logits = logits_out.squeeze(1)
-                loss = _compute_supervised_bce_loss(logits, y, criterion)
+                logits = _prepare_logits_for_task(logits_out)
+                loss = _compute_supervised_task_loss(logits, y, task_config, criterion)
                 loss.backward()
                 optimizer.step()
 
@@ -681,39 +795,49 @@ def train_model_with_validation(
         else:
             model.eval()
         val_loss = 0.0
-        val_targets = []
-        val_probs = []
+        val_store = {
+            "probs": [],
+            "y_true": [],
+            "logits": [],
+            "event_times": [],
+            "event_observed": [],
+            "censorship": [],
+            "y_disc": [],
+        }
 
         with torch.no_grad():
             for Xs, present_mask, y, _ in val_loader:
                 Xs = [x.to(device) for x in Xs]
                 present_mask = present_mask.to(device)
-                y = y.to(device)
+                if isinstance(y, dict):
+                    y = {k: v.to(device) for k, v in y.items()}
+                else:
+                    y = y.to(device)
 
                 if model_name_l in {"dipam", "di_mmlp"}:
-                    logits = student_model(Xs, present_mask).squeeze(1)
-                    loss = _compute_supervised_bce_loss(logits, y, criterion)
+                    logits = _prepare_logits_for_task(student_model(Xs, present_mask))
+                    loss = _compute_supervised_task_loss(logits, y, task_config, criterion)
                 else:
                     model_mask = None if bypass_mask else present_mask
-                    logits = model(Xs, model_mask).squeeze(1)
-                    loss = _compute_supervised_bce_loss(logits, y, criterion)
+                    logits = _prepare_logits_for_task(model(Xs, model_mask))
+                    loss = _compute_supervised_task_loss(logits, y, task_config, criterion)
 
                 val_loss += loss.item()
-                val_probs.extend(torch.sigmoid(logits).cpu().numpy().tolist())
-                val_targets.extend(y.cpu().numpy())
+                _accumulate_eval_batch(task_config, logits, y, val_store)
 
         avg_val_loss = val_loss / max(len(val_loader), 1)
         scheduler.step()
 
-        val_metrics_epoch = safe_binary_metrics(val_targets, val_probs)
+        val_metrics_epoch = _finalize_task_metrics(task_config, val_store)
         history.append(
             {
                 "epoch": epoch,
                 "train_loss": float(avg_train_loss),
                 "val_loss": float(avg_val_loss),
-                "val_auc": float(val_metrics_epoch["AUC"]),
-                "val_aucpr": float(val_metrics_epoch["AUCPR"]),
-                "val_acc": float(val_metrics_epoch["ACC"]),
+                "val_auc": float(val_metrics_epoch.get("AUC", 0.0)),
+                "val_aucpr": float(val_metrics_epoch.get("AUCPR", 0.0)),
+                "val_acc": float(val_metrics_epoch.get("ACC", 0.0)),
+                "val_cindex": float(val_metrics_epoch.get("CINDEX", 0.0)),
                 "teacher_loss": float(avg_teacher_loss),
                 "student_survival_loss": float(avg_student_survival),
                 "student_repr_loss": float(avg_student_repr),
@@ -726,7 +850,7 @@ def train_model_with_validation(
             }
         )
 
-        epoch_score = (float(val_metrics_epoch["AUC"]), -float(avg_val_loss))
+        epoch_score = (float(val_metrics_epoch[best_metric_key]), -float(avg_val_loss))
         if epoch >= min_best_epoch and epoch_score > best_epoch_score:
             best_epoch_score = epoch_score
             best_epoch = epoch
@@ -734,8 +858,7 @@ def train_model_with_validation(
                 best_model_state = copy.deepcopy(student_model.state_dict())
             else:
                 best_model_state = copy.deepcopy(model.state_dict())
-            best_val_targets = np.asarray(val_targets)
-            best_val_probs = np.asarray(val_probs)
+            best_val_targets = copy.deepcopy(val_store)
             early_stop = 0
         else:
             early_stop += 1
@@ -752,7 +875,7 @@ def train_model_with_validation(
     else:
         model.load_state_dict(best_model_state)
 
-    best_metrics = safe_binary_metrics(best_val_targets, best_val_probs)
+    best_metrics = _finalize_task_metrics(task_config, best_val_targets)
     best_metrics["best_epoch"] = int(best_epoch)
 
     if model_name_l in {"dipam", "di_mmlp"}:
@@ -772,6 +895,7 @@ def train_model_on_full_dataset(
     train_seed=0,
     weight_decay=1e-4,
     min_lr=1e-6,
+    task_config=None,
 ):
     """Train a final model on the full outer-train split for a fixed number of epochs."""
     model_kwargs = model_kwargs or {}
@@ -789,6 +913,7 @@ def train_model_on_full_dataset(
             train_seed=train_seed,
             weight_decay=weight_decay,
             min_lr=min_lr,
+            task_config=task_config,
         )
 
     bypass_mask = (
@@ -843,8 +968,15 @@ def train_model_on_full_dataset(
 
         train_loss = 0.0
         train_steps = 0
-        train_targets = []
-        train_probs = []
+        train_store = {
+            "probs": [],
+            "y_true": [],
+            "logits": [],
+            "event_times": [],
+            "event_observed": [],
+            "censorship": [],
+            "y_disc": [],
+        }
         train_teacher_loss = 0.0
         train_student_survival = 0.0
         train_student_repr = 0.0
@@ -853,7 +985,10 @@ def train_model_on_full_dataset(
         for Xs, present_mask, y, pids in train_loader:
             Xs = [x.to(device) for x in Xs]
             present_mask = present_mask.to(device)
-            y = y.to(device)
+            if isinstance(y, dict):
+                y = {k: v.to(device) for k, v in y.items()}
+            else:
+                y = y.to(device)
 
             if model_name_l in {"dipam", "di_mmlp"}:
                 Xs_teacher, teacher_mask, y_teacher = _build_full_batch_from_patient_ids(
@@ -868,7 +1003,7 @@ def train_model_on_full_dataset(
                     "di_mmlp" if model_name_l == "di_mmlp" else "dipam",
                     teacher_out,
                 )
-                teacher_loss = _compute_supervised_bce_loss(teacher_logits, y_teacher, criterion)
+                teacher_loss = _compute_supervised_task_loss(teacher_logits, y_teacher, task_config, criterion)
                 teacher_loss.backward()
                 teacher_optimizer.step()
 
@@ -886,13 +1021,12 @@ def train_model_on_full_dataset(
                     feat_criterion=feat_criterion,
                     alpha_repr=distill_alpha,
                     beta_feat=distill_beta,
+                    task_config=task_config,
                 )
                 student_loss.backward()
                 student_optimizer.step()
 
-                probs = torch.sigmoid(student_logits).detach().cpu().numpy().reshape(-1)
-                train_targets.extend(y.detach().cpu().numpy().tolist())
-                train_probs.extend(probs.tolist())
+                _accumulate_eval_batch(task_config, student_logits, y, train_store)
                 train_loss += student_loss.item()
                 train_teacher_loss += teacher_loss.item()
                 train_student_survival += student_survival.item()
@@ -905,28 +1039,27 @@ def train_model_on_full_dataset(
                 logits_out = model(Xs, model_mask)
                 if logits_out is None:
                     continue
-                logits = logits_out.squeeze(1)
-                loss = _compute_supervised_bce_loss(logits, y, criterion)
+                logits = _prepare_logits_for_task(logits_out)
+                loss = _compute_supervised_task_loss(logits, y, task_config, criterion)
                 loss.backward()
                 optimizer.step()
 
-                probs = torch.sigmoid(logits).detach().cpu().numpy().reshape(-1)
-                train_targets.extend(y.detach().cpu().numpy().tolist())
-                train_probs.extend(probs.tolist())
+                _accumulate_eval_batch(task_config, logits, y, train_store)
                 train_loss += loss.item()
                 train_steps += 1
 
         avg_train_loss = train_loss / max(train_steps, 1)
         scheduler.step()
-        train_metrics_epoch = safe_binary_metrics(train_targets, train_probs)
+        train_metrics_epoch = _finalize_task_metrics(task_config, train_store)
 
         history.append(
             {
                 "epoch": epoch,
                 "train_loss": float(avg_train_loss),
-                "train_auc": float(train_metrics_epoch["AUC"]),
-                "train_aucpr": float(train_metrics_epoch["AUCPR"]),
-                "train_acc": float(train_metrics_epoch["ACC"]),
+                "train_auc": float(train_metrics_epoch.get("AUC", 0.0)),
+                "train_aucpr": float(train_metrics_epoch.get("AUCPR", 0.0)),
+                "train_acc": float(train_metrics_epoch.get("ACC", 0.0)),
+                "train_cindex": float(train_metrics_epoch.get("CINDEX", 0.0)),
                 "teacher_loss": float(train_teacher_loss / max(train_steps, 1)),
                 "student_survival_loss": float(train_student_survival / max(train_steps, 1)),
                 "student_repr_loss": float(train_student_repr / max(train_steps, 1)),

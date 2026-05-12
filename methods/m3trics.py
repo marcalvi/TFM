@@ -18,6 +18,7 @@ from dataset.preprocess_dataset import (
     summarize_missing_values,
     validate_imputation_requirements,
 )
+from survival_utils import normalize_task_type
 
 
 # ------------------------ GENERIC ARG HELPERS ------------------------
@@ -183,6 +184,38 @@ def build_training_arg_parser():
     parser.add_argument("--dataset", type=str, required=True, help="Dataset name suffix")
     parser.add_argument("--endpoint", type=str, required=True, help="Endpoint base name")
     parser.add_argument(
+        "--task_type",
+        type=str,
+        default="binary_classification",
+        choices=["binary_classification", "classification", "survival"],
+        help="Task mode. 'binary_classification' uses BCE/AUC. 'survival' uses discrete-time survival heads and c-index.",
+    )
+    parser.add_argument(
+        "--survival_loss",
+        type=str,
+        default="nll",
+        choices=["nll", "ce_survival", "cox"],
+        help="Survival loss to use when task_type=survival.",
+    )
+    parser.add_argument(
+        "--survival_time_col",
+        type=str,
+        default=None,
+        help="Continuous survival time column in endpoints_selected.csv when task_type=survival.",
+    )
+    parser.add_argument(
+        "--survival_event_col",
+        type=str,
+        default=None,
+        help="Binary event indicator column (1=event observed, 0=censored) when task_type=survival.",
+    )
+    parser.add_argument(
+        "--survival_n_bins",
+        type=int,
+        default=4,
+        help="Number of discrete survival bins when task_type=survival.",
+    )
+    parser.add_argument(
         "--model",
         type=str,
         required=True,
@@ -218,6 +251,12 @@ def build_training_arg_parser():
             "If true and retrain_outer=true, also save the retained inner-fold outer-test results "
             "under the sibling retrainfalse directory. Has no effect when retrain_outer=false."
         ),
+    )
+    parser.add_argument(
+        "--ablation_study",
+        type=_parse_bool_flag,
+        default=True,
+        help="If false, disable synthetic missingness and train only on the fixed observed multimodal dataset.",
     )
     parser.add_argument("--learning_rate", type=str, default="5e-5")
     parser.add_argument("--weight_decay", type=str, default="1e-4")
@@ -352,7 +391,10 @@ def _build_output_dir(
     missing_location,
     train_missing_prop,
     seed,
+    ablation_study=True,
 ):
+    if not bool(ablation_study):
+        return os.path.join(base_odir, "FIXED", f"seed_{seed}")
     mapping = {
         "global": "GLOBAL",
         "radio": "RADIO",
@@ -495,15 +537,20 @@ def run_training_from_args(args):
             "imputation_method='knn' or 'vae' is currently supported only with model='MLP'."
         )
 
-    inst_df, dfs, label_col, patient_id_col = load_or_preprocess_dataset(args)
+    inst_df, dfs, label_col, patient_id_col, task_config = load_or_preprocess_dataset(args)
     modality_names = list(dfs.keys())
     num_modalities = len(modality_names)
     print(f"Dataframes read. Starting {args.model} training.")
 
     seeds_list = _parse_training_value_or_list(args.seeds, int)
-    missing_locations = _parse_training_value_or_list(args.missing_location, str, to_lower=True)
-    train_missing_props = _parse_training_value_or_list(args.train_missing_prop, float)
-    test_missing_props = _parse_training_value_or_list(args.test_missing_prop, float)
+    if bool(args.ablation_study):
+        missing_locations = _parse_training_value_or_list(args.missing_location, str, to_lower=True)
+        train_missing_props = _parse_training_value_or_list(args.train_missing_prop, float)
+        test_missing_props = _parse_training_value_or_list(args.test_missing_prop, float)
+    else:
+        missing_locations = ["global"]
+        train_missing_props = [0.0]
+        test_missing_props = [0.0]
 
     invalid_train_locations = [
         loc for loc in missing_locations if loc != "global" and loc not in modality_names
@@ -583,6 +630,7 @@ def run_training_from_args(args):
                     missing_location=missing_location,
                     train_missing_prop=train_missing_prop,
                     seed=seed,
+                    ablation_study=bool(args.ablation_study),
                 )
                 best_epoch_warmup = min(5, int(args.epochs))
                 print(
@@ -594,6 +642,15 @@ def run_training_from_args(args):
                 print(f"Best-epoch warmup: {best_epoch_warmup}")
                 print(f"Retrain outer train: {bool(args.retrain_outer)}")
                 print(f"Save inner outputs: {bool(args.save_inner)}")
+                print(f"Ablation study: {bool(args.ablation_study)}")
+                resolved_task_type = normalize_task_type(args.task_type)
+                print(f"Task type: {resolved_task_type}")
+                if resolved_task_type == "survival":
+                    print(
+                        f"Survival setup: loss={str(args.survival_loss).strip().lower()}, "
+                        f"time_col={args.survival_time_col}, event_col={args.survival_event_col}, "
+                        f"n_bins={int(task_config.get('survival_n_bins', args.survival_n_bins))}"
+                    )
                 print(f"HP selection epsilon: {float(args.hp_selection_epsilon):.4f}")
                 print(f"Output directory: {odir}")
                 print(f"Hyperparameter combinations to evaluate: {len(hp_configs)}")
@@ -607,8 +664,10 @@ def run_training_from_args(args):
                     "modalities": modality_names,
                     "hp_grid_size": len(hp_configs),
                     "epochs": args.epochs,
+                    "task_type": normalize_task_type(args.task_type),
                     "retrain_outer": bool(args.retrain_outer),
                     "save_inner": bool(args.save_inner),
+                    "ablation_study": bool(args.ablation_study),
                     "best_epoch_warmup": best_epoch_warmup,
                     "inner_splits": args.inner_splits,
                     "outer_splits": args.outer_splits,
@@ -637,11 +696,21 @@ def run_training_from_args(args):
                             "vae_imputer_beta": float(args.vae_imputer_beta),
                         }
                     )
+                if normalize_task_type(args.task_type) == "survival":
+                    wandb_base_config.update(
+                        {
+                            "survival_loss": str(args.survival_loss).strip().lower(),
+                            "survival_time_col": str(args.survival_time_col),
+                            "survival_event_col": str(args.survival_event_col),
+                            "survival_n_bins": int(task_config.get("survival_n_bins", args.survival_n_bins)),
+                        }
+                    )
 
                 inner_df, outer_df, history_df, split_df, test_predictions_df, auxiliary_outputs = nested_cv(
                     dfs=dfs,
                     inst_df=inst_df,
                     label_col=label_col,
+                    task_config=task_config,
                     epochs=args.epochs,
                     seed=seed,
                     hp_configs=hp_configs,
@@ -707,6 +776,7 @@ def run_training_from_args(args):
                         missing_location=missing_location,
                         train_missing_prop=train_missing_prop,
                         seed=seed,
+                        ablation_study=bool(args.ablation_study),
                     )
                     _save_run_outputs(
                         odir=auxiliary_odir,
@@ -750,6 +820,10 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
         str(shared_args.results_root),
         "--endpoint",
         str(shared_args.endpoint_col),
+        "--task_type",
+        str(shared_args.task_type),
+        "--survival_loss",
+        str(shared_args.survival_loss),
         "--inner_splits",
         str(int(shared_args.inner_splits)),
         "--outer_splits",
@@ -760,19 +834,37 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
         str(bool(shared_args.retrain_outer)).lower(),
         "--save_inner",
         str(bool(shared_args.save_inner)).lower(),
+        "--ablation_study",
+        str(bool(shared_args.ablation_study)).lower(),
         "--hp_selection_epsilon",
         str(float(shared_args.hp_selection_epsilon)),
         "--seeds",
         str(shared_args.seeds),
         "--missing_pattern_seed",
         str(int(shared_args.missing_pattern_seed)),
-        "--missing_location",
-        str(shared_args.missing_location),
-        "--train_missing_prop",
-        str(shared_args.train_missing_prop),
-        "--test_missing_prop",
-        str(shared_args.test_missing_prop),
     ]
+    if str(shared_args.task_type).strip().lower() == "survival":
+        arg_list.extend(
+            [
+                "--survival_time_col",
+                str(shared_args.survival_time_col),
+                "--survival_event_col",
+                str(shared_args.survival_event_col),
+                "--survival_n_bins",
+                str(int(shared_args.survival_n_bins)),
+            ]
+        )
+    if bool(shared_args.ablation_study):
+        arg_list.extend(
+            [
+                "--missing_location",
+                str(shared_args.missing_location),
+                "--train_missing_prop",
+                str(shared_args.train_missing_prop),
+                "--test_missing_prop",
+                str(shared_args.test_missing_prop),
+            ]
+        )
     for arg_name, arg_value in fixed_args.items():
         if arg_name == "epochs":
             continue
@@ -822,10 +914,21 @@ def _run_selected_models(args, modality_configs):
     print(f"Outer splits: {args.outer_splits}")
     print(f"Retrain outer: {bool(args.retrain_outer)}")
     print(f"Save inner outputs: {bool(args.save_inner)}")
+    print(f"Ablation study: {bool(args.ablation_study)}")
+    print(f"Task type: {normalize_task_type(args.task_type)}")
+    if normalize_task_type(args.task_type) == "survival":
+        print(
+            f"Survival config: loss={str(args.survival_loss).strip().lower()} | "
+            f"time_col={args.survival_time_col} | event_col={args.survival_event_col} | "
+            f"n_bins={int(args.survival_n_bins)}"
+        )
     print(f"HP selection epsilon: {float(args.hp_selection_epsilon):.4f}")
-    print(f"Train missing prop: {args.train_missing_prop}")
-    print(f"Test missing prop: {args.test_missing_prop}")
-    print(f"Missing location: {args.missing_location}")
+    if bool(args.ablation_study):
+        print(f"Train missing prop: {args.train_missing_prop}")
+        print(f"Test missing prop: {args.test_missing_prop}")
+        print(f"Missing location: {args.missing_location}")
+    else:
+        print("Fixed dataset mode: synthetic missingness disabled.")
     if training_modality_pooling:
         print(f"Duplicate-row aggregation for training: {training_modality_pooling}")
 
@@ -851,6 +954,21 @@ def build_preprocessing_arg_parser():
     parser.add_argument("--endpoint_csv", required=True, type=str)
     parser.add_argument("--patient_id_col", required=True, type=str)
     parser.add_argument("--endpoint_col", required=True, type=str)
+    parser.add_argument(
+        "--task_type",
+        type=str,
+        default="binary_classification",
+        choices=["binary_classification", "classification", "survival"],
+    )
+    parser.add_argument(
+        "--survival_loss",
+        type=str,
+        default="nll",
+        choices=["nll", "ce_survival", "cox"],
+    )
+    parser.add_argument("--survival_time_col", type=str, default=None)
+    parser.add_argument("--survival_event_col", type=str, default=None)
+    parser.add_argument("--survival_n_bins", type=int, default=4)
     parser.add_argument("--modality_csv", action="append", default=[])
     parser.add_argument("--categorical_cols", action="append", default=[])
     parser.add_argument("--drop_cols", action="append", default=[])
@@ -871,10 +989,11 @@ def build_preprocessing_arg_parser():
     parser.add_argument("--outer_splits", required=True, type=int)
     parser.add_argument("--retrain_outer", required=True, type=_parse_bool_flag)
     parser.add_argument("--save_inner", type=_parse_bool_flag, default=False)
+    parser.add_argument("--ablation_study", type=_parse_bool_flag, default=True)
     parser.add_argument("--hp_selection_epsilon", type=float, default=0.02)
-    parser.add_argument("--missing_location", required=True, type=str)
-    parser.add_argument("--train_missing_prop", required=True, type=str)
-    parser.add_argument("--test_missing_prop", required=True, type=str)
+    parser.add_argument("--missing_location", default="global", type=str)
+    parser.add_argument("--train_missing_prop", default="0", type=str)
+    parser.add_argument("--test_missing_prop", default="0", type=str)
     parser.add_argument("--seeds", required=True, type=str)
     parser.add_argument("--missing_pattern_seed", required=True, type=int)
     parser.add_argument("--wandb", action="store_true")
@@ -894,6 +1013,10 @@ def main(argv=None):
         path=args.endpoint_csv,
         patient_id_col=args.patient_id_col,
         endpoint_col=args.endpoint_col,
+        task_type=args.task_type,
+        survival_time_col=args.survival_time_col,
+        survival_event_col=args.survival_event_col,
+        survival_n_bins=int(args.survival_n_bins),
     )
     modality_frames, modality_configs = load_configured_modality_frames(
         modality_paths=_parse_keyed_str_map(args.modality_csv, "--modality_csv"),
@@ -999,6 +1122,11 @@ def main(argv=None):
         "results_root": args.results_root,
         "endpoint_csv": args.endpoint_csv,
         "endpoint_col": args.endpoint_col,
+        "task_type": normalize_task_type(args.task_type),
+        "survival_loss": str(args.survival_loss).strip().lower() if normalize_task_type(args.task_type) == "survival" else None,
+        "survival_time_col": args.survival_time_col if normalize_task_type(args.task_type) == "survival" else None,
+        "survival_event_col": args.survival_event_col if normalize_task_type(args.task_type) == "survival" else None,
+        "survival_n_bins": int(args.survival_n_bins) if normalize_task_type(args.task_type) == "survival" else None,
         "patient_id_col": args.patient_id_col,
         "modality_imputation_config": {
             modality_name: {
@@ -1024,6 +1152,17 @@ def main(argv=None):
         endpoint_col=args.endpoint_col,
         modality_frames=modality_frames,
         summary_payload=summary_payload,
+        endpoint_columns=(
+            [
+                args.patient_id_col,
+                args.survival_time_col,
+                args.survival_event_col,
+                "censorship",
+                "y_disc",
+            ]
+            if normalize_task_type(args.task_type) == "survival"
+            else [args.patient_id_col, args.endpoint_col]
+        ),
     )
 
     print("\n=== Preprocessing Complete ===")

@@ -6,6 +6,7 @@ from itertools import product
 from models import MultimodalMLP, DiMMLP, PAM, DiPAM, SMILE, HealNetBinaryWrapper
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import average_precision_score, roc_auc_score
+from survival_utils import normalize_task_type, safe_survival_metrics as _safe_survival_metrics
 
 # ------------------------ 0. CONFIGURATION --------------------------
 
@@ -657,6 +658,20 @@ def build_model(model_name, input_dims, model_kwargs):
         f"Unsupported model '{model_name}'. Supported: mlp, di_mmlp, pam, dipam, smile, healnet"
     )
 
+
+def primary_metric_name(task_config):
+    task_type = normalize_task_type((task_config or {}).get("task_type", "binary_classification"))
+    if task_type == "survival":
+        return "CINDEX"
+    return "AUC"
+
+
+def primary_loss_name(task_config):
+    task_type = normalize_task_type((task_config or {}).get("task_type", "binary_classification"))
+    if task_type == "survival":
+        return "LOSS"
+    return "LOGLOSS"
+
 # -------------------------- 5. EVALUATION ----------------------------
 
 # Metric calculation for binary classification that handles edge cases gracefully
@@ -709,3 +724,22 @@ def safe_binary_metrics(y_true, y_prob, include_raw=False):
         metrics["Binary_Preds"] = y_pred.astype(np.int8).tolist()
         metrics["True_Labels"] = y_true.tolist()
     return metrics
+
+
+def safe_task_metrics(task_config, **kwargs):
+    task_type = normalize_task_type((task_config or {}).get("task_type", "binary_classification"))
+    if task_type == "survival":
+        return _safe_survival_metrics(
+            event_times=kwargs["event_times"],
+            event_observed=kwargs["event_observed"],
+            censorship=kwargs["censorship"],
+            y_disc=kwargs["y_disc"],
+            logits=kwargs["logits"],
+            loss_name=str((task_config or {}).get("survival_loss", "nll")).strip().lower(),
+            include_raw=bool(kwargs.get("include_raw", False)),
+        )
+    return safe_binary_metrics(
+        y_true=kwargs["y_true"],
+        y_prob=kwargs["y_prob"],
+        include_raw=bool(kwargs.get("include_raw", False)),
+    )

@@ -4,9 +4,9 @@ import torch.nn.functional as F
 
 
 class PAM(nn.Module):
-    """Patient-level Attention over Modalities for binary classification."""
+    """Patient-level Attention over Modalities with a configurable output head."""
 
-    def __init__(self, input_dims, bottleneck_dim=16, dropout_p=0.4, temperature=2.0):
+    def __init__(self, input_dims, bottleneck_dim=16, dropout_p=0.4, temperature=2.0, output_dim=1):
         super().__init__()
 
         if not input_dims:
@@ -15,8 +15,11 @@ class PAM(nn.Module):
         self.input_dims = list(input_dims)
         self.n_modalities = len(self.input_dims)
         self.T = float(temperature)
+        self.output_dim = int(output_dim)
         if self.T <= 0:
             raise ValueError("temperature must be > 0")
+        if self.output_dim < 1:
+            raise ValueError("output_dim must be > 0")
 
         self.projections = nn.ModuleList(
             [
@@ -31,7 +34,7 @@ class PAM(nn.Module):
         )
 
         self.risk_layers = nn.ModuleList(
-            [nn.Linear(bottleneck_dim, 1, bias=False) for _ in range(self.n_modalities)]
+            [nn.Linear(bottleneck_dim, self.output_dim, bias=False) for _ in range(self.n_modalities)]
         )
         self.attn_layers = nn.ModuleList(
             [nn.Linear(bottleneck_dim, 1, bias=False) for _ in range(self.n_modalities)]
@@ -72,7 +75,7 @@ class PAM(nn.Module):
         for i in range(self.n_modalities):
             Xi = Xs[i]
             if Xi is None:
-                risk_scores.append(torch.zeros(batch_size, 1, device=device))
+                risk_scores.append(torch.zeros(batch_size, self.output_dim, device=device))
                 attn_logits.append(torch.full((batch_size, 1), -1e9, device=device))
                 continue
 
@@ -81,7 +84,7 @@ class PAM(nn.Module):
             attn_logits.append(self.attn_layers[i](feat))
 
         # Concatenate modality-wise scores and attention logits
-        R = torch.cat(risk_scores, dim=1)
+        R = torch.stack(risk_scores, dim=1)
         A_logits = torch.cat(attn_logits, dim=1)
 
         # Apply softplus and temperature scaling to attention logits
@@ -89,11 +92,11 @@ class PAM(nn.Module):
 
         # Masking: Zero out logits for missing modalities
         masked_scores = A_softplus * masks
-        R_masked = R * masks
+        R_masked = R * masks.unsqueeze(-1)
 
         # Normalize masked logits to get attention weights
         attn_weights = masked_scores / (masked_scores.sum(dim=1, keepdim=True) + 1e-9)
-        output = (attn_weights * R_masked).sum(dim=1, keepdim=True)
+        output = (attn_weights.unsqueeze(-1) * R_masked).sum(dim=1)
 
         if return_aux:
             # Count number of active modalities for each patient

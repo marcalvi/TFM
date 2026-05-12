@@ -15,9 +15,13 @@ from dataset import (
     multimodal_collate,
     build_loaders,
 )
+from survival_utils import normalize_task_type, survival_logits_to_outputs
 from utils import (
     build_model,
+    primary_loss_name,
+    primary_metric_name,
     safe_binary_metrics,
+    safe_task_metrics,
     select_device,
     fit_and_transform_modalities,
     set_global_seed,
@@ -180,6 +184,41 @@ def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
     )
 
 
+def _is_survival(task_config):
+    return normalize_task_type((task_config or {}).get("task_type", "binary_classification")) == "survival"
+
+
+def _with_task_output_dim(model_kwargs, task_config):
+    resolved = dict(model_kwargs or {})
+    if _is_survival(task_config):
+        resolved["output_dim"] = int((task_config or {}).get("survival_n_bins", 4))
+    return resolved
+
+
+def _prepare_base_dataset_kwargs(task_config):
+    if not _is_survival(task_config):
+        return {}
+    return {
+        "task_type": "survival",
+        "survival_time_col": (task_config or {}).get("survival_time_col"),
+        "survival_event_col": (task_config or {}).get("survival_event_col"),
+        "survival_censorship_col": (task_config or {}).get("survival_censorship_col"),
+        "survival_y_disc_col": (task_config or {}).get("survival_y_disc_col"),
+    }
+
+
+def _empty_eval_store(task_config):
+    return {
+        "y_true": [],
+        "probs": [],
+        "logits": [],
+        "event_times": [],
+        "event_observed": [],
+        "censorship": [],
+        "y_disc": [],
+    }
+
+
 def _candidate_bundle_path(candidate_model_dir, outer_fold_idx, inner_fold_idx, hp_name):
     safe_hp_name = str(hp_name).replace(os.sep, "_")
     fold_dir = os.path.join(
@@ -270,19 +309,18 @@ def _fit_split_imputer(
     )
 
 # Function to predict on outer fold for each inner fold model
-def _predict_model_probabilities(
+def _predict_model_outputs(
     model,
     data_loader,
     device,
     bypass_mask=False,
     collect_pam_details=False,
     model_name=None,
+    task_config=None,
 ):
-    """Run one model on a loader and return y_true / logits / probabilities / pids."""
+    """Run one model on a loader and return task-specific outputs plus patient ids."""
     model.eval()
-    y_true = []
-    y_logits = []
-    y_prob = []
+    outputs = _empty_eval_store(task_config)
     pids = []
     pam_alpha = []
     pam_r_scores = []
@@ -291,11 +329,13 @@ def _predict_model_probabilities(
         for Xs, present_mask, y, pid_batch in data_loader:
             Xs = [x.to(device) for x in Xs]
             present_mask = present_mask.to(device)
+            if isinstance(y, dict):
+                y = {k: v.to(device) for k, v in y.items()}
 
             model_mask = None if bypass_mask else present_mask
             if collect_pam_details:
                 model_out = model(Xs, model_mask, return_aux=True)
-                logits = model_out[0].squeeze(1)
+                logits = model_out[0]
                 if model_name not in {"pam", "dipam"}:
                     raise ValueError(
                         "collect_pam_details=True is only supported for model_name in "
@@ -304,13 +344,30 @@ def _predict_model_probabilities(
                 pam_alpha.append(model_out[2].detach().cpu().numpy())
                 pam_r_scores.append(model_out[3].detach().cpu().numpy())
             else:
-                logits = model(Xs, model_mask).squeeze(1)
-            logits_np = logits.detach().cpu().numpy().reshape(-1)
-            probs = torch.sigmoid(logits).cpu().numpy().reshape(-1)
-
-            y_logits.extend(logits_np.tolist())
-            y_prob.extend(probs.tolist())
-            y_true.extend(y.cpu().numpy().tolist())
+                logits = model(Xs, model_mask)
+            if logits.ndim == 2 and logits.size(1) == 1:
+                logits = logits.squeeze(1)
+            if _is_survival(task_config):
+                logits_np = logits.detach().cpu().numpy()
+                hazards, survival, risk = survival_logits_to_outputs(logits)
+                outputs["logits"].append(logits_np)
+                outputs["event_times"].extend(y["event_time"].detach().cpu().numpy().tolist())
+                outputs["event_observed"].extend(y["event"].detach().cpu().numpy().tolist())
+                outputs["censorship"].extend(y["censorship"].detach().cpu().numpy().tolist())
+                outputs["y_disc"].extend(y["y_disc"].detach().cpu().numpy().tolist())
+                if "hazards" not in outputs:
+                    outputs["hazards"] = []
+                    outputs["survival"] = []
+                    outputs["risk"] = []
+                outputs["hazards"].append(hazards.detach().cpu().numpy())
+                outputs["survival"].append(survival.detach().cpu().numpy())
+                outputs["risk"].append(risk.detach().cpu().numpy())
+            else:
+                logits_np = logits.detach().cpu().numpy().reshape(-1)
+                probs = torch.sigmoid(logits).cpu().numpy().reshape(-1)
+                outputs["logits"].append(logits_np)
+                outputs["probs"].extend(probs.tolist())
+                outputs["y_true"].extend(y.cpu().numpy().tolist())
             pids.extend(pid_batch)
 
     pam_details = None
@@ -320,7 +377,24 @@ def _predict_model_probabilities(
             "R": np.concatenate(pam_r_scores, axis=0),
         }
 
-    return np.asarray(y_true), np.asarray(y_logits), np.asarray(y_prob), list(pids), pam_details
+    outputs["pids"] = list(pids)
+    outputs["pam_details"] = pam_details
+    if outputs["logits"]:
+        outputs["logits"] = np.concatenate(outputs["logits"], axis=0)
+    else:
+        outputs["logits"] = np.zeros((0, 0), dtype=np.float32) if _is_survival(task_config) else np.zeros((0,), dtype=np.float32)
+    if _is_survival(task_config):
+        outputs["hazards"] = np.concatenate(outputs.get("hazards", []), axis=0) if outputs.get("hazards") else np.zeros_like(outputs["logits"])
+        outputs["survival"] = np.concatenate(outputs.get("survival", []), axis=0) if outputs.get("survival") else np.zeros_like(outputs["logits"])
+        outputs["risk"] = np.concatenate(outputs.get("risk", []), axis=0) if outputs.get("risk") else np.zeros((outputs["logits"].shape[0],), dtype=np.float32)
+        outputs["event_times"] = np.asarray(outputs["event_times"], dtype=np.float32)
+        outputs["event_observed"] = np.asarray(outputs["event_observed"], dtype=np.int64)
+        outputs["censorship"] = np.asarray(outputs["censorship"], dtype=np.float32)
+        outputs["y_disc"] = np.asarray(outputs["y_disc"], dtype=np.int64)
+    else:
+        outputs["y_true"] = np.asarray(outputs["y_true"], dtype=np.int64)
+        outputs["probs"] = np.asarray(outputs["probs"], dtype=np.float32)
+    return outputs
 
 def _log_selected_inner_models_to_wandb(
     selected_candidates,
@@ -331,6 +405,7 @@ def _log_selected_inner_models_to_wandb(
     wandb_mode,
     wandb_base_config,
     model_name_l,
+    task_config,
 ):
     missing_location = str((wandb_base_config or {}).get("missing_location", "na")).strip().lower()
     train_missing_prop = float((wandb_base_config or {}).get("train_missing_prop", 0.0))
@@ -371,10 +446,17 @@ def _log_selected_inner_models_to_wandb(
             log_payload = {
                 "best_inner_model/train_loss": float(hrow["train_loss"]),
                 "best_inner_model/val_loss": float(hrow["val_loss"]),
-                "best_inner_model/val_auc": float(hrow["val_auc"]),
-                "best_inner_model/val_aucpr": float(hrow["val_aucpr"]),
-                "best_inner_model/val_acc": float(hrow["val_acc"]),
             }
+            if _is_survival(task_config):
+                log_payload["best_inner_model/val_cindex"] = float(hrow.get("val_cindex", 0.0))
+            else:
+                log_payload.update(
+                    {
+                        "best_inner_model/val_auc": float(hrow["val_auc"]),
+                        "best_inner_model/val_aucpr": float(hrow["val_aucpr"]),
+                        "best_inner_model/val_acc": float(hrow["val_acc"]),
+                    }
+                )
             if model_name_l in {"dipam", "di_mmlp"}:
                 log_payload.update(
                     {
@@ -420,10 +502,14 @@ def _evaluate_retained_inner_models_on_outer_test(
     selected_inner_rows,
     best_hp_row,
     epsilon,
-    best_mean_auc,
+    best_mean_metric,
+    task_config,
 ):
     outer_results = []
     test_prediction_rows = []
+    primary_metric_key = primary_metric_name(task_config)
+    primary_loss_key = primary_loss_name(task_config)
+    base_dataset_kwargs = _prepare_base_dataset_kwargs(task_config)
 
     for eval_setup in test_eval_setups:
         eval_simulator = eval_setup["simulator"]
@@ -431,10 +517,9 @@ def _evaluate_retained_inner_models_on_outer_test(
         eval_missing_prop = float(eval_setup["missing_prop"])
         apply_missing_eval = eval_missing_prop > 0.0
 
-        ref_y_true = None
+        ref_targets = None
         ref_pids = None
-        model_logits = []
-        model_probs = []
+        model_outputs = []
         model_details = []
         model_outer_metrics = []
 
@@ -467,6 +552,7 @@ def _evaluate_retained_inner_models_on_outer_test(
                 label_df=inst_df_test_outer,
                 label_col=label_col,
                 id_col=patient_id_col,
+                **base_dataset_kwargs,
             )
             outer_eval_ds = MultimodalDatasetWithMissing(
                 base_dataset=outer_eval_base,
@@ -485,28 +571,60 @@ def _evaluate_retained_inner_models_on_outer_test(
                 drop_last=False,
             )
 
-            y_true_outer, y_logits_outer, y_prob_outer, pids_outer, pam_details_outer = _predict_model_probabilities(
+            pred_out = _predict_model_outputs(
                 model=loaded_bundle["model"],
                 data_loader=outer_eval_loader,
                 device=device,
                 bypass_mask=predict_bypass_mask,
                 collect_pam_details=model_name_l in {"pam", "dipam"},
                 model_name=model_name_l,
+                task_config=task_config,
             )
 
-            if ref_y_true is None:
-                ref_y_true = y_true_outer
-                ref_pids = list(pids_outer)
+            if _is_survival(task_config):
+                aligned_targets = (
+                    pred_out["event_times"],
+                    pred_out["event_observed"],
+                    pred_out["censorship"],
+                    pred_out["y_disc"],
+                )
             else:
-                if not np.array_equal(ref_y_true, y_true_outer):
-                    raise RuntimeError("Retained inner-model predictions are misaligned on y_true.")
-                if ref_pids != list(pids_outer):
+                aligned_targets = pred_out["y_true"]
+
+            if ref_targets is None:
+                ref_targets = aligned_targets
+                ref_pids = list(pred_out["pids"])
+            else:
+                if _is_survival(task_config):
+                    if not all(np.array_equal(a, b) for a, b in zip(ref_targets, aligned_targets)):
+                        raise RuntimeError("Retained inner-model predictions are misaligned on survival targets.")
+                else:
+                    if not np.array_equal(ref_targets, aligned_targets):
+                        raise RuntimeError("Retained inner-model predictions are misaligned on y_true.")
+                if ref_pids != list(pred_out["pids"]):
                     raise RuntimeError("Retained inner-model predictions are misaligned on patient IDs.")
 
-            model_logits.append(y_logits_outer)
-            model_probs.append(y_prob_outer)
-            model_details.append(pam_details_outer)
-            model_outer_metrics.append(safe_binary_metrics(y_true_outer, y_prob_outer))
+            model_outputs.append(pred_out)
+            model_details.append(pred_out["pam_details"])
+            if _is_survival(task_config):
+                model_outer_metrics.append(
+                    safe_task_metrics(
+                        task_config,
+                        event_times=pred_out["event_times"],
+                        event_observed=pred_out["event_observed"],
+                        censorship=pred_out["censorship"],
+                        y_disc=pred_out["y_disc"],
+                        logits=pred_out["logits"],
+                    )
+                )
+            else:
+                model_outer_metrics.append(
+                    safe_task_metrics(
+                        task_config,
+                        y_true=pred_out["y_true"],
+                        y_prob=pred_out["probs"],
+                    )
+                )
 
             del loaded_bundle["model"]
             gc.collect()
@@ -523,59 +641,86 @@ def _evaluate_retained_inner_models_on_outer_test(
                 "train_missing_prop": float(getattr(train_missing_simulator, "missing_prop", 0.0)),
                 "test_missing_location": eval_missing_location,
                 "test_missing_prop": eval_missing_prop,
-                "y_true": int(ref_y_true[patient_idx]),
             }
+            if _is_survival(task_config):
+                row["event_time"] = float(ref_targets[0][patient_idx])
+                row["event_observed"] = int(ref_targets[1][patient_idx])
+                row["censorship"] = int(ref_targets[2][patient_idx])
+                row["y_disc"] = int(ref_targets[3][patient_idx])
+            else:
+                row["y_true"] = int(ref_targets[patient_idx])
 
-            for model_idx, (logits_arr, probs_arr, details_arr) in enumerate(
-                zip(model_logits, model_probs, model_details),
+            for model_idx, (pred_out, details_arr) in enumerate(
+                zip(model_outputs, model_details),
                 1,
             ):
-                row[f"inner_model_{model_idx}_logit"] = float(logits_arr[patient_idx])
-                row[f"inner_model_{model_idx}_prob"] = float(probs_arr[patient_idx])
-                row[f"inner_model_{model_idx}_pred_label"] = int(logits_arr[patient_idx] >= 0.0)
+                if _is_survival(task_config):
+                    row[f"inner_model_{model_idx}_risk"] = float(pred_out["risk"][patient_idx])
+                    for bin_idx in range(pred_out["logits"].shape[1]):
+                        row[f"inner_model_{model_idx}_logit_bin_{bin_idx}"] = float(
+                            pred_out["logits"][patient_idx, bin_idx]
+                        )
+                        row[f"inner_model_{model_idx}_hazard_bin_{bin_idx}"] = float(
+                            pred_out["hazards"][patient_idx, bin_idx]
+                        )
+                        row[f"inner_model_{model_idx}_survival_bin_{bin_idx}"] = float(
+                            pred_out["survival"][patient_idx, bin_idx]
+                        )
+                else:
+                    row[f"inner_model_{model_idx}_logit"] = float(pred_out["logits"][patient_idx])
+                    row[f"inner_model_{model_idx}_prob"] = float(pred_out["probs"][patient_idx])
+                    row[f"inner_model_{model_idx}_pred_label"] = int(pred_out["logits"][patient_idx] >= 0.0)
                 if model_name_l in {"pam", "dipam"} and details_arr is not None:
                     for modality_idx, modality_name in enumerate(modality_names):
                         row[f"inner_model_{model_idx}_{modality_name}_alpha"] = float(
                             details_arr["alpha"][patient_idx, modality_idx]
                         )
-                        row[f"inner_model_{model_idx}_{modality_name}_R"] = float(
-                            details_arr["R"][patient_idx, modality_idx]
-                        )
+                        r_value = details_arr["R"][patient_idx, modality_idx]
+                        if np.ndim(r_value) == 0:
+                            row[f"inner_model_{model_idx}_{modality_name}_R"] = float(r_value)
+                        else:
+                            for bin_idx, bin_value in enumerate(np.asarray(r_value).reshape(-1)):
+                                row[f"inner_model_{model_idx}_{modality_name}_R_bin_{bin_idx}"] = float(bin_value)
 
             per_patient_prediction_rows.append(row)
 
         test_prediction_rows.extend(per_patient_prediction_rows)
 
-        metric_names = ["LOGLOSS", "AUC", "AUCPR", "ACC", "SEN", "SP", "MCC"]
-        mean_outer_metrics = {
-            name: float(np.mean([float(metrics[name]) for metrics in model_outer_metrics]))
-            for name in metric_names
-        }
-
-        outer_results.append(
-            {
-                "outer_fold": outer_fold_idx,
-                "outer_eval_target": "test_outer",
-                "eval_missing_location": eval_missing_location,
-                "eval_missing_prop": eval_missing_prop,
-                "inner_models_count": int(len(selected_candidates)),
-                "selected_inner_hp_names": str(best_hp_row["hp_name"]),
-                "selected_inner_mean_AUC": float(np.mean([r["val_best_AUC"] for r in selected_inner_rows])),
-                "selected_inner_mean_LOGLOSS": float(np.mean([r["val_best_LOGLOSS"] for r in selected_inner_rows])),
-                "selected_inner_std_AUC": float(best_hp_row["std_auc"]),
-                "hp_selection_epsilon": float(epsilon),
-                "hp_selection_best_mean_AUC": float(best_mean_auc),
-                "outer_test_metric_source": "mean_retained_inner_models",
-                "outer_refit_epochs": np.nan,
-                "outer_test_LOGLOSS": float(mean_outer_metrics["LOGLOSS"]),
-                "outer_test_AUC": float(mean_outer_metrics["AUC"]),
-                "outer_test_AUCPR": float(mean_outer_metrics["AUCPR"]),
-                "outer_test_ACC": float(mean_outer_metrics["ACC"]),
-                "outer_test_SEN": float(mean_outer_metrics["SEN"]),
-                "outer_test_SP": float(mean_outer_metrics["SP"]),
-                "outer_test_MCC": float(mean_outer_metrics["MCC"]),
+        if _is_survival(task_config):
+            mean_outer_metrics = {
+                "LOSS": float(np.mean([float(metrics["LOSS"]) for metrics in model_outer_metrics])),
+                "CINDEX": float(np.mean([float(metrics["CINDEX"]) for metrics in model_outer_metrics])),
             }
+        else:
+            metric_names = ["LOGLOSS", "AUC", "AUCPR", "ACC", "SEN", "SP", "MCC"]
+            mean_outer_metrics = {
+                name: float(np.mean([float(metrics[name]) for metrics in model_outer_metrics]))
+                for name in metric_names
+            }
+
+        result_row = {
+            "outer_fold": outer_fold_idx,
+            "outer_eval_target": "test_outer",
+            "eval_missing_location": eval_missing_location,
+            "eval_missing_prop": eval_missing_prop,
+            "inner_models_count": int(len(selected_candidates)),
+            "selected_inner_hp_names": str(best_hp_row["hp_name"]),
+            "hp_selection_epsilon": float(epsilon),
+            "outer_test_metric_source": "mean_retained_inner_models",
+            "outer_refit_epochs": np.nan,
+        }
+        result_row[f"selected_inner_mean_{primary_metric_key}"] = float(
+            np.mean([r[f"val_best_{primary_metric_key}"] for r in selected_inner_rows])
         )
+        result_row[f"selected_inner_mean_{primary_loss_key}"] = float(
+            np.mean([r[f"val_best_{primary_loss_key}"] for r in selected_inner_rows])
+        )
+        result_row[f"selected_inner_std_{primary_metric_key}"] = float(best_hp_row["std_primary"])
+        result_row[f"hp_selection_best_mean_{primary_metric_key}"] = float(best_mean_metric)
+        for metric_name, metric_value in mean_outer_metrics.items():
+            result_row[f"outer_test_{metric_name}"] = float(metric_value)
+
+        outer_results.append(result_row)
 
     return outer_results, test_prediction_rows
 
@@ -587,6 +732,7 @@ def nested_cv(
     dfs,
     inst_df,
     label_col,
+    task_config,
     epochs,
     seed,
     hp_configs,
@@ -624,6 +770,9 @@ def nested_cv(
         and str(imputation_method).strip().lower() in {"knn", "vae"}
     )
     set_global_seed(seed, deterministic=True)
+    primary_metric_key = primary_metric_name(task_config)
+    primary_loss_key = primary_loss_name(task_config)
+    base_dataset_kwargs = _prepare_base_dataset_kwargs(task_config)
 
     # Test-time evaluation setups:
     # by default evaluate once with the provided train simulator.
@@ -751,6 +900,7 @@ def nested_cv(
                 label_df=inst_df_train_inner,
                 label_col=label_col,
                 id_col=patient_id_col,
+                **base_dataset_kwargs,
             )
             prefit_inner_imputer = _fit_split_imputer(
                 split_dataset=train_split_dataset,
@@ -784,9 +934,17 @@ def nested_cv(
                     id_col=patient_id_col,
                     prefit_imputer=prefit_inner_imputer,
                     imputer_kwargs=imputer_kwargs,
+                    task_type=normalize_task_type((task_config or {}).get("task_type", "binary_classification")),
+                    survival_time_col=(task_config or {}).get("survival_time_col"),
+                    survival_event_col=(task_config or {}).get("survival_event_col"),
+                    survival_censorship_col=(task_config or {}).get("survival_censorship_col"),
+                    survival_y_disc_col=(task_config or {}).get("survival_y_disc_col"),
                 )
 
-                model_kwargs = _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg)
+                model_kwargs = _with_task_output_dim(
+                    _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg),
+                    task_config,
+                )
 
                 # Train the model and evaluate on inner-val fold
                 model, history, best_metrics = train_model_with_validation(
@@ -803,6 +961,7 @@ def nested_cv(
                     imputation_method=imputation_method,
                     model_kwargs=model_kwargs,
                     train_seed=int(seed + outer_fold_idx * 10_000 + inner_fold_idx * 100 + hp_idx),
+                    task_config=task_config,
                 )
 
                 # Save inner evaluation METRICS for this HP config and inner fold
@@ -813,13 +972,15 @@ def nested_cv(
                         "hp_name": hp_name,
                         **hp_cfg,
                         "val_best_epoch": int(best_metrics["best_epoch"]),
-                        "val_best_LOGLOSS": float(best_metrics["LOGLOSS"]),
-                        "val_best_AUC": float(best_metrics["AUC"]),
-                        "val_best_AUCPR": float(best_metrics["AUCPR"]),
-                        "val_best_ACC": float(best_metrics["ACC"]),
-                        "val_best_SEN": float(best_metrics["SEN"]),
-                        "val_best_SP": float(best_metrics["SP"]),
-                        "val_best_MCC": float(best_metrics["MCC"]),
+                        "val_best_LOGLOSS": float(best_metrics.get("LOGLOSS", np.nan)),
+                        "val_best_AUC": float(best_metrics.get("AUC", np.nan)),
+                        "val_best_AUCPR": float(best_metrics.get("AUCPR", np.nan)),
+                        "val_best_ACC": float(best_metrics.get("ACC", np.nan)),
+                        "val_best_SEN": float(best_metrics.get("SEN", np.nan)),
+                        "val_best_SP": float(best_metrics.get("SP", np.nan)),
+                        "val_best_MCC": float(best_metrics.get("MCC", np.nan)),
+                        "val_best_LOSS": float(best_metrics.get("LOSS", np.nan)),
+                        "val_best_CINDEX": float(best_metrics.get("CINDEX", np.nan)),
                     }
                 )
 
@@ -888,34 +1049,40 @@ def nested_cv(
                     f"Expected {expected_inner_folds}, found {len(candidates)}."
                 )
 
-            aucs = np.asarray([float(c["metrics"]["AUC"]) for c in candidates], dtype=np.float32)
-            loglosses = np.asarray([float(c["metrics"]["LOGLOSS"]) for c in candidates], dtype=np.float32)
-            mean_auc = float(np.mean(aucs))
-            std_auc = float(np.std(aucs))
-            mean_logloss = float(np.mean(loglosses))
+            primary_scores = np.asarray(
+                [float(c["metrics"][primary_metric_key]) for c in candidates],
+                dtype=np.float32,
+            )
+            loss_scores = np.asarray(
+                [float(c["metrics"][primary_loss_key]) for c in candidates],
+                dtype=np.float32,
+            )
+            mean_primary = float(np.mean(primary_scores))
+            std_primary = float(np.std(primary_scores))
+            mean_loss = float(np.mean(loss_scores))
             hp_selection_rows.append(
                 {
                     "hp_name": hp_name,
                     "hp_cfg": hp_cfg,
                     "candidates": candidates,
-                    "mean_auc": mean_auc,
-                    "std_auc": std_auc,
-                    "mean_logloss": mean_logloss,
+                    "mean_primary": mean_primary,
+                    "std_primary": std_primary,
+                    "mean_loss": mean_loss,
                 }
             )
 
         epsilon = max(0.0, float(hp_selection_epsilon))
-        best_mean_auc = max(float(row["mean_auc"]) for row in hp_selection_rows)
+        best_mean_metric = max(float(row["mean_primary"]) for row in hp_selection_rows)
         tied_hp_rows = [
             row
             for row in hp_selection_rows
-            if float(row["mean_auc"]) >= (best_mean_auc - epsilon)
+            if float(row["mean_primary"]) >= (best_mean_metric - epsilon)
         ]
         best_hp_row = min(
             tied_hp_rows,
             key=lambda row: (
-                float(row["std_auc"]),
-                float(row["mean_logloss"]),
+                float(row["std_primary"]),
+                float(row["mean_loss"]),
                 str(row["hp_name"]),
             ),
         )
@@ -923,17 +1090,18 @@ def nested_cv(
 
         print(
             f"  Selected hp across inner folds: {best_hp_row['hp_name']} "
-            f"(mean_AUC={best_hp_row['mean_auc']:.4f}, std_AUC={best_hp_row['std_auc']:.4f}, "
-            f"mean_LOGLOSS={best_hp_row['mean_logloss']:.4f}, epsilon={epsilon:.4f}, "
-            f"best_mean_AUC={best_mean_auc:.4f}, tied_configs={len(tied_hp_rows)})"
+            f"(mean_{primary_metric_key}={best_hp_row['mean_primary']:.4f}, "
+            f"std_{primary_metric_key}={best_hp_row['std_primary']:.4f}, "
+            f"mean_{primary_loss_key}={best_hp_row['mean_loss']:.4f}, epsilon={epsilon:.4f}, "
+            f"best_mean_{primary_metric_key}={best_mean_metric:.4f}, tied_configs={len(tied_hp_rows)})"
         )
 
         for candidate in selected_candidates:
             candidate_metrics = candidate["metrics"]
             print(
                 f"    Inner fold {candidate['inner_fold']} retained model: "
-                f"AUC={float(candidate_metrics['AUC']):.4f}, "
-                f"LOGLOSS={float(candidate_metrics['LOGLOSS']):.4f}, "
+                f"{primary_metric_key}={float(candidate_metrics[primary_metric_key]):.4f}, "
+                f"{primary_loss_key}={float(candidate_metrics[primary_loss_key]):.4f}, "
                 f"best_epoch={int(candidate_metrics['best_epoch'])}"
             )
             selected_inner_rows.append(
@@ -941,12 +1109,14 @@ def nested_cv(
                     "inner_fold": int(candidate["inner_fold"]),
                     "hp_name": candidate["hp_name"],
                     **candidate["hp_cfg"],
-                    "val_best_AUC": float(candidate_metrics["AUC"]),
-                    "val_best_LOGLOSS": float(candidate_metrics["LOGLOSS"]),
-                    "selected_hp_mean_AUC": float(best_hp_row["mean_auc"]),
-                    "selected_hp_std_AUC": float(best_hp_row["std_auc"]),
+                    "val_best_AUC": float(candidate_metrics.get("AUC", np.nan)),
+                    "val_best_LOGLOSS": float(candidate_metrics.get("LOGLOSS", np.nan)),
+                    "val_best_CINDEX": float(candidate_metrics.get("CINDEX", np.nan)),
+                    "val_best_LOSS": float(candidate_metrics.get("LOSS", np.nan)),
+                    f"selected_hp_mean_{primary_metric_key}": float(best_hp_row["mean_primary"]),
+                    f"selected_hp_std_{primary_metric_key}": float(best_hp_row["std_primary"]),
                     "hp_selection_epsilon": float(epsilon),
-                    "hp_selection_best_mean_AUC": float(best_mean_auc),
+                    f"hp_selection_best_mean_{primary_metric_key}": float(best_mean_metric),
                 }
             )
             selected_inner_histories.append(candidate["history"])
@@ -994,6 +1164,7 @@ def nested_cv(
                 label_df=inst_df_train_outer,
                 label_col=label_col,
                 id_col=patient_id_col,
+                **base_dataset_kwargs,
             )
             prefit_outer_imputer = _fit_split_imputer(
                 split_dataset=outer_train_split_dataset,
@@ -1022,6 +1193,11 @@ def nested_cv(
                 id_col=patient_id_col,
                 prefit_imputer=prefit_outer_imputer,
                 imputer_kwargs=imputer_kwargs,
+                task_type=normalize_task_type((task_config or {}).get("task_type", "binary_classification")),
+                survival_time_col=(task_config or {}).get("survival_time_col"),
+                survival_event_col=(task_config or {}).get("survival_event_col"),
+                survival_censorship_col=(task_config or {}).get("survival_censorship_col"),
+                survival_y_disc_col=(task_config or {}).get("survival_y_disc_col"),
             )
 
             outer_train_model, outer_refit_history = train_model_on_full_dataset(
@@ -1036,6 +1212,7 @@ def nested_cv(
                 imputation_method=imputation_method,
                 model_kwargs=selected_model_kwargs,
                 train_seed=int(seed + outer_fold_idx * 100_000 + 2),
+                task_config=task_config,
             )
 
             for hrow in outer_refit_history:
@@ -1085,12 +1262,17 @@ def nested_cv(
 
                 for hrow in outer_refit_history:
                     epoch_i = int(hrow["epoch"])
-                    log_payload = {
-                        "outer_train_model/train_loss": float(hrow["train_loss"]),
-                        "outer_train_model/train_auc": float(hrow["train_auc"]),
-                        "outer_train_model/train_aucpr": float(hrow["train_aucpr"]),
-                        "outer_train_model/train_acc": float(hrow["train_acc"]),
-                    }
+                    log_payload = {"outer_train_model/train_loss": float(hrow["train_loss"])}
+                    if _is_survival(task_config):
+                        log_payload["outer_train_model/train_cindex"] = float(hrow.get("train_cindex", 0.0))
+                    else:
+                        log_payload.update(
+                            {
+                                "outer_train_model/train_auc": float(hrow["train_auc"]),
+                                "outer_train_model/train_aucpr": float(hrow["train_aucpr"]),
+                                "outer_train_model/train_acc": float(hrow["train_acc"]),
+                            }
+                        )
 
                     if model_name_l in {"dipam", "di_mmlp"}:
                         log_payload.update(
@@ -1136,6 +1318,7 @@ def nested_cv(
                 label_df=inst_df_test_outer,
                 label_col=label_col,
                 id_col=patient_id_col,
+                **base_dataset_kwargs,
             )
 
             for eval_setup in test_eval_setups:
@@ -1161,18 +1344,33 @@ def nested_cv(
                     drop_last=False,
                 )
 
-                y_true_outer, y_logits_outer, y_prob_outer, pids_outer, pam_details_outer = _predict_model_probabilities(
+                pred_out = _predict_model_outputs(
                     model=outer_train_model,
                     data_loader=outer_eval_loader,
                     device=device,
                     bypass_mask=predict_bypass_mask,
                     collect_pam_details=model_name_l in {"pam", "dipam"},
                     model_name=model_name_l,
+                    task_config=task_config,
                 )
-                outer_metrics = safe_binary_metrics(y_true_outer, y_prob_outer)
+                if _is_survival(task_config):
+                    outer_metrics = safe_task_metrics(
+                        task_config,
+                        event_times=pred_out["event_times"],
+                        event_observed=pred_out["event_observed"],
+                        censorship=pred_out["censorship"],
+                        y_disc=pred_out["y_disc"],
+                        logits=pred_out["logits"],
+                    )
+                else:
+                    outer_metrics = safe_task_metrics(
+                        task_config,
+                        y_true=pred_out["y_true"],
+                        y_prob=pred_out["probs"],
+                    )
 
                 per_patient_prediction_rows = []
-                for patient_idx, pid in enumerate(pids_outer):
+                for patient_idx, pid in enumerate(pred_out["pids"]):
                     row = {
                         "outer_fold": outer_fold_idx,
                         "outer_eval_target": "test_outer",
@@ -1181,50 +1379,68 @@ def nested_cv(
                         "train_missing_prop": float(getattr(train_missing_simulator, "missing_prop", 0.0)),
                         "test_missing_location": eval_missing_location,
                         "test_missing_prop": eval_missing_prop,
-                        "y_true": int(y_true_outer[patient_idx]),
                     }
-                    logit_value = float(y_logits_outer[patient_idx])
-                    prob_value = float(y_prob_outer[patient_idx])
-                    pred_label = int(logit_value >= 0.0)
-                    row["inner_model_1_logit"] = logit_value
-                    row["inner_model_1_prob"] = prob_value
-                    row["inner_model_1_pred_label"] = pred_label
-                    if model_name_l in {"pam", "dipam"} and pam_details_outer is not None:
+                    if _is_survival(task_config):
+                        row["event_time"] = float(pred_out["event_times"][patient_idx])
+                        row["event_observed"] = int(pred_out["event_observed"][patient_idx])
+                        row["censorship"] = int(pred_out["censorship"][patient_idx])
+                        row["y_disc"] = int(pred_out["y_disc"][patient_idx])
+                        row["inner_model_1_risk"] = float(pred_out["risk"][patient_idx])
+                        for bin_idx in range(pred_out["logits"].shape[1]):
+                            row[f"inner_model_1_logit_bin_{bin_idx}"] = float(
+                                pred_out["logits"][patient_idx, bin_idx]
+                            )
+                            row[f"inner_model_1_hazard_bin_{bin_idx}"] = float(
+                                pred_out["hazards"][patient_idx, bin_idx]
+                            )
+                            row[f"inner_model_1_survival_bin_{bin_idx}"] = float(
+                                pred_out["survival"][patient_idx, bin_idx]
+                            )
+                    else:
+                        row["y_true"] = int(pred_out["y_true"][patient_idx])
+                        logit_value = float(pred_out["logits"][patient_idx])
+                        prob_value = float(pred_out["probs"][patient_idx])
+                        pred_label = int(logit_value >= 0.0)
+                        row["inner_model_1_logit"] = logit_value
+                        row["inner_model_1_prob"] = prob_value
+                        row["inner_model_1_pred_label"] = pred_label
+                    if model_name_l in {"pam", "dipam"} and pred_out["pam_details"] is not None:
                         for modality_idx, modality_name in enumerate(modality_names):
                             row[f"inner_model_1_{modality_name}_alpha"] = float(
-                                pam_details_outer["alpha"][patient_idx, modality_idx]
+                                pred_out["pam_details"]["alpha"][patient_idx, modality_idx]
                             )
-                            row[f"inner_model_1_{modality_name}_R"] = float(
-                                pam_details_outer["R"][patient_idx, modality_idx]
-                            )
+                            r_value = pred_out["pam_details"]["R"][patient_idx, modality_idx]
+                            if np.ndim(r_value) == 0:
+                                row[f"inner_model_1_{modality_name}_R"] = float(r_value)
+                            else:
+                                for bin_idx, bin_value in enumerate(np.asarray(r_value).reshape(-1)):
+                                    row[f"inner_model_1_{modality_name}_R_bin_{bin_idx}"] = float(bin_value)
                     per_patient_prediction_rows.append(row)
 
                 test_prediction_rows.extend(per_patient_prediction_rows)
 
-                outer_results.append(
-                    {
-                        "outer_fold": outer_fold_idx,
-                        "outer_eval_target": "test_outer",
-                        "eval_missing_location": eval_missing_location,
-                        "eval_missing_prop": eval_missing_prop,
-                        "inner_models_count": 1,
-                        "selected_inner_hp_names": str(best_hp_row["hp_name"]),
-                        "selected_inner_mean_AUC": float(np.mean([r["val_best_AUC"] for r in selected_inner_rows])),
-                        "selected_inner_mean_LOGLOSS": float(np.mean([r["val_best_LOGLOSS"] for r in selected_inner_rows])),
-                        "selected_inner_std_AUC": float(best_hp_row["std_auc"]),
-                        "hp_selection_epsilon": float(epsilon),
-                        "hp_selection_best_mean_AUC": float(best_mean_auc),
-                        "outer_test_metric_source": "outer_refit_model",
-                        "outer_refit_epochs": int(refit_epochs),
-                        "outer_test_LOGLOSS": float(outer_metrics["LOGLOSS"]),
-                        "outer_test_AUC": float(outer_metrics["AUC"]),
-                        "outer_test_AUCPR": float(outer_metrics["AUCPR"]),
-                        "outer_test_ACC": float(outer_metrics["ACC"]),
-                        "outer_test_SEN": float(outer_metrics["SEN"]),
-                        "outer_test_SP": float(outer_metrics["SP"]),
-                        "outer_test_MCC": float(outer_metrics["MCC"]),
-                    }
-                )
+                result_row = {
+                    "outer_fold": outer_fold_idx,
+                    "outer_eval_target": "test_outer",
+                    "eval_missing_location": eval_missing_location,
+                    "eval_missing_prop": eval_missing_prop,
+                    "inner_models_count": 1,
+                    "selected_inner_hp_names": str(best_hp_row["hp_name"]),
+                    "hp_selection_epsilon": float(epsilon),
+                    "outer_test_metric_source": "outer_refit_model",
+                    "outer_refit_epochs": int(refit_epochs),
+                    f"selected_inner_mean_{primary_metric_key}": float(
+                        np.mean([r[f"val_best_{primary_metric_key}"] for r in selected_inner_rows])
+                    ),
+                    f"selected_inner_mean_{primary_loss_key}": float(
+                        np.mean([r[f"val_best_{primary_loss_key}"] for r in selected_inner_rows])
+                    ),
+                    f"selected_inner_std_{primary_metric_key}": float(best_hp_row["std_primary"]),
+                    f"hp_selection_best_mean_{primary_metric_key}": float(best_mean_metric),
+                }
+                for metric_name, metric_value in outer_metrics.items():
+                    result_row[f"outer_test_{metric_name}"] = float(metric_value)
+                outer_results.append(result_row)
 
             del outer_train_model
             gc.collect()
@@ -1242,6 +1458,7 @@ def nested_cv(
                         wandb_mode=wandb_mode,
                         wandb_base_config=wandb_base_config,
                         model_name_l=model_name_l,
+                        task_config=task_config,
                     )
                 inner_outer_results, inner_test_prediction_rows = _evaluate_retained_inner_models_on_outer_test(
                     selected_candidates=selected_candidates,
@@ -1264,7 +1481,8 @@ def nested_cv(
                     selected_inner_rows=selected_inner_rows,
                     best_hp_row=best_hp_row,
                     epsilon=epsilon,
-                    best_mean_auc=best_mean_auc,
+                    best_mean_metric=best_mean_metric,
+                    task_config=task_config,
                 )
                 saved_inner_outer_results.extend(inner_outer_results)
                 saved_inner_test_prediction_rows.extend(inner_test_prediction_rows)
@@ -1288,6 +1506,7 @@ def nested_cv(
                     wandb_mode=wandb_mode,
                     wandb_base_config=wandb_base_config,
                     model_name_l=model_name_l,
+                    task_config=task_config,
                 )
 
             inner_outer_results, inner_test_prediction_rows = _evaluate_retained_inner_models_on_outer_test(
@@ -1311,7 +1530,8 @@ def nested_cv(
                 selected_inner_rows=selected_inner_rows,
                 best_hp_row=best_hp_row,
                 epsilon=epsilon,
-                best_mean_auc=best_mean_auc,
+                best_mean_metric=best_mean_metric,
+                task_config=task_config,
             )
             outer_results.extend(inner_outer_results)
             test_prediction_rows.extend(inner_test_prediction_rows)
