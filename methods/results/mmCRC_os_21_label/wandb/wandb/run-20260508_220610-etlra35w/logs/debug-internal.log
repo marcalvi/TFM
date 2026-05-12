@@ -1,0 +1,12 @@
+{"time":"2026-05-08T22:06:10.862973316+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-08T22:06:11.137009316+02:00","level":"INFO","msg":"stream: created new stream","id":"etlra35w"}
+{"time":"2026-05-08T22:06:11.137059766+02:00","level":"INFO","msg":"handler: started","stream_id":"etlra35w"}
+{"time":"2026-05-08T22:06:11.140999256+02:00","level":"INFO","msg":"stream: started","id":"etlra35w"}
+{"time":"2026-05-08T22:06:11.141035735+02:00","level":"INFO","msg":"writer: started","stream_id":"etlra35w"}
+{"time":"2026-05-08T22:06:11.141054515+02:00","level":"INFO","msg":"sender: started","stream_id":"etlra35w"}
+{"time":"2026-05-08T22:06:12.740873087+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-08T22:06:13.005666423+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-08T22:06:13.007873457+02:00","level":"INFO","msg":"stream: closing","id":"etlra35w"}
+{"time":"2026-05-08T22:06:13.007878877+02:00","level":"INFO","msg":"handler: closed","stream_id":"etlra35w"}
+{"time":"2026-05-08T22:06:13.008480855+02:00","level":"INFO","msg":"sender: closed","stream_id":"etlra35w"}
+{"time":"2026-05-08T22:06:13.008484795+02:00","level":"INFO","msg":"stream: closed","id":"etlra35w"}
