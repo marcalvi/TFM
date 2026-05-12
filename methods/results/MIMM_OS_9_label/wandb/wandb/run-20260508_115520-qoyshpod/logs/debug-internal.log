@@ -1,0 +1,12 @@
+{"time":"2026-05-08T11:55:20.897583735+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-08T11:55:21.164615787+02:00","level":"INFO","msg":"stream: created new stream","id":"qoyshpod"}
+{"time":"2026-05-08T11:55:21.164666147+02:00","level":"INFO","msg":"handler: started","stream_id":"qoyshpod"}
+{"time":"2026-05-08T11:55:21.168302936+02:00","level":"INFO","msg":"stream: started","id":"qoyshpod"}
+{"time":"2026-05-08T11:55:21.168312096+02:00","level":"INFO","msg":"writer: started","stream_id":"qoyshpod"}
+{"time":"2026-05-08T11:55:21.168323566+02:00","level":"INFO","msg":"sender: started","stream_id":"qoyshpod"}
+{"time":"2026-05-08T11:55:22.533778668+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-08T11:55:22.73602518+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-08T11:55:22.73799714+02:00","level":"INFO","msg":"stream: closing","id":"qoyshpod"}
+{"time":"2026-05-08T11:55:22.73800414+02:00","level":"INFO","msg":"handler: closed","stream_id":"qoyshpod"}
+{"time":"2026-05-08T11:55:22.73845937+02:00","level":"INFO","msg":"sender: closed","stream_id":"qoyshpod"}
+{"time":"2026-05-08T11:55:22.7384633+02:00","level":"INFO","msg":"stream: closed","id":"qoyshpod"}

@@ -1,0 +1,18 @@
+2026-05-07 23:49:54,214 INFO    MainThread:18 [wandb_init.py:setup_run_log_directory():717] Logging user logs to /home/osiris-user/Desktop/TFM/methods/results/1001P_OS_27_label/wandb/wandb/run-20260507_234954-o5fibe2d/logs/debug.log
+2026-05-07 23:49:54,214 INFO    MainThread:18 [wandb_init.py:setup_run_log_directory():718] Logging internal logs to /home/osiris-user/Desktop/TFM/methods/results/1001P_OS_27_label/wandb/wandb/run-20260507_234954-o5fibe2d/logs/debug-internal.log
+2026-05-07 23:49:54,214 INFO    MainThread:18 [wandb_init.py:init():844] calling init triggers
+2026-05-07 23:49:54,214 INFO    MainThread:18 [wandb_init.py:init():849] wandb.init called with sweep_config: {}
+config: {'endpoint': 'OS_27_label', 'model': 'MLP', 'model_canonical': 'mlp', 'dataset': '1001P', 'modalities': ['blood', 'radio', 'radio_report'], 'hp_grid_size': 12, 'epochs': 80, 'retrain_outer': True, 'save_inner': True, 'best_epoch_warmup': 5, 'inner_splits': 5, 'outer_splits': 5, 'hp_selection_epsilon': 0.02, 'train_missing_prop': 0.0, 'missing_location': 'global', 'missing_pattern_seed': 2026, 'imputation_method': 'vae', 'modality_pooling': {}, 'test_eval_combinations': 3, 'test_missing_props_grid': '0.0,0.33,0.66', 'eval_missing_locations_grid': 'global,global,global', 'vae_imputer_latent_dim': 16, 'vae_imputer_hidden_dim': 128, 'vae_imputer_epochs': 30, 'vae_imputer_batch_size': 64, 'vae_imputer_lr': 0.001, 'vae_imputer_beta': 0.001, 'seed': 55602, 'outer_fold': 4, 'inner_fold': 5, 'model_type': 'inner', 'phase': 'selected_inner_model', 'selected_hp_name': 'lr1e-04_bs32_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss0_trlocglobal', '_wandb': {}}
+2026-05-07 23:49:54,214 INFO    MainThread:18 [wandb_init.py:init():892] starting backend
+2026-05-07 23:49:54,214 INFO    MainThread:18 [wandb_init.py:init():895] sending inform_init request
+2026-05-07 23:49:54,216 INFO    MainThread:18 [wandb_init.py:init():903] backend started and connected
+2026-05-07 23:49:54,217 INFO    MainThread:18 [wandb_init.py:init():973] updated telemetry
+2026-05-07 23:49:54,218 INFO    MainThread:18 [wandb_init.py:init():997] communicating run to backend with 180.0 second timeout
+2026-05-07 23:49:54,827 INFO    MainThread:18 [wandb_init.py:init():1042] starting run threads in backend
+2026-05-07 23:49:54,919 INFO    MainThread:18 [wandb_run.py:_console_start():2524] atexit reg
+2026-05-07 23:49:54,919 INFO    MainThread:18 [wandb_run.py:_redirect():2373] redirect: off
+2026-05-07 23:49:54,921 INFO    MainThread:18 [wandb_init.py:init():1082] run started, returning control to user process
+2026-05-07 23:49:54,930 INFO    MainThread:18 [wandb_run.py:_finish():2291] finishing run marc_albesa/VAE_MLP_1001P/o5fibe2d
+2026-05-07 23:49:54,930 INFO    MainThread:18 [wandb_run.py:_atexit_cleanup():2490] got exitcode: 0
+2026-05-07 23:49:54,930 INFO    MainThread:18 [wandb_run.py:_restore():2472] restore
+2026-05-07 23:49:54,930 INFO    MainThread:18 [wandb_run.py:_restore():2478] restore done
