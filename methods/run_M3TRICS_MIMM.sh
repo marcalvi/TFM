@@ -27,16 +27,12 @@ DATA_ROOT="/nfs/rnas/projects/M3TRICS/data/inputs"
 
 # -----------------------------------------------------------------------------------------
 # 2. DATASET AND ENDPOINT
-# Define dataset name, patient ID column, endpoint CSV file, and endpoint column
+# Define dataset name, patient ID column, and endpoint CSV file
 # -----------------------------------------------------------------------------------------
 
 DATASET="MIMM"
 PATIENT_ID_COL="patient"
 ENDPOINTS_CSV="patients_mimm.csv"
-ENDPOINT_COL="OS_9_label"
-
-# Output directory
-RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}_${ENDPOINT_COL}"
 
 # -----------------------------------------------------------------------------------------
 # 3. MODALITIES CONFIGURATION
@@ -106,21 +102,27 @@ LR_PATIENCE=5
 
 # -----------------------------------------------------------------------------------------
 # 5. TASK CONFIGURATION
-# binary classification:
+# binary classification arguments:
 #   TASK_TYPE="binary_classification"
-#   ENDPOINT_COL is used as the target label
+#   ENDPOINT_COL: binary label column used as the prediction target
 #
-# survival:
+# survival arguments:
 #   TASK_TYPE="survival"
-#   SURVIVAL_TIME_COL and SURVIVAL_EVENT_COL are used to build y_disc/censorship
-#   ENDPOINT_COL is kept for compatibility with the current CLI/output naming
+#   SURVIVAL_LOSS: survival loss to optimize
+#   SURVIVAL_TIME_COL: continuous survival time column
+#   SURVIVAL_EVENT_COL: binary event indicator column (1=event, 0=censored)
+#   SURVIVAL_N_BINS: number of discrete survival bins
 # -----------------------------------------------------------------------------------------
 
 TASK_TYPE="binary_classification"
+ENDPOINT_COL="OS_9_label"
 # SURVIVAL_LOSS="nll"
 # SURVIVAL_TIME_COL=""
 # SURVIVAL_EVENT_COL=""
 # SURVIVAL_N_BINS=4
+
+# Output directory
+RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}_${ENDPOINT_COL}"
 
 # -----------------------------------------------------------------------------------------
 # 6. ABLATION STUDY
