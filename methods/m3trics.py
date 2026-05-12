@@ -267,13 +267,7 @@ def build_training_arg_parser():
         "--scheduler_type",
         type=str,
         default="cosine_annealing",
-        choices=[
-            "cosine_annealing",
-            "cosine",
-            "reduce_on_plateau",
-            "plateau",
-            "reduce_lr_on_plateau",
-        ],
+        choices=["cosine_annealing", "reduce_lr_on_plateau"],
         help="Learning-rate scheduler. Default: cosine_annealing.",
     )
     parser.add_argument("--lr_patience", type=int, default=5)
@@ -859,15 +853,17 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
         str(float(shared_args.hp_selection_epsilon)),
         "--scheduler_type",
         str(shared_args.scheduler_type),
-        "--min_lr",
-        str(float(shared_args.min_lr)),
-        "--lr_patience",
-        str(int(shared_args.lr_patience)),
         "--seeds",
         str(shared_args.seeds),
         "--missing_pattern_seed",
         str(int(shared_args.missing_pattern_seed)),
     ]
+    scheduler_type = str(shared_args.scheduler_type).strip().lower()
+    if scheduler_type == "cosine_annealing":
+        arg_list.extend(["--min_lr", str(float(shared_args.min_lr))])
+    elif scheduler_type == "reduce_lr_on_plateau":
+        arg_list.extend(["--lr_patience", str(int(shared_args.lr_patience))])
+
     if str(shared_args.task_type).strip().lower() == "survival":
         arg_list.extend(
             [
@@ -1023,13 +1019,7 @@ def build_preprocessing_arg_parser():
         "--scheduler_type",
         type=str,
         default="cosine_annealing",
-        choices=[
-            "cosine_annealing",
-            "cosine",
-            "reduce_on_plateau",
-            "plateau",
-            "reduce_lr_on_plateau",
-        ],
+        choices=["cosine_annealing", "reduce_lr_on_plateau"],
     )
     parser.add_argument("--min_lr", type=float, default=1e-6)
     parser.add_argument("--lr_patience", type=int, default=5)

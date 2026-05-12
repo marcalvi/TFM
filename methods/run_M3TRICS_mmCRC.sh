@@ -84,7 +84,9 @@ BLOOD_CSV="mmCRC_blood_data.csv"
 # 4. TRAINING CONFIGURATION
 # Select the models to run after preprocessing.
 # Available methods: ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, Di-MMLP, HealNet, SMILe
-# Available scheduler types: cosine_annealing, cosine, reduce_on_plateau, plateau, reduce_lr_on_plateau
+# Available scheduler types: cosine_annealing, reduce_lr_on_plateau
+#   cosine_annealing requires MIN_LR
+#   reduce_lr_on_plateau requires LR_PATIENCE
 # -----------------------------------------------------------------------------------------
 
 RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, Di-MMLP, HealNet, SMILe"
@@ -96,7 +98,7 @@ INNER_SPLITS=${k}
 OUTER_SPLITS=${k}
 SCHEDULER_TYPE="cosine_annealing"
 MIN_LR="1e-6"
-LR_PATIENCE=5
+# LR_PATIENCE=5
 
 # -----------------------------------------------------------------------------------------
 # 5. TASK CONFIGURATION
@@ -197,11 +199,15 @@ M3TRICS_ARGS=(
   --ablation_study "${ABLATION_STUDY}"
   --hp_selection_epsilon "${HP_SELECTION_EPSILON}"
   --scheduler_type "${SCHEDULER_TYPE}"
-  --min_lr "${MIN_LR}"
-  --lr_patience "${LR_PATIENCE}"
   --seeds "${SEEDS}"
   --missing_pattern_seed "${MISSING_PATTERN_SEED}"
 )
+
+if [[ "${SCHEDULER_TYPE}" == "cosine_annealing" ]]; then
+  M3TRICS_ARGS+=(--min_lr "${MIN_LR}")
+elif [[ "${SCHEDULER_TYPE}" == "reduce_lr_on_plateau" ]]; then
+  M3TRICS_ARGS+=(--lr_patience "${LR_PATIENCE}")
+fi
 
 if [[ "${TASK_TYPE}" == "survival" ]]; then
   M3TRICS_ARGS+=(

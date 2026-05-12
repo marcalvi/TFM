@@ -223,19 +223,10 @@ def _extract_distill_outputs(model_name, model_out):
 
 def _normalize_scheduler_type(scheduler_type):
     value = str(scheduler_type or "cosine_annealing").strip().lower()
-    aliases = {
-        "cosine": "cosine_annealing",
-        "cosineannealinglr": "cosine_annealing",
-        "cosine_annealing_lr": "cosine_annealing",
-        "plateau": "reduce_on_plateau",
-        "reducelronplateau": "reduce_on_plateau",
-        "reduce_lr_on_plateau": "reduce_on_plateau",
-    }
-    value = aliases.get(value, value)
-    if value not in {"cosine_annealing", "reduce_on_plateau"}:
+    if value not in {"cosine_annealing", "reduce_lr_on_plateau"}:
         raise ValueError(
             f"Unsupported scheduler_type '{scheduler_type}'. Supported: "
-            "cosine_annealing, reduce_on_plateau."
+            "cosine_annealing, reduce_lr_on_plateau."
         )
     return value
 
@@ -248,7 +239,7 @@ def _build_scheduler(optimizer, epochs, min_lr, scheduler_type="cosine_annealing
             T_max=max(int(epochs), 1),
             eta_min=float(min_lr),
         )
-    if scheduler_type == "reduce_on_plateau":
+    if scheduler_type == "reduce_lr_on_plateau":
         return optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode="min",
