@@ -98,28 +98,40 @@ HP_SELECTION_EPSILON="0.02"
 k=5
 INNER_SPLITS=${k}
 OUTER_SPLITS=${k}
+ABLATION_STUDY="true"
+
+# -----------------------------------------------------------------------------------------
+# 5. TASK CONFIGURATION
+# binary classification:
+#   TASK_TYPE="binary_classification"
+#   ENDPOINT_COL is used as the target label
+#
+# survival:
+#   TASK_TYPE="survival"
+#   SURVIVAL_TIME_COL and SURVIVAL_EVENT_COL are used to build y_disc/censorship
+#   ENDPOINT_COL is kept for compatibility with the current CLI/output naming
+# -----------------------------------------------------------------------------------------
+
+TASK_TYPE="binary_classification"
+SURVIVAL_LOSS="nll"
+SURVIVAL_TIME_COL=""
+SURVIVAL_EVENT_COL=""
+SURVIVAL_N_BINS=4
+
+# -----------------------------------------------------------------------------------------
+# 6. ABLATION STUDY
+# Specify these values to perform the proposed ablation study and decay analysis.
+# Note: this process needs a subset with all modalities available, so make sure N is large
+# enough to support meaningful statistical comparisons.
+# If ABLATION_STUDY=false, synthetic missingness is disabled and the dataset is trained as-is.
+# -----------------------------------------------------------------------------------------
+
 MISSING_LOCATION="global"
 TRAIN_MISSING_PROP="0.0,0.33,0.66"
 TEST_MISSING_PROP="0.0,0.33,0.66"
 
 SEEDS="22,2002,4,18473,55602"
 MISSING_PATTERN_SEED=2026
-
-# -----------------------------------------------------------------------------------------
-# 5. BASIC VALIDATION
-# -----------------------------------------------------------------------------------------
-
-ENDPOINTS_PATH="${DATA_ROOT}/${DATASET_DIR}/${ENDPOINTS_CSV}"
-if [[ ! -f "${ENDPOINTS_PATH}" ]]; then
-  echo "Missing endpoint CSV: ${ENDPOINTS_PATH}" >&2
-  echo "Create endpoints_1001Prostate.csv first, then set ENDPOINT_COL to a real label column." >&2
-  exit 1
-fi
-
-if [[ "${ENDPOINT_COL}" == "SET_ME" ]]; then
-  echo "ENDPOINT_COL is still SET_ME. Point it to a real endpoint label column before running." >&2
-  exit 1
-fi
 
 # -----------------------------------------------------------------------------------------
 # Wrap arguments and run m3trics script
@@ -164,21 +176,37 @@ add_modality_args "${RADIO_REPORT_NAME}" "${RADIO_REPORT_CSV}" "${RADIO_REPORT_D
 M3TRICS_ARGS=(
   --dataset "${DATASET}"
   --results_root "${RESULTS_ROOT}"
-  --endpoint_csv "${ENDPOINTS_PATH}"
+  --endpoint_csv "${DATA_ROOT}/${DATASET_DIR}/${ENDPOINTS_CSV}"
   --patient_id_col "${PATIENT_ID_COL}"
   --endpoint_col "${ENDPOINT_COL}"
+  --task_type "${TASK_TYPE}"
   --run_models "${RUN_MODELS}"
   --inner_splits "${INNER_SPLITS}"
   --outer_splits "${OUTER_SPLITS}"
   --retrain_outer "${RETRAIN_OUTER}"
   --save_inner "${SAVE_INNER}"
+  --ablation_study "${ABLATION_STUDY}"
   --hp_selection_epsilon "${HP_SELECTION_EPSILON}"
-  --missing_location "${MISSING_LOCATION}"
-  --train_missing_prop "${TRAIN_MISSING_PROP}"
-  --test_missing_prop "${TEST_MISSING_PROP}"
   --seeds "${SEEDS}"
   --missing_pattern_seed "${MISSING_PATTERN_SEED}"
 )
+
+if [[ "${TASK_TYPE}" == "survival" ]]; then
+  M3TRICS_ARGS+=(
+    --survival_loss "${SURVIVAL_LOSS}"
+    --survival_time_col "${SURVIVAL_TIME_COL}"
+    --survival_event_col "${SURVIVAL_EVENT_COL}"
+    --survival_n_bins "${SURVIVAL_N_BINS}"
+  )
+fi
+
+if [[ "${ABLATION_STUDY}" == "true" ]]; then
+  M3TRICS_ARGS+=(
+    --missing_location "${MISSING_LOCATION}"
+    --train_missing_prop "${TRAIN_MISSING_PROP}"
+    --test_missing_prop "${TEST_MISSING_PROP}"
+  )
+fi
 
 WANDB_ENABLED_RESOLVED="${WANDB_ENABLED:-false}"
 WANDB_MODE_RESOLVED="${WANDB_MODE:-online}"

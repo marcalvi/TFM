@@ -2,6 +2,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader, Sampler
 from imputation_methods import build_imputer
+from utils import normalize_model_name
+from survival_utils import normalize_task_type
 import zlib
 
 # ------------------------ MM SIMULATOR --------------------------
@@ -121,8 +123,24 @@ class MissingModalitySimulator:
 class MultimodalBaseDataset(Dataset):
     """Multimodal patient-level dataset with complete modalities."""
 
-    def __init__(self, dfs, label_df, label_col, id_col="patient"):
+    def __init__(
+        self,
+        dfs,
+        label_df,
+        label_col,
+        id_col="patient",
+        task_type="binary_classification",
+        survival_time_col=None,
+        survival_event_col=None,
+        survival_censorship_col=None,
+        survival_y_disc_col=None,
+    ):
         self.label_col = label_col
+        self.task_type = normalize_task_type(task_type)
+        self.survival_time_col = survival_time_col
+        self.survival_event_col = survival_event_col
+        self.survival_censorship_col = survival_censorship_col
+        self.survival_y_disc_col = survival_y_disc_col
 
         # `label_df` is indexed by patient ids in the training launcher
         self.label_df = label_df
@@ -151,7 +169,27 @@ class MultimodalBaseDataset(Dataset):
             x = torch.tensor(df.loc[p_id].values, dtype=torch.float32)
             Xs.append(x)
 
-        y = torch.tensor(float(self.label_df.loc[p_id, self.label_col]), dtype=torch.float32)
+        if self.task_type == "survival":
+            y = {
+                "event_time": torch.tensor(
+                    float(self.label_df.loc[p_id, self.survival_time_col]),
+                    dtype=torch.float32,
+                ),
+                "event": torch.tensor(
+                    float(self.label_df.loc[p_id, self.survival_event_col]),
+                    dtype=torch.float32,
+                ),
+                "censorship": torch.tensor(
+                    float(self.label_df.loc[p_id, self.survival_censorship_col]),
+                    dtype=torch.float32,
+                ),
+                "y_disc": torch.tensor(
+                    int(self.label_df.loc[p_id, self.survival_y_disc_col]),
+                    dtype=torch.long,
+                ),
+            }
+        else:
+            y = torch.tensor(float(self.label_df.loc[p_id, self.label_col]), dtype=torch.float32)
         return Xs, y, p_id
 
     def get_by_patient_id(self, patient_id):
@@ -178,7 +216,15 @@ def multimodal_collate(batch):
             modality_samples.append(x.to(dtype=torch.float32))
         Xs_out.append(torch.stack(modality_samples, dim=0))
 
-    y = torch.stack(ys).to(dtype=torch.float32)
+    if isinstance(ys[0], dict):
+        y = {
+            "event_time": torch.stack([item["event_time"] for item in ys]).to(dtype=torch.float32),
+            "event": torch.stack([item["event"] for item in ys]).to(dtype=torch.float32),
+            "censorship": torch.stack([item["censorship"] for item in ys]).to(dtype=torch.float32),
+            "y_disc": torch.stack([item["y_disc"] for item in ys]).to(dtype=torch.long),
+        }
+    else:
+        y = torch.stack(ys).to(dtype=torch.float32)
     present_mask = torch.stack(present_masks).to(dtype=torch.bool)
 
     return Xs_out, present_mask, y, list(pids)
@@ -449,18 +495,33 @@ def build_loaders(
     id_col="patient",
     prefit_imputer=None,
     imputer_kwargs=None,
+    task_type="binary_classification",
+    survival_time_col=None,
+    survival_event_col=None,
+    survival_censorship_col=None,
+    survival_y_disc_col=None,
 ):
     train_base = MultimodalBaseDataset(
         dfs=dfs_train_scaled,
         label_df=inst_df_train,
         label_col=label_col,
         id_col=id_col,
+        task_type=task_type,
+        survival_time_col=survival_time_col,
+        survival_event_col=survival_event_col,
+        survival_censorship_col=survival_censorship_col,
+        survival_y_disc_col=survival_y_disc_col,
     )
     val_base = MultimodalBaseDataset(
         dfs=dfs_eval_scaled,
         label_df=inst_df_eval,
         label_col=label_col,
         id_col=id_col,
+        task_type=task_type,
+        survival_time_col=survival_time_col,
+        survival_event_col=survival_event_col,
+        survival_censorship_col=survival_censorship_col,
+        survival_y_disc_col=survival_y_disc_col,
     )
 
     method_l = str(imputation_method).strip().lower()
@@ -500,7 +561,7 @@ def build_loaders(
         train_ds.set_imputer(shared_imputer, method_l)
         val_ds.set_imputer(shared_imputer, method_l)
 
-    model_name_l = str(model_name).strip().lower()
+    model_name_l = normalize_model_name(model_name)
     train_batch_size = int(batch_size)
     eval_batch_size = 1 if model_name_l == "healnet" else train_batch_size
     n_train = len(train_ds)

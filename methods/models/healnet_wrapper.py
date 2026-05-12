@@ -30,7 +30,7 @@ HealNet = _HEALNET_MODULE.HealNet
 
 
 class HealNetBinaryWrapper(nn.Module):
-    """Binary-classification adapter around the vendored HealNet repo.
+    """Adapter around the vendored HealNet repo with configurable output width.
 
     This pipeline provides one vector per modality with shape ``[B, D]`` plus a
     ``present_mask`` of shape ``[B, M]``. The wrapper maps each modality to
@@ -56,6 +56,7 @@ class HealNetBinaryWrapper(nn.Module):
         weight_tie_layers=False,
         fourier_encode_data=True,
         snn=True,
+        output_dim=1,
     ):
         super().__init__()
         if not input_dims:
@@ -63,12 +64,13 @@ class HealNetBinaryWrapper(nn.Module):
 
         self.n_modalities = len(input_dims)
         self.input_dims = [int(d) for d in input_dims]
+        self.output_dim = int(output_dim)
 
         self.model = HealNet(
             n_modalities=self.n_modalities,
             channel_dims=self.input_dims,
             num_spatial_axes=[1] * self.n_modalities,
-            out_dims=1,
+            out_dims=self.output_dim,
             depth=int(depth),
             num_freq_bands=int(num_freq_bands),
             max_freq=float(max_freq),

@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from survival_utils import compute_survival_loss_from_logits, normalize_task_type
 
 
 class UniversalReconstructionNet(nn.Module):
@@ -147,6 +148,7 @@ class SMILE(nn.Module):
         classifier_hidden_dim=256,
         alpha=1e-2,
         beta=1e-2,
+        output_dim=1,
     ):
         super().__init__()
         if not input_dims:
@@ -157,6 +159,7 @@ class SMILE(nn.Module):
         self.latent_dim = int(latent_dim)
         self.num_priors = int(num_priors)
         self.classifier_hidden_dim = int(classifier_hidden_dim)
+        self.output_dim = int(output_dim)
         self.alpha = float(alpha)
         self.beta = float(beta)
 
@@ -179,7 +182,7 @@ class SMILE(nn.Module):
         fused_dim = self.latent_dim * self.num_modalities
         self.noise_net = SMILNoiseNet(fused_dim=fused_dim, hidden_dim=self.classifier_hidden_dim)
         self.classifier_fc1 = nn.Linear(fused_dim, self.classifier_hidden_dim)
-        self.classifier_fc2 = nn.Linear(self.classifier_hidden_dim, 1)
+        self.classifier_fc2 = nn.Linear(self.classifier_hidden_dim, self.output_dim)
         self.relu = nn.ReLU(inplace=True)
         self.dropout = nn.Dropout(dropout)
 
@@ -380,8 +383,10 @@ def smile_alignment_loss(
     beta=1e-2,
     bce_criterion=None,
     mse_criterion=None,
+    task_config=None,
 ):
     """SMIL-style meta-validation loss: classification on noisy view + feature alignment."""
+    task_type = normalize_task_type((task_config or {}).get("task_type", "binary_classification"))
     if noisy_logits.ndim == 2 and noisy_logits.size(1) == 1:
         noisy_logits = noisy_logits.squeeze(1)
     if clean_logits.ndim == 2 and clean_logits.size(1) == 1:
@@ -392,7 +397,15 @@ def smile_alignment_loss(
     if mse_criterion is None:
         mse_criterion = nn.MSELoss()
 
-    loss_ce_noise = bce_criterion(noisy_logits, targets)
+    if task_type == "survival":
+        loss_ce_noise = compute_survival_loss_from_logits(
+            logits=noisy_logits,
+            y_disc=targets["y_disc"],
+            censorship=targets["censorship"],
+            loss_name=str((task_config or {}).get("survival_loss", "nll")).strip().lower(),
+        )
+    else:
+        loss_ce_noise = bce_criterion(noisy_logits, targets)
     loss_map_1 = mse_criterion(clean_aux["fusion_feature"], noisy_aux["fusion_feature"])
     loss_map_2 = mse_criterion(clean_aux["hidden_feature"], noisy_aux["hidden_feature"])
     total = loss_ce_noise + (float(alpha) * loss_map_1) + (float(beta) * loss_map_2)
@@ -413,6 +426,7 @@ def meta_train_step(
     inner_lr=1e-2,
     alpha=1e-2,
     beta=1e-2,
+    task_config=None,
 ):
     """First-order SMIL-style meta update inside a benchmark inner-train split."""
     if inner_steps < 1:
@@ -433,7 +447,15 @@ def meta_train_step(
             meta_train=True,
             return_aux=True,
         )
-        last_meta_train_loss = bce_criterion(noisy_logits.squeeze(1), y_train_inc)
+        if normalize_task_type((task_config or {}).get("task_type", "binary_classification")) == "survival":
+            last_meta_train_loss = compute_survival_loss_from_logits(
+                logits=noisy_logits if noisy_logits.ndim != 2 or noisy_logits.size(1) != 1 else noisy_logits.squeeze(1),
+                y_disc=y_train_inc["y_disc"],
+                censorship=y_train_inc["censorship"],
+                loss_name=str((task_config or {}).get("survival_loss", "nll")).strip().lower(),
+            )
+        else:
+            last_meta_train_loss = bce_criterion(noisy_logits.squeeze(1), y_train_inc)
         inner_optimizer.zero_grad()
         last_meta_train_loss.backward()
         inner_optimizer.step()
@@ -465,6 +487,7 @@ def meta_train_step(
         alpha=alpha,
         beta=beta,
         bce_criterion=bce_criterion,
+        task_config=task_config,
     )
 
     noisy_train_eval, _ = adapted_model(
@@ -474,7 +497,15 @@ def meta_train_step(
         meta_train=False,
         return_aux=True,
     )
-    meta_train_eval_loss = bce_criterion(noisy_train_eval.squeeze(1), y_train_inc)
+    if normalize_task_type((task_config or {}).get("task_type", "binary_classification")) == "survival":
+        meta_train_eval_loss = compute_survival_loss_from_logits(
+            logits=noisy_train_eval if noisy_train_eval.ndim != 2 or noisy_train_eval.size(1) != 1 else noisy_train_eval.squeeze(1),
+            y_disc=y_train_inc["y_disc"],
+            censorship=y_train_inc["censorship"],
+            loss_name=str((task_config or {}).get("survival_loss", "nll")).strip().lower(),
+        )
+    else:
+        meta_train_eval_loss = bce_criterion(noisy_train_eval.squeeze(1), y_train_inc)
     total_meta_loss = meta_train_eval_loss + meta_val_loss
 
     optimizer.zero_grad()

@@ -105,9 +105,12 @@ def _parse_retrain_flag_from_run_name(run_name: str):
     return None
 
 
-def list_model_sources(results_root: Path, dataset_name: str, train_missing_location: str, model_names=None, retrain_outer=None):
+def list_model_sources(results_root: Path, dataset_name: str, train_missing_location: str = 'GLOBAL', model_names=None, retrain_outer=None, results_mode: str = 'decay'):
     sources = []
     requested = None if model_names is None else set(model_names)
+    results_mode = str(results_mode).strip().lower()
+    if results_mode not in {'decay', 'fixed_dataset'}:
+        raise ValueError(f"Unsupported results_mode='{results_mode}'. Expected 'decay' or 'fixed_dataset'.")
 
     for run_dir in sorted(p for p in results_root.iterdir() if p.is_dir() and not p.name.startswith('.')):
         run_retrain_flag = _parse_retrain_flag_from_run_name(run_dir.name)
@@ -120,27 +123,25 @@ def list_model_sources(results_root: Path, dataset_name: str, train_missing_loca
         if requested is not None and model_label not in requested:
             continue
 
-        preferred_train_missing_dir = run_dir / 'TRAIN_MISSING' / train_missing_location.upper()
-        train_missing_dir = preferred_train_missing_dir if preferred_train_missing_dir.exists() else None
-        if train_missing_dir is None:
-            candidate_dirs = [p for p in run_dir.iterdir() if p.is_dir() and not p.name.startswith('.')]
-            for candidate_dir in candidate_dirs:
-                probe = candidate_dir / dataset_name.upper() / 'TRAIN_MISSING' / train_missing_location.upper()
-                if probe.exists():
-                    train_missing_dir = probe
-                    break
-        if train_missing_dir is None:
-            continue
+        if results_mode == 'fixed_dataset':
+            run_data_dir = run_dir / 'FIXED'
+            if not run_data_dir.exists():
+                continue
+        else:
+            run_data_dir = run_dir / 'TRAIN_MISSING' / train_missing_location.upper()
+            if not run_data_dir.exists():
+                continue
 
         sources.append({
             'model_name': model_label,
             'run_dir': run_dir,
-            'train_missing_dir': train_missing_dir,
+            'run_data_dir': run_data_dir,
+            'results_mode': results_mode,
         })
     return sources
 
 
-def resolve_requested_model_names(results_root: Path, dataset_name: str, train_missing_location: str, retrain_outer=None):
+def resolve_requested_model_names(results_root: Path, dataset_name: str, train_missing_location: str = 'GLOBAL', retrain_outer=None, results_mode: str = 'decay'):
     return sorted({
         source['model_name']
         for source in list_model_sources(
@@ -149,6 +150,7 @@ def resolve_requested_model_names(results_root: Path, dataset_name: str, train_m
             train_missing_location,
             model_names=None,
             retrain_outer=retrain_outer,
+            results_mode=results_mode,
         )
     })
 
@@ -205,7 +207,7 @@ def normalize_prediction_df(pred_df: pd.DataFrame):
     return out.reset_index(drop=True)
 
 
-def load_all_test_predictions(results_root: Path, dataset_name: str, train_missing_location: str, model_names=None, retrain_outer=None):
+def load_all_test_predictions(results_root: Path, dataset_name: str, train_missing_location: str = 'GLOBAL', model_names=None, retrain_outer=None, results_mode: str = 'decay'):
     frames = []
     missing_prediction_files = []
     for source in list_model_sources(
@@ -214,9 +216,10 @@ def load_all_test_predictions(results_root: Path, dataset_name: str, train_missi
         train_missing_location,
         model_names=model_names,
         retrain_outer=retrain_outer,
+        results_mode=results_mode,
     ):
         found_any = False
-        for path in sorted(source['train_missing_dir'].rglob('test_predictions.csv')):
+        for path in sorted(source['run_data_dir'].rglob('test_predictions.csv')):
             found_any = True
             df = pd.read_csv(path)
             if df.empty:
@@ -227,7 +230,7 @@ def load_all_test_predictions(results_root: Path, dataset_name: str, train_missi
             df['source_file'] = str(path)
             frames.append(df)
         if not found_any:
-            missing_prediction_files.append(str(source['train_missing_dir']))
+            missing_prediction_files.append(str(source['run_data_dir']))
 
     if not frames:
         return pd.DataFrame(), missing_prediction_files
@@ -388,6 +391,26 @@ def build_level1_summary(replicate_auc_df: pd.DataFrame):
             'n_replicates': int(auc_values.size),
         })
     return pd.DataFrame(rows).sort_values(['model_name', 'train_prop', 'test_prop']).reset_index(drop=True)
+
+
+def build_fixed_dataset_method_summary(replicate_auc_df: pd.DataFrame):
+    if replicate_auc_df.empty:
+        return pd.DataFrame(columns=['model_name', 'mean_auc', 'std_auc', 'n_replicates', 'auc_ci95', 'auc_ci95_lower', 'auc_ci95_upper'])
+    rows = []
+    for model_name, group_df in replicate_auc_df.groupby('model_name', sort=True):
+        auc_values = group_df['auc'].to_numpy(dtype=float)
+        auc_values = auc_values[np.isfinite(auc_values)]
+        stats = bootstrap_mean_ci(auc_values, n_bootstrap=2000, confidence=0.95, random_seed=_stable_seed(model_name, 'fixed_dataset'))
+        rows.append({
+            'model_name': str(model_name),
+            'mean_auc': float(stats['mean']),
+            'std_auc': float(np.std(auc_values, ddof=1)) if auc_values.size > 1 else 0.0,
+            'n_replicates': int(auc_values.size),
+            'auc_ci95': float(stats['ci_half_width']),
+            'auc_ci95_lower': float(stats['ci_lower']),
+            'auc_ci95_upper': float(stats['ci_upper']),
+        })
+    return pd.DataFrame(rows).sort_values(['mean_auc', 'model_name'], ascending=[False, True]).reset_index(drop=True)
 
 
 def build_cell_model_mean_matrix(level1_df: pd.DataFrame):
@@ -687,6 +710,37 @@ def compute_level1_global_friedman(level1_df: pd.DataFrame):
     stat, p_value = friedmanchisquare(*[complete_matrix[col].to_numpy(dtype=float) for col in complete_matrix.columns])
     return pd.DataFrame([{
         'n_cells': int(n_cells),
+        'n_models': int(n_models),
+        'friedman_statistic': float(stat),
+        'p_value': float(p_value),
+        'significant_p0_05': bool(float(p_value) < 0.05),
+    }])
+
+
+def compute_fixed_dataset_global_friedman(replicate_auc_df: pd.DataFrame):
+    if replicate_auc_df.empty:
+        return pd.DataFrame(columns=['n_replicates', 'n_models', 'friedman_statistic', 'p_value', 'significant_p0_05'])
+
+    complete_matrix = (
+        replicate_auc_df[['replicate_id', 'model_name', 'auc']]
+        .pivot(index='replicate_id', columns='model_name', values='auc')
+        .dropna(axis=0, how='any')
+        .sort_index(axis=0)
+        .sort_index(axis=1)
+    )
+    n_replicates, n_models = complete_matrix.shape
+    if n_models < 3 or n_replicates < 2:
+        return pd.DataFrame([{
+            'n_replicates': int(n_replicates),
+            'n_models': int(n_models),
+            'friedman_statistic': np.nan,
+            'p_value': np.nan,
+            'significant_p0_05': False,
+        }])
+
+    stat, p_value = friedmanchisquare(*[complete_matrix[col].to_numpy(dtype=float) for col in complete_matrix.columns])
+    return pd.DataFrame([{
+        'n_replicates': int(n_replicates),
         'n_models': int(n_models),
         'friedman_statistic': float(stat),
         'p_value': float(p_value),
@@ -1004,6 +1058,24 @@ def compute_level2_pairwise_tests(level1_df: pd.DataFrame, replicate_auc_df: pd.
     return out.sort_values([
         'train_missing_prop', 'test_missing_prop', 'winner_rank', 'loser_rank'
     ]).reset_index(drop=True)
+
+
+def build_fixed_dataset_method_significance_summary(method_summary_df: pd.DataFrame, pairwise_df: pd.DataFrame):
+    if method_summary_df.empty:
+        return pd.DataFrame(columns=['model_name', 'mean_auc', 'std_auc', 'n_replicates', 'auc_ci95', 'significant_wins', 'significant_losses'])
+
+    summary_df = method_summary_df.copy()
+    if pairwise_df.empty:
+        summary_df['significant_wins'] = 0
+        summary_df['significant_losses'] = 0
+        return summary_df
+
+    sig_df = pairwise_df.loc[pairwise_df['significant_fdr_0p05']].copy()
+    wins = sig_df.groupby('winner_model').size().to_dict()
+    losses = sig_df.groupby('loser_model').size().to_dict()
+    summary_df['significant_wins'] = summary_df['model_name'].map(lambda name: int(wins.get(name, 0)))
+    summary_df['significant_losses'] = summary_df['model_name'].map(lambda name: int(losses.get(name, 0)))
+    return summary_df
 
 
 def select_level2_plot_pairs(level2_pairwise_df: pd.DataFrame):

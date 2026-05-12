@@ -7,6 +7,12 @@ import pandas as pd
 from sklearn.impute import KNNImputer
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
+from survival_utils import (
+    SURVIVAL_CENSORSHIP_COL,
+    SURVIVAL_Y_DISC_COL,
+    add_survival_target_columns,
+    normalize_task_type,
+)
 
 
 def filter_by_patients(df, patient_ids, id_col="patient"):
@@ -309,40 +315,71 @@ def validate_imputation_requirements(modality_frames, modality_configs, id_col):
         raise ValueError("\n".join(errors))
 
 
-def load_endpoint_df(path, patient_id_col, endpoint_col):
+def load_endpoint_df(
+    path,
+    patient_id_col,
+    endpoint_col=None,
+    task_type="binary_classification",
+    survival_time_col=None,
+    survival_event_col=None,
+    survival_n_bins=4,
+):
     endpoint_df = pd.read_csv(path)
-    for required_col in [patient_id_col, endpoint_col]:
-        if required_col not in endpoint_df.columns:
-            raise ValueError(
-                f"Required column '{required_col}' not found in endpoint CSV '{path}'."
-            )
+    if patient_id_col not in endpoint_df.columns:
+        raise ValueError(
+            f"Required column '{patient_id_col}' not found in endpoint CSV '{path}'."
+        )
     if endpoint_df[patient_id_col].isna().any():
         raise ValueError(f"Endpoint CSV '{path}' has missing values in '{patient_id_col}'.")
 
-    raw_labels = endpoint_df[endpoint_col]
-    coerced_labels = pd.to_numeric(raw_labels, errors="coerce")
-    invalid_label_mask = coerced_labels.isna()
-    if invalid_label_mask.any():
-        invalid_examples = (
-            endpoint_df.loc[invalid_label_mask, [patient_id_col, endpoint_col]]
-            .head(10)
-            .to_dict("records")
+    task_type_l = normalize_task_type(task_type)
+    if task_type_l == "survival":
+        if not survival_time_col or not survival_event_col:
+            raise ValueError(
+                "Survival mode requires both survival_time_col and survival_event_col."
+            )
+        endpoint_df, _ = add_survival_target_columns(
+            endpoint_df=endpoint_df,
+            patient_id_col=patient_id_col,
+            time_col=survival_time_col,
+            event_col=survival_event_col,
+            n_bins=int(survival_n_bins),
+            y_disc_col=SURVIVAL_Y_DISC_COL,
+            censorship_col=SURVIVAL_CENSORSHIP_COL,
         )
-        n_invalid = int(invalid_label_mask.sum())
-        print(
-            f"[endpoints] Dropping {n_invalid} rows with non-numeric or missing labels in "
-            f"'{endpoint_col}'. Examples: {invalid_examples}"
-        )
-        endpoint_df = endpoint_df.loc[~invalid_label_mask].copy()
-        coerced_labels = coerced_labels.loc[~invalid_label_mask].copy()
+    else:
+        if not endpoint_col:
+            raise ValueError("Classification mode requires endpoint_col.")
+        if endpoint_col not in endpoint_df.columns:
+            raise ValueError(
+                f"Required column '{endpoint_col}' not found in endpoint CSV '{path}'."
+            )
 
-    if endpoint_df.empty:
-        raise ValueError(
-            f"Endpoint CSV '{path}' has no valid rows left after filtering invalid labels "
-            f"in '{endpoint_col}'."
-        )
+        raw_labels = endpoint_df[endpoint_col]
+        coerced_labels = pd.to_numeric(raw_labels, errors="coerce")
+        invalid_label_mask = coerced_labels.isna()
+        if invalid_label_mask.any():
+            invalid_examples = (
+                endpoint_df.loc[invalid_label_mask, [patient_id_col, endpoint_col]]
+                .head(10)
+                .to_dict("records")
+            )
+            n_invalid = int(invalid_label_mask.sum())
+            print(
+                f"[endpoints] Dropping {n_invalid} rows with non-numeric or missing labels in "
+                f"'{endpoint_col}'. Examples: {invalid_examples}"
+            )
+            endpoint_df = endpoint_df.loc[~invalid_label_mask].copy()
+            coerced_labels = coerced_labels.loc[~invalid_label_mask].copy()
 
-    endpoint_df[endpoint_col] = coerced_labels.astype(np.float32)
+        if endpoint_df.empty:
+            raise ValueError(
+                f"Endpoint CSV '{path}' has no valid rows left after filtering invalid labels "
+                f"in '{endpoint_col}'."
+            )
+
+        endpoint_df[endpoint_col] = coerced_labels.astype(np.float32)
+
     duplicated = endpoint_df[patient_id_col].duplicated(keep=False)
     if duplicated.any():
         preview = endpoint_df.loc[duplicated, patient_id_col].astype(str).head(10).tolist()
@@ -520,9 +557,24 @@ def align_complete_multimodal_cohort(modality_frames, endpoint_df, patient_id_co
     return aligned_modality_frames, aligned_endpoint_df, cohort_summary
 
 
-def save_processed_outputs(output_dir, endpoint_df, patient_id_col, endpoint_col, modality_frames, summary_payload):
+def save_processed_outputs(
+    output_dir,
+    endpoint_df,
+    patient_id_col,
+    endpoint_col,
+    modality_frames,
+    summary_payload,
+    endpoint_columns=None,
+):
     os.makedirs(output_dir, exist_ok=True)
-    endpoint_out = endpoint_df[[patient_id_col, endpoint_col]].copy()
+    if endpoint_columns is None:
+        endpoint_columns = [patient_id_col, endpoint_col]
+    missing_endpoint_cols = [col for col in endpoint_columns if col not in endpoint_df.columns]
+    if missing_endpoint_cols:
+        raise ValueError(
+            f"Cannot save processed endpoints: missing columns {missing_endpoint_cols}."
+        )
+    endpoint_out = endpoint_df[list(endpoint_columns)].copy()
     endpoint_out.to_csv(os.path.join(output_dir, "endpoints_selected.csv"), index=False)
 
     modalities_dir = os.path.join(output_dir, "modalities")
@@ -614,7 +666,14 @@ def _infer_patient_id_col_from_processed_bundle(endpoints_df, summary_path=None)
     )
 
 
-def _load_processed_dataset_bundle(dataset_dir, endpoint):
+def _load_processed_dataset_bundle(
+    dataset_dir,
+    endpoint,
+    task_type="binary_classification",
+    survival_time_col=None,
+    survival_event_col=None,
+    survival_n_bins=4,
+):
     processed_root = _resolve_processed_bundle_dir(dataset_dir)
     if processed_root is None:
         return None
@@ -625,8 +684,33 @@ def _load_processed_dataset_bundle(dataset_dir, endpoint):
 
     inst_df = pd.read_csv(endpoints_path)
     patient_id_col = _infer_patient_id_col_from_processed_bundle(inst_df, summary_path=summary_path)
-    label_col = find_label_column(inst_df, endpoint)
-    inst_df = inst_df[[patient_id_col, label_col]].copy()
+    task_type_l = normalize_task_type(task_type)
+    if task_type_l == "survival":
+        if not survival_time_col or not survival_event_col:
+            raise ValueError(
+                "Survival mode requires both survival_time_col and survival_event_col."
+            )
+        inst_df, _ = add_survival_target_columns(
+            endpoint_df=inst_df,
+            patient_id_col=patient_id_col,
+            time_col=survival_time_col,
+            event_col=survival_event_col,
+            n_bins=int(survival_n_bins),
+            y_disc_col=SURVIVAL_Y_DISC_COL,
+            censorship_col=SURVIVAL_CENSORSHIP_COL,
+        )
+        label_col = SURVIVAL_Y_DISC_COL
+        keep_cols = [
+            patient_id_col,
+            survival_time_col,
+            survival_event_col,
+            SURVIVAL_CENSORSHIP_COL,
+            SURVIVAL_Y_DISC_COL,
+        ]
+        inst_df = inst_df[keep_cols].copy()
+    else:
+        label_col = find_label_column(inst_df, endpoint)
+        inst_df = inst_df[[patient_id_col, label_col]].copy()
 
     modality_files = sorted(
         filename for filename in os.listdir(modalities_dir) if filename.lower().endswith(".csv")
@@ -645,7 +729,21 @@ def _load_processed_dataset_bundle(dataset_dir, endpoint):
         dfs[modality_name] = df.set_index(patient_id_col, drop=False)
 
     inst_df = inst_df.set_index(patient_id_col, drop=False)
-    return inst_df, dfs, label_col, patient_id_col
+    task_config = {
+        "task_type": task_type_l,
+        "label_col": label_col,
+    }
+    if task_type_l == "survival":
+        task_config.update(
+            {
+                "survival_time_col": survival_time_col,
+                "survival_event_col": survival_event_col,
+                "survival_censorship_col": SURVIVAL_CENSORSHIP_COL,
+                "survival_y_disc_col": SURVIVAL_Y_DISC_COL,
+                "survival_n_bins": int(inst_df[SURVIVAL_Y_DISC_COL].nunique()),
+            }
+        )
+    return inst_df, dfs, label_col, patient_id_col, task_config
 
 
 def _resolve_csv_path(dataset_dir, filename, required=False):
@@ -679,7 +777,13 @@ def _load_mimm_radio_df(radio_path, inst_df, id_col):
     return rad_df[keep]
 
 
-def _load_legacy_mimm_raw_bundle(dataset_dir, endpoint):
+def _load_legacy_mimm_raw_bundle(dataset_dir, endpoint, task_type="binary_classification"):
+    task_type_l = normalize_task_type(task_type)
+    if task_type_l != "binary_classification":
+        raise NotImplementedError(
+            "Legacy raw MIMM loading is only supported for binary classification. "
+            "Use a generic processed bundle for survival runs."
+        )
     id_col = "patient"
     inst_path = _resolve_csv_path(dataset_dir, "patients_mimm.csv", required=True)
     patho_path = _resolve_csv_path(dataset_dir, "pathology_mimm.csv", required=False)
@@ -715,7 +819,11 @@ def _load_legacy_mimm_raw_bundle(dataset_dir, endpoint):
         dfs[mod] = dfs[mod].set_index(id_col, drop=False)
 
     inst_df = inst_df.set_index(id_col, drop=False)
-    return inst_df, dfs, label_col, id_col
+    task_config = {
+        "task_type": "binary_classification",
+        "label_col": label_col,
+    }
+    return inst_df, dfs, label_col, id_col, task_config
 
 
 def load_or_preprocess_dataset(args):
@@ -724,13 +832,25 @@ def load_or_preprocess_dataset(args):
     if not dataset_dir:
         raise ValueError("Dataset loading requires --dataset_dir.")
 
-    processed_bundle = _load_processed_dataset_bundle(dataset_dir, endpoint=args.endpoint)
+    task_type = normalize_task_type(getattr(args, "task_type", "binary_classification"))
+    processed_bundle = _load_processed_dataset_bundle(
+        dataset_dir,
+        endpoint=args.endpoint,
+        task_type=task_type,
+        survival_time_col=getattr(args, "survival_time_col", None),
+        survival_event_col=getattr(args, "survival_event_col", None),
+        survival_n_bins=int(getattr(args, "survival_n_bins", 4)),
+    )
     if processed_bundle is not None:
         return processed_bundle
 
     dataset_name = str(args.dataset).strip().lower()
     if dataset_name == "mimm":
-        return _load_legacy_mimm_raw_bundle(dataset_dir=dataset_dir, endpoint=args.endpoint)
+        return _load_legacy_mimm_raw_bundle(
+            dataset_dir=dataset_dir,
+            endpoint=args.endpoint,
+            task_type=task_type,
+        )
 
     raise NotImplementedError(
         f"Dataset '{args.dataset}' is not available as a generic processed bundle and has no legacy raw loader. "

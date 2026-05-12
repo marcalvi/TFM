@@ -33,6 +33,7 @@ class MultimodalMLP(nn.Module):
         dropout_p=0.2,
         use_mask=True,
         fusion_batchnorm=False,
+        output_dim=1,
     ):
         super().__init__()
 
@@ -43,8 +44,11 @@ class MultimodalMLP(nn.Module):
         self.n_modalities = len(self.input_dims)
         self.use_mask = use_mask
         self.fusion_hidden_layers = int(fusion_hidden_layers)
+        self.output_dim = int(output_dim)
         if self.fusion_hidden_layers < 1:
             raise ValueError("fusion_hidden_layers must be >= 1")
+        if self.output_dim < 1:
+            raise ValueError("output_dim must be >= 1")
 
         self.modality_blocks = nn.ModuleList(
             [
@@ -76,7 +80,7 @@ class MultimodalMLP(nn.Module):
             )
             self.fusion_dropouts.append(nn.Dropout(p=dropout_p))
             in_dim = fusion_hidden_dim
-        self.fusion_output = nn.Linear(fusion_hidden_dim, 1)
+        self.fusion_output = nn.Linear(fusion_hidden_dim, self.output_dim)
 
     def forward(self, Xs, present_mask=None, return_aux=False):
         if len(Xs) != self.n_modalities:
