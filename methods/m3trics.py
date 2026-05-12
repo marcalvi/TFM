@@ -263,6 +263,20 @@ def build_training_arg_parser():
     parser.add_argument("--hp_selection_epsilon", type=float, default=0.02)
     parser.add_argument("--early_stopping_patience", type=int, default=20)
     parser.add_argument("--min_lr", type=float, default=1e-6)
+    parser.add_argument(
+        "--scheduler_type",
+        type=str,
+        default="cosine_annealing",
+        choices=[
+            "cosine_annealing",
+            "cosine",
+            "reduce_on_plateau",
+            "plateau",
+            "reduce_lr_on_plateau",
+        ],
+        help="Learning-rate scheduler. Default: cosine_annealing.",
+    )
+    parser.add_argument("--lr_patience", type=int, default=5)
     parser.add_argument("--seeds", type=str, default="123")
     parser.add_argument(
         "--missing_pattern_seed",
@@ -652,6 +666,9 @@ def run_training_from_args(args):
                         f"n_bins={int(task_config.get('survival_n_bins', args.survival_n_bins))}"
                     )
                 print(f"HP selection epsilon: {float(args.hp_selection_epsilon):.4f}")
+                print(f"Scheduler type: {str(args.scheduler_type).strip().lower()}")
+                print(f"Min LR: {float(args.min_lr):g}")
+                print(f"LR patience: {int(args.lr_patience)}")
                 print(f"Output directory: {odir}")
                 print(f"Hyperparameter combinations to evaluate: {len(hp_configs)}")
                 print(f"Test missingness combinations to evaluate: {len(test_eval_setups)}")
@@ -738,6 +755,8 @@ def run_training_from_args(args):
                     },
                     early_stopping_patience=int(args.early_stopping_patience),
                     min_lr=float(args.min_lr),
+                    scheduler_type=str(args.scheduler_type),
+                    lr_patience=int(args.lr_patience),
                     hp_selection_epsilon=float(args.hp_selection_epsilon),
                     radio_pooling_kwargs={
                         "hidden_dim": int(args.radio_attention_hidden_dim),
@@ -838,6 +857,12 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
         str(bool(shared_args.ablation_study)).lower(),
         "--hp_selection_epsilon",
         str(float(shared_args.hp_selection_epsilon)),
+        "--scheduler_type",
+        str(shared_args.scheduler_type),
+        "--min_lr",
+        str(float(shared_args.min_lr)),
+        "--lr_patience",
+        str(int(shared_args.lr_patience)),
         "--seeds",
         str(shared_args.seeds),
         "--missing_pattern_seed",
@@ -923,6 +948,9 @@ def _run_selected_models(args, modality_configs):
             f"n_bins={int(args.survival_n_bins)}"
         )
     print(f"HP selection epsilon: {float(args.hp_selection_epsilon):.4f}")
+    print(f"Scheduler type: {str(args.scheduler_type).strip().lower()}")
+    print(f"Min LR: {float(args.min_lr):g}")
+    print(f"LR patience: {int(args.lr_patience)}")
     if bool(args.ablation_study):
         print(f"Train missing prop: {args.train_missing_prop}")
         print(f"Test missing prop: {args.test_missing_prop}")
@@ -991,6 +1019,20 @@ def build_preprocessing_arg_parser():
     parser.add_argument("--save_inner", type=_parse_bool_flag, default=False)
     parser.add_argument("--ablation_study", type=_parse_bool_flag, default=True)
     parser.add_argument("--hp_selection_epsilon", type=float, default=0.02)
+    parser.add_argument(
+        "--scheduler_type",
+        type=str,
+        default="cosine_annealing",
+        choices=[
+            "cosine_annealing",
+            "cosine",
+            "reduce_on_plateau",
+            "plateau",
+            "reduce_lr_on_plateau",
+        ],
+    )
+    parser.add_argument("--min_lr", type=float, default=1e-6)
+    parser.add_argument("--lr_patience", type=int, default=5)
     parser.add_argument("--missing_location", default="global", type=str)
     parser.add_argument("--train_missing_prop", default="0", type=str)
     parser.add_argument("--test_missing_prop", default="0", type=str)

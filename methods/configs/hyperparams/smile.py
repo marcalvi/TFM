@@ -4,7 +4,6 @@ MODEL_CONFIG = {
     "fixed_args": {
         "epochs": 80,
         "early_stopping_patience": 20,
-        "min_lr": "1e-6",
         "weight_decay": "1e-4",
         "smil_e_num_heads": "1",
         "smil_e_dropout": "0.2",

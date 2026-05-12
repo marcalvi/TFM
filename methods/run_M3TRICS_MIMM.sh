@@ -90,6 +90,7 @@ RADIO_REPORT_CSV="radioreports_mimm.csv"
 # 4. TRAINING CONFIGURATION
 # Select the models to run after preprocessing.
 # Available methods: ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, Di-MMLP, HealNet, SMILe
+# Available scheduler types: cosine_annealing, cosine, reduce_on_plateau, plateau, reduce_lr_on_plateau
 # -----------------------------------------------------------------------------------------
 
 RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, Di-MMLP, HealNet, SMILe"
@@ -99,7 +100,9 @@ HP_SELECTION_EPSILON="0.02"
 k=5
 INNER_SPLITS=${k}
 OUTER_SPLITS=${k}
-ABLATION_STUDY="true"
+SCHEDULER_TYPE="cosine_annealing"
+MIN_LR="1e-6"
+LR_PATIENCE=5
 
 # -----------------------------------------------------------------------------------------
 # 5. TASK CONFIGURATION
@@ -114,10 +117,10 @@ ABLATION_STUDY="true"
 # -----------------------------------------------------------------------------------------
 
 TASK_TYPE="binary_classification"
-SURVIVAL_LOSS="nll"
-SURVIVAL_TIME_COL=""
-SURVIVAL_EVENT_COL=""
-SURVIVAL_N_BINS=4
+# SURVIVAL_LOSS="nll"
+# SURVIVAL_TIME_COL=""
+# SURVIVAL_EVENT_COL=""
+# SURVIVAL_N_BINS=4
 
 # -----------------------------------------------------------------------------------------
 # 6. ABLATION STUDY
@@ -127,6 +130,7 @@ SURVIVAL_N_BINS=4
 # If ABLATION_STUDY=false, synthetic missingness is disabled and the dataset is trained as-is.
 # -----------------------------------------------------------------------------------------
 
+ABLATION_STUDY="true"
 MISSING_LOCATION="global"
 TRAIN_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
 TEST_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
@@ -193,6 +197,9 @@ M3TRICS_ARGS=(
   --save_inner "${SAVE_INNER}"
   --ablation_study "${ABLATION_STUDY}"
   --hp_selection_epsilon "${HP_SELECTION_EPSILON}"
+  --scheduler_type "${SCHEDULER_TYPE}"
+  --min_lr "${MIN_LR}"
+  --lr_patience "${LR_PATIENCE}"
   --seeds "${SEEDS}"
   --missing_pattern_seed "${MISSING_PATTERN_SEED}"
 )
