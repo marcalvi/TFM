@@ -45,11 +45,11 @@ Use these names in `RUN_MODELS` inside the `.sh` launchers.
 | `ZI_MLP` | MLP with zero imputation for missing modalities. |
 | `KNN_MLP` | MLP with KNN imputation for missing modalities. |
 | `VAE_MLP` | MLP with VAE-based imputation for missing modalities. |
-| `pAM` | Prior-aware multimodal model. |
+| `pAM` | Attention masking over unimodal predictions model. |
 | `Di-PAM` | Distilled version of pAM. |
 | `Di-MMLP` | Distilled multimodal MLP. |
 | `HealNet` | HealNet wrapper for modality-level embeddings. |
-| `SMILe` | SMILe-style multimodal learning method. |
+| `SMILe` | SMIL-style multimodal learning method. |
 
 Hyperparameter grids live in `configs/hyperparams/`. Edit those files when you want to change the search space for a method.
 
