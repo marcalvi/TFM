@@ -1,0 +1,53 @@
+method: bayes
+filter_overlap: False
+
+metric:
+  goal: maximize
+  name: mean_val_c_index
+parameters:
+  sources:
+    value: ["clinical", "radiology", "pathology"]
+  explainer:
+    value: False
+  n_folds:
+    distribution: int_uniform
+    min: 4
+    max: 6
+  train_loop.epochs:
+      value: 100
+  train_loop.patience:
+      value: 5
+  train_loop.batch_size:
+    values: [4, 8, 12, 16]
+  model_params.l1:
+    distribution: uniform
+    min: 0.0
+    max: 0.0005
+  model_params.depth:
+    distribution: int_uniform
+    min: 2
+    max: 5
+  model_params.num_latents:
+    distribution: int_uniform
+    min: 8
+    max: 32
+  model_params.latent_dim:
+    distribution: int_uniform
+    min: 16
+    max: 128
+  model_params.cross_heads:
+    distribution: int_uniform
+    min: 1
+    max: 32
+  model_params.cross_dim_head:
+    distribution: int_uniform
+    min: 16
+    max: 128
+  model_params.attn_dropout:
+    distribution: uniform
+    min: 0.0
+    max: 0.5
+  model_params.ff_dropout:
+    min: 0.0
+    max: 0.5
+program: healnet/main.py

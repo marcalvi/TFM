@@ -1,0 +1,2 @@
+train_missing_prop,test_missing_prop,winner_rank,loser_rank,winner_model,loser_model,winner_mean_auc,loser_mean_auc,delta_mean_auc,wilcoxon_statistic,p_value,n_replicates,p_value_fdr,significant_fdr_0p05,n_pairs_tested_in_cell
+0.0,0.0,1,2,ZI_MLP,KNN_MLP,0.6146201002063072,0.6134337033762322,0.0011863968300750427,6.0,0.6858304344516057,20,0.6858304344516057,False,1

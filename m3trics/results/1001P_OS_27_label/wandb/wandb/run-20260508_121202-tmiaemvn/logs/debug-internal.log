@@ -1,0 +1,12 @@
+{"time":"2026-05-08T12:12:02.225116568+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-08T12:12:02.503756531+02:00","level":"INFO","msg":"stream: created new stream","id":"tmiaemvn"}
+{"time":"2026-05-08T12:12:02.503806285+02:00","level":"INFO","msg":"handler: started","stream_id":"tmiaemvn"}
+{"time":"2026-05-08T12:12:02.507382886+02:00","level":"INFO","msg":"stream: started","id":"tmiaemvn"}
+{"time":"2026-05-08T12:12:02.507402002+02:00","level":"INFO","msg":"writer: started","stream_id":"tmiaemvn"}
+{"time":"2026-05-08T12:12:02.507421779+02:00","level":"INFO","msg":"sender: started","stream_id":"tmiaemvn"}
+{"time":"2026-05-08T12:12:04.190375507+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-08T12:12:04.523567201+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-08T12:12:04.526900572+02:00","level":"INFO","msg":"stream: closing","id":"tmiaemvn"}
+{"time":"2026-05-08T12:12:04.526913857+02:00","level":"INFO","msg":"handler: closed","stream_id":"tmiaemvn"}
+{"time":"2026-05-08T12:12:04.527451013+02:00","level":"INFO","msg":"sender: closed","stream_id":"tmiaemvn"}
+{"time":"2026-05-08T12:12:04.527462575+02:00","level":"INFO","msg":"stream: closed","id":"tmiaemvn"}

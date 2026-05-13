@@ -1,9 +1,0 @@
-Mean baseline performance,Intuition,Pure test-time resilience,Mean post-adaptation AUC
-SMILe,SMILe,pAM,SMILe
-HealNet,Di-MMLP,KNN_MLP,ZI_MLP
-VAE_MLP,ZI_MLP,VAE_MLP,KNN_MLP
-KNN_MLP,VAE_MLP,ZI_MLP,VAE_MLP
-ZI_MLP,pAM,Di-PAM,HealNet
-Di-MMLP,KNN_MLP,SMILe,Di-MMLP
-Di-PAM,HealNet,HealNet,pAM
-pAM,Di-PAM,Di-MMLP,Di-PAM

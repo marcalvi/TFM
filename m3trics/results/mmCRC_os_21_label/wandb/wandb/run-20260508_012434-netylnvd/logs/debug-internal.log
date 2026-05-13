@@ -1,0 +1,12 @@
+{"time":"2026-05-08T01:24:34.893582403+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-08T01:24:35.166747828+02:00","level":"INFO","msg":"stream: created new stream","id":"netylnvd"}
+{"time":"2026-05-08T01:24:35.166798708+02:00","level":"INFO","msg":"handler: started","stream_id":"netylnvd"}
+{"time":"2026-05-08T01:24:35.170273003+02:00","level":"INFO","msg":"stream: started","id":"netylnvd"}
+{"time":"2026-05-08T01:24:35.170478152+02:00","level":"INFO","msg":"writer: started","stream_id":"netylnvd"}
+{"time":"2026-05-08T01:24:35.170498832+02:00","level":"INFO","msg":"sender: started","stream_id":"netylnvd"}
+{"time":"2026-05-08T01:24:36.282932341+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-08T01:24:36.456805221+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-08T01:24:36.458315779+02:00","level":"INFO","msg":"stream: closing","id":"netylnvd"}
+{"time":"2026-05-08T01:24:36.458321499+02:00","level":"INFO","msg":"handler: closed","stream_id":"netylnvd"}
+{"time":"2026-05-08T01:24:36.458849078+02:00","level":"INFO","msg":"sender: closed","stream_id":"netylnvd"}
+{"time":"2026-05-08T01:24:36.458852738+02:00","level":"INFO","msg":"stream: closed","id":"netylnvd"}

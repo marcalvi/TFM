@@ -1,0 +1,12 @@
+{"time":"2026-04-21T06:10:43.63702732+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-21T06:10:43.908782622+02:00","level":"INFO","msg":"stream: created new stream","id":"resdeith"}
+{"time":"2026-04-21T06:10:43.908837952+02:00","level":"INFO","msg":"handler: started","stream_id":"resdeith"}
+{"time":"2026-04-21T06:10:43.913316505+02:00","level":"INFO","msg":"stream: started","id":"resdeith"}
+{"time":"2026-04-21T06:10:43.913503274+02:00","level":"INFO","msg":"writer: started","stream_id":"resdeith"}
+{"time":"2026-04-21T06:10:43.913517794+02:00","level":"INFO","msg":"sender: started","stream_id":"resdeith"}
+{"time":"2026-04-21T06:10:45.074409249+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-21T06:10:45.395019704+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-21T06:10:45.396517438+02:00","level":"INFO","msg":"stream: closing","id":"resdeith"}
+{"time":"2026-04-21T06:10:45.396523798+02:00","level":"INFO","msg":"handler: closed","stream_id":"resdeith"}
+{"time":"2026-04-21T06:10:45.397188876+02:00","level":"INFO","msg":"sender: closed","stream_id":"resdeith"}
+{"time":"2026-04-21T06:10:45.397192445+02:00","level":"INFO","msg":"stream: closed","id":"resdeith"}

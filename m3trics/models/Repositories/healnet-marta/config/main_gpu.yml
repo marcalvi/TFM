@@ -1,0 +1,53 @@
+data_path: /nfs/rnas/projects/mmCRC/git/healnet-adoption/data/mmCRC
+
+clinical: /nfs/rnas/projects/mmCRC/git/healnet-adoption/data/mmCRC/v2_cohort_clinical_input_data.csv
+pathology: /nfs/rnas/projects/mmCRC/git/healnet-adoption/data/mmCRC/v2_cohort_pathology_input_data.csv
+radiology: /nfs/rnas/projects/mmCRC/git/healnet-adoption/data/mmCRC/v2_FM-CIB_cohort_radiology_input_data.csv
+
+target_path: /nfs/rnas/projects/mmCRC/git/healnet-adoption/data/mmCRC/v2_cohort_target_data.csv
+
+absolut_path: /nfs/rnas/projects/mmCRC/git/healnet-adoption
+
+wandb: True # log to weights and biases (login required)
+wandb_name: single_run_ce_loss
+
+filter_overlap: False
+
+gdc_client: healnet/gdc-client
+log_path: /nfs/rnas/projects/mmCRC/git/healnet-adoption/logs
+seed: 1
+hyperparams: /nfs/rnas/projects/mmCRC/git/healnet-adoption/config/best_hyperparams.yml
+
+dataset: mmCRC #  [blca, brca, ucec, kirp]
+model: healnet # [fcnn, healnet, healnet_early, mcat]
+
+explainer: True
+missing_ablation: False
+
+n_folds: 5
+
+sources: # select which data sources to use, list of string, valid values: omic, slides
+  - clinical 
+  - pathology
+  - radiology
+
+survival: # all parameters related to survival task
+  loss: ce_survival #nll # valid: nll, ce_survival, cox
+  subset: uncensored # subset used to calculate survival bin cutoffs, valid: all, censored, uncensored
+
+train_loop:
+  eval_interval: 1 # evaluate on validation set every n epochs
+  batch_size: 8
+  epochs: 50 # max training epochs
+  early_stopping: True # stop training if validation loss doesn't improve for `patience` epochs
+  monitor: val_c_index # metric to monitor for early stopping, valid: val_loss, val_c_index
+  patience: 5 # number of epochs to wait for improvement before stopping training
+
+optimizer:
+  max_lr: 0.008 # maximum learning rate for OneCycleLR scheduler
+  lr: 0.007765016508403882 # used for all
+  momentum: 0.92 # momentum
+  weight_decay: None # L2 regularisation
+
+
+# other `model_params` are specified in config/best_hyperparams.yml

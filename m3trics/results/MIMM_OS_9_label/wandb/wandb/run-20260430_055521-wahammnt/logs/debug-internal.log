@@ -1,0 +1,12 @@
+{"time":"2026-04-30T05:55:21.393938584+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-30T05:55:21.668608248+02:00","level":"INFO","msg":"stream: created new stream","id":"wahammnt"}
+{"time":"2026-04-30T05:55:21.668656128+02:00","level":"INFO","msg":"handler: started","stream_id":"wahammnt"}
+{"time":"2026-04-30T05:55:21.671490747+02:00","level":"INFO","msg":"stream: started","id":"wahammnt"}
+{"time":"2026-04-30T05:55:21.671681807+02:00","level":"INFO","msg":"writer: started","stream_id":"wahammnt"}
+{"time":"2026-04-30T05:55:21.671692007+02:00","level":"INFO","msg":"sender: started","stream_id":"wahammnt"}
+{"time":"2026-04-30T05:55:23.051862513+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-30T05:55:23.273897049+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-30T05:55:23.275526249+02:00","level":"INFO","msg":"stream: closing","id":"wahammnt"}
+{"time":"2026-04-30T05:55:23.275533549+02:00","level":"INFO","msg":"handler: closed","stream_id":"wahammnt"}
+{"time":"2026-04-30T05:55:23.276023768+02:00","level":"INFO","msg":"sender: closed","stream_id":"wahammnt"}
+{"time":"2026-04-30T05:55:23.276027368+02:00","level":"INFO","msg":"stream: closed","id":"wahammnt"}
