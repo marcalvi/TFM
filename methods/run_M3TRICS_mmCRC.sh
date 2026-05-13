@@ -87,18 +87,28 @@ BLOOD_CSV="mmCRC_blood_data.csv"
 # Available scheduler types: cosine_annealing, reduce_lr_on_plateau
 #   cosine_annealing requires MIN_LR
 #   reduce_lr_on_plateau requires LR_PATIENCE
+# Missing pattern seed is fixed to ensure the same ablation patterns across seeds
 # -----------------------------------------------------------------------------------------
 
+# Methods
 RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, Di-MMLP, HealNet, SMILe"
+
+# Nested CV
 RETRAIN_OUTER="true"
 SAVE_INNER="true"
-HP_SELECTION_EPSILON="0.02"
 k=5
 INNER_SPLITS=${k}
 OUTER_SPLITS=${k}
+
+# HPs
+HP_SELECTION_EPSILON="0.02"
 SCHEDULER_TYPE="cosine_annealing"
 MIN_LR="1e-6"
 # LR_PATIENCE=5
+
+# Seeds
+SEEDS="22,2002,4,18473,55602"
+MISSING_PATTERN_SEED=2026
 
 # -----------------------------------------------------------------------------------------
 # 5. TASK CONFIGURATION
@@ -132,16 +142,10 @@ RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}_${ENDPOINT_COL}"
 # If ABLATION_STUDY=false, synthetic missingness is disabled and the dataset is trained as-is.
 # -----------------------------------------------------------------------------------------
 
-ABLATION_STUDY="true"
-MISSING_LOCATION="global"
-TRAIN_MISSING_PROP="0.0,0.25,0.5,0.75"
-TEST_MISSING_PROP="0.0,0.25,0.5,0.75"
-
-# Proposed seeds for reproducibility
-SEEDS="22,2002,4,18473,55602"
-
-# Missing pattern seed is fixed to ensure the same ablation patterns across seeds
-MISSING_PATTERN_SEED=2026
+ABLATION_STUDY="false"
+# MISSING_LOCATION="global"
+# TRAIN_MISSING_PROP="0.0,0.25,0.5,0.75"
+# TEST_MISSING_PROP="0.0,0.25,0.5,0.75"
 
 # -----------------------------------------------------------------------------------------
 # Wrap arguments and run m3trics script
