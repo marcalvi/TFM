@@ -55,6 +55,15 @@ def _parse_csv_list(raw_value):
     return [item.strip() for item in str(raw_value).split(",") if item.strip()]
 
 
+def _print_scheduler_config(args):
+    scheduler_type = str(args.scheduler_type).strip().lower()
+    print(f"Scheduler type: {scheduler_type}")
+    if scheduler_type == "cosine_annealing":
+        print(f"Active scheduler config: min_lr={float(args.min_lr):g}")
+    elif scheduler_type == "reduce_lr_on_plateau":
+        print(f"Active scheduler config: lr_patience={int(args.lr_patience)}")
+
+
 def _parse_bool_flag(value):
     if isinstance(value, bool):
         return value
@@ -658,12 +667,7 @@ def run_training_from_args(args):
                         f"n_bins={int(task_config.get('survival_n_bins', args.survival_n_bins))}"
                     )
                 print(f"HP selection epsilon: {float(args.hp_selection_epsilon):.4f}")
-                scheduler_type = str(args.scheduler_type).strip().lower()
-                print(f"Scheduler type: {scheduler_type}")
-                if scheduler_type == "cosine_annealing":
-                    print(f"Min LR: {float(args.min_lr):g}")
-                elif scheduler_type == "reduce_lr_on_plateau":
-                    print(f"LR patience: {int(args.lr_patience)}")
+                _print_scheduler_config(args)
                 print(f"Output directory: {odir}")
                 print(f"Hyperparameter combinations to evaluate: {len(hp_configs)}")
                 print(f"Test missingness combinations to evaluate: {len(test_eval_setups)}")
@@ -945,12 +949,7 @@ def _run_selected_models(args, modality_configs):
             f"n_bins={int(args.survival_n_bins)}"
         )
     print(f"HP selection epsilon: {float(args.hp_selection_epsilon):.4f}")
-    scheduler_type = str(args.scheduler_type).strip().lower()
-    print(f"Scheduler type: {scheduler_type}")
-    if scheduler_type == "cosine_annealing":
-        print(f"Min LR: {float(args.min_lr):g}")
-    elif scheduler_type == "reduce_lr_on_plateau":
-        print(f"LR patience: {int(args.lr_patience)}")
+    _print_scheduler_config(args)
     if bool(args.ablation_study):
         print(f"Train missing prop: {args.train_missing_prop}")
         print(f"Test missing prop: {args.test_missing_prop}")

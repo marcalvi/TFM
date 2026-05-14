@@ -48,13 +48,14 @@ except ImportError:
 
 try:
     import matplotlib.pyplot as plt
-    from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+    from matplotlib.colors import ListedColormap, LinearSegmentedColormap, Normalize
     from matplotlib.patches import Patch, Rectangle
     HAVE_MPL = True
 except ImportError:
     plt = None
     ListedColormap = None
     LinearSegmentedColormap = None
+    Normalize = None
     Patch = None
     Rectangle = None
     HAVE_MPL = False
@@ -413,6 +414,87 @@ def build_fixed_dataset_method_summary(replicate_auc_df: pd.DataFrame):
     return pd.DataFrame(rows).sort_values(['mean_auc', 'model_name'], ascending=[False, True]).reset_index(drop=True)
 
 
+def plot_fixed_dataset_auc_violins(
+    replicate_auc_df: pd.DataFrame,
+    method_summary_df: pd.DataFrame,
+    title: str,
+    figures_dir: Path,
+    file_name: str,
+    figsize=None,
+):
+    if not HAVE_MPL:
+        print('Matplotlib is not available in this environment. Skipping fixed-dataset AUC violin plot.')
+        return
+    if replicate_auc_df.empty:
+        print('No replicate AUCs available for fixed-dataset violin plot.')
+        return
+
+    ordered_models = method_summary_df['model_name'].astype(str).tolist() if not method_summary_df.empty else sorted(replicate_auc_df['model_name'].astype(str).unique().tolist())
+    data = []
+    labels = []
+    for model_name in ordered_models:
+        values = replicate_auc_df.loc[replicate_auc_df['model_name'].astype(str) == model_name, 'auc'].to_numpy(dtype=float)
+        values = values[np.isfinite(values)]
+        if values.size:
+            data.append(values)
+            labels.append(model_name)
+    if not data:
+        print('No finite AUC values available for fixed-dataset violin plot.')
+        return
+
+    resolved_figsize = tuple(figsize) if figsize is not None else (max(12.0, 1.25 * len(labels) + 4.0), 8.0)
+    fig, ax = plt.subplots(figsize=resolved_figsize)
+    positions = np.arange(1, len(labels) + 1)
+    violin_parts = ax.violinplot(
+        data,
+        positions=positions,
+        widths=0.78,
+        showmeans=False,
+        showmedians=False,
+        showextrema=False,
+    )
+
+    palette = plt.cm.Set2(np.linspace(0.0, 1.0, max(len(labels), 3)))
+    for idx, body in enumerate(violin_parts['bodies']):
+        body.set_facecolor(palette[idx])
+        body.set_edgecolor('#263238')
+        body.set_alpha(0.55)
+        body.set_linewidth(1.0)
+
+    rng = np.random.default_rng(42)
+    for pos, values in zip(positions, data):
+        jitter = rng.normal(0.0, 0.075, size=len(values))
+        ax.scatter(
+            np.full_like(values, float(pos), dtype=float) + jitter,
+            values,
+            s=26,
+            color='#111111',
+            edgecolor='none',
+            alpha=0.72,
+            zorder=3,
+        )
+
+    ax.set_title(title, fontsize=18, pad=16)
+    ax.set_ylabel('Replicate AUC', fontsize=15)
+    ax.set_xlabel('Method', fontsize=15)
+    ax.set_xticks(positions)
+    ax.set_xticklabels(labels, rotation=35, ha='right', fontsize=12)
+    ax.tick_params(axis='y', labelsize=12)
+    ax.set_ylim(0.0, 1.0)
+    ax.grid(axis='y', color='#D9DEE3', linewidth=0.9, alpha=0.85)
+    ax.set_axisbelow(True)
+    for spine in ['top', 'right']:
+        ax.spines[spine].set_visible(False)
+    ax.spines['left'].set_color('#A7B0BA')
+    ax.spines['bottom'].set_color('#A7B0BA')
+
+    figures_dir.mkdir(parents=True, exist_ok=True)
+    figure_path = figures_dir / file_name
+    plt.savefig(figure_path, dpi=300, bbox_inches='tight')
+    print(f'Saved figure to: {figure_path}')
+    plt.show()
+
+
 def build_cell_model_mean_matrix(level1_df: pd.DataFrame):
     both_df = level1_df.loc[level1_df['scenario'] == 'both'].copy()
     if both_df.empty:
@@ -499,10 +581,16 @@ def build_post_adaptation_envelope(level1_df: pd.DataFrame):
     return envelope_df
 
 
-def build_method_level_metrics(replicate_auc_df: pd.DataFrame, level1_df: pd.DataFrame):
+def build_method_level_metrics(
+    replicate_auc_df: pd.DataFrame,
+    level1_df: pd.DataFrame,
+    distillation_model_names=None,
+):
     both_df = level1_df.loc[level1_df['scenario'] == 'both'].copy()
     if both_df.empty:
         return pd.DataFrame(), pd.DataFrame()
+
+    distillation_model_set = {str(model_name) for model_name in (distillation_model_names or [])}
 
     baseline_df = both_df.loc[
         np.isclose(both_df['train_missing_prop'], 0.0) & np.isclose(both_df['test_missing_prop'], 0.0),
@@ -521,11 +609,20 @@ def build_method_level_metrics(replicate_auc_df: pd.DataFrame, level1_df: pd.Dat
         test_complete_df = model_replicates_df.loc[np.isclose(model_replicates_df['test_missing_prop'], 0.0)].copy()
 
         test_time_resilience = fit_mixedlm_slope(train_complete_df, 'test_missing_prop')
-        intuition = fit_mixedlm_slope(test_complete_df, 'train_missing_prop')
+        exclude_from_intuition = model_name in distillation_model_set
+        if exclude_from_intuition:
+            intuition = {
+                'slope': np.nan,
+                'p_value': np.nan,
+                'fit_status': 'excluded_distillation_requires_complete_training_data',
+            }
+        else:
+            intuition = fit_mixedlm_slope(test_complete_df, 'train_missing_prop')
 
         rows.append({
             'model_name': model_name,
             'baseline_mean_auc': float(baseline_lookup.get(model_name, np.nan)),
+            'excluded_from_intuition_ranking': bool(exclude_from_intuition),
             'intuition_slope': float(intuition['slope']),
             'intuition_p_value': float(intuition['p_value']) if np.isfinite(intuition['p_value']) else np.nan,
             'intuition_fit_status': intuition['fit_status'],
@@ -608,9 +705,10 @@ def build_method_plot_summary(replicate_auc_df: pd.DataFrame, n_bootstrap=2000, 
     return summary_df
 
 
-def build_metric_ordering_table(method_level_metrics_df: pd.DataFrame):
+def build_metric_ordering_table(method_level_metrics_df: pd.DataFrame, distillation_model_names=None):
     if method_level_metrics_df.empty:
         return pd.DataFrame()
+    distillation_model_set = {str(model_name) for model_name in (distillation_model_names or [])}
     metric_specs = [
         ('baseline_mean_auc', 'Mean baseline performance'),
         ('intuition_slope', 'Intuition'),
@@ -620,8 +718,11 @@ def build_metric_ordering_table(method_level_metrics_df: pd.DataFrame):
     max_len = int(method_level_metrics_df['model_name'].nunique())
     out = {}
     for metric_col, label in metric_specs:
+        metric_df = method_level_metrics_df[['model_name', metric_col]].copy()
+        if metric_col == 'intuition_slope' and distillation_model_set:
+            metric_df = metric_df.loc[~metric_df['model_name'].astype(str).isin(distillation_model_set)].copy()
         ordered = (
-            method_level_metrics_df[['model_name', metric_col]]
+            metric_df
             .sort_values([metric_col, 'model_name'], ascending=[False, True], na_position='last')
             ['model_name']
             .tolist()
@@ -916,20 +1017,6 @@ def plot_level1_auc_heatmaps(summary_df: pd.DataFrame, friedman_global_df: pd.Da
         wspace=0.34,
         hspace=layout['hspace'],
     )
-    if image is not None and used_axes:
-        positions = [ax.get_position() for ax in used_axes]
-        y0 = min(pos.y0 for pos in positions)
-        y1 = max(pos.y1 for pos in positions)
-        x1 = max(pos.x1 for pos in positions)
-        reference_heatmap_width = float(BASE_HEATMAP_PANEL_WIDTH) * 4.0
-        reference_cbar_pad = 0.010 * reference_heatmap_width
-        cbar_pad = reference_cbar_pad / float(resolved_figsize[0])
-        reference_cbar_width = 0.0040 * reference_heatmap_width
-        cbar_width = reference_cbar_width / float(resolved_figsize[0])
-        cbar_ax = fig.add_axes([x1 + cbar_pad, y0, cbar_width, y1 - y0])
-        cbar = fig.colorbar(image, cax=cbar_ax)
-        cbar.ax.tick_params(labelsize=12)
-
     footnote = '* global Friedman test significant (p < 0.05)'
     if np.isfinite(global_p_value):
         footnote = f'* global Friedman test significant (p = {global_p_value:.4g})' if global_significant else f'global Friedman test not significant (p = {global_p_value:.4g})'
@@ -1247,13 +1334,21 @@ def plot_level3_pairwise_condition_matrices(level2_pairwise_df: pd.DataFrame, ti
             panel_model_counts.append(len(mean_auc_lookup))
     n_models_max = max(panel_model_counts) if panel_model_counts else 0
 
-    fig_width = max(22.0, 4.1 * len(test_props) + 4.2)
-    fig_height = max(22.0, 4.1 * len(train_props) + 4.0)
+    single_panel = len(train_props) == 1 and len(test_props) == 1
+    fig_width = 15.0 if single_panel else max(22.0, 4.1 * len(test_props) + 4.2)
+    fig_height = 13.0 if single_panel else max(22.0, 4.1 * len(train_props) + 4.0)
     fig, axes = plt.subplots(len(train_props), len(test_props), figsize=(fig_width, fig_height), squeeze=False)
 
-    cmap = plt.cm.RdBu.copy()
-    cmap.set_bad('#F2F2F2')
+    cmap = plt.cm.Blues.copy()
+    cmap.set_bad((1.0, 1.0, 1.0, 0.0))
+    norm = Normalize(vmin=0.0, vmax=max_abs_delta)
     image = None
+    title_fontsize = 18 if single_panel else 12
+    tick_fontsize = 15 if single_panel else 8.4
+    xtick_fontsize = 14 if single_panel else 7.8
+    cell_fontsize = 13 if single_panel else 6.0
+    panel_title_pad = 0 if single_panel else 11
+    cell_linewidth = 0.55 if single_panel else 0.30
 
     for row_idx, train_prop in enumerate(train_props):
         for col_idx, test_prop in enumerate(test_props):
@@ -1272,7 +1367,7 @@ def plot_level3_pairwise_condition_matrices(level2_pairwise_df: pd.DataFrame, ti
                 name for name, _ in sorted(mean_auc_lookup.items(), key=lambda item: (-item[1], item[0]))
             ]
             n_models = len(ordered_models)
-            display_model_names_x = [f'({idx + 1})' for idx, _ in enumerate(ordered_models)]
+            display_model_names_x = [f'{name} ({idx + 1})' for idx, name in enumerate(ordered_models)]
             display_model_names_y = [f'{name} ({idx + 1})' for idx, name in enumerate(ordered_models)]
             model_to_idx = {name: idx for idx, name in enumerate(ordered_models)}
 
@@ -1282,35 +1377,47 @@ def plot_level3_pairwise_condition_matrices(level2_pairwise_df: pd.DataFrame, ti
                 loser_idx = model_to_idx[pair_row['loser_model']]
                 delta = float(pair_row['delta_mean_auc'])
                 matrix[winner_idx, loser_idx] = delta
-                matrix[loser_idx, winner_idx] = -delta
 
             matrix[np.diag_indices(n_models)] = np.nan
 
             x_edges = np.arange(n_models + 1, dtype=float)
             y_edges = np.arange(n_models + 1, dtype=float)
+            ax.set_facecolor('white')
+            for mat_row in range(n_models):
+                for mat_col in range(mat_row + 1, n_models):
+                    ax.add_patch(Rectangle(
+                        (float(mat_col), float(mat_row)),
+                        1.0,
+                        1.0,
+                        facecolor='#E6E6E6',
+                        edgecolor='white',
+                        linewidth=cell_linewidth,
+                        zorder=0,
+                    ))
             image = ax.pcolormesh(
                 x_edges,
                 y_edges,
                 matrix,
                 cmap=cmap,
-                vmin=-max_abs_delta,
-                vmax=max_abs_delta,
+                norm=norm,
                 edgecolors='white',
-                linewidth=0.30,
+                linewidth=cell_linewidth,
                 shading='flat',
+                zorder=1,
             )
             ax.set_xlim(0, n_models)
             ax.set_ylim(n_models, 0)
             ax.set_aspect('equal')
-            ax.set_title(f'train={train_prop:g} | test={test_prop:g}', fontsize=12, pad=11)
+            if not single_panel:
+                ax.set_title(f'train={train_prop:g} | test={test_prop:g}', fontsize=title_fontsize, pad=panel_title_pad)
             ax.tick_params(axis='both', which='major', length=0)
             for spine in ax.spines.values():
                 spine.set_visible(False)
 
             ax.set_xticks(np.arange(n_models, dtype=float) + 0.5)
             ax.set_yticks(np.arange(n_models, dtype=float) + 0.5)
-            ax.set_xticklabels(display_model_names_x, fontsize=8.4)
-            ax.set_yticklabels(display_model_names_y, fontsize=8.4)
+            ax.set_xticklabels(display_model_names_x, rotation=90, ha='center', va='top', fontsize=xtick_fontsize)
+            ax.set_yticklabels(display_model_names_y, fontsize=tick_fontsize)
 
             finite_coords = np.argwhere(np.isfinite(matrix))
             for mat_row, mat_col in finite_coords:
@@ -1322,18 +1429,17 @@ def plot_level3_pairwise_condition_matrices(level2_pairwise_df: pd.DataFrame, ti
                     f'{value:+.03f}',
                     ha='center',
                     va='center',
-                    fontsize=6.0,
+                    fontsize=cell_fontsize,
+                    fontweight='bold' if single_panel else 'normal',
                     color=text_color,
                 )
 
-    fig.subplots_adjust(left=0.10, right=0.90, bottom=0.10, top=0.94, wspace=0.44, hspace=0.24)
-    if image is not None:
-        cbar_ax = fig.add_axes([0.92, 0.12, 0.016, 0.76])
-        cbar = fig.colorbar(image, cax=cbar_ax)
-        cbar.ax.tick_params(labelsize=12)
-        cbar.set_label('ΔAUC (row model - column model) | significant pairs only', fontsize=13)
-
-    fig.suptitle(title, fontsize=19, y=0.985)
+    if single_panel:
+        fig.subplots_adjust(left=0.18, right=0.96, bottom=0.30, top=0.86)
+        fig.suptitle(title, fontsize=22, y=0.94)
+    else:
+        fig.subplots_adjust(left=0.10, right=0.90, bottom=0.14, top=0.94, wspace=0.50, hspace=0.34)
+        fig.suptitle(title, fontsize=19, y=0.985)
     figures_dir.mkdir(parents=True, exist_ok=True)
     figure_path = figures_dir / file_name
     target_long_side_px = 3840

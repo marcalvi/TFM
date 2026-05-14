@@ -42,14 +42,14 @@ Use these names in `RUN_MODELS` inside the `.sh` launchers.
 
 | Method | Purpose |
 | --- | --- |
-| `ZI_MLP` | MLP with zero imputation for missing modalities. |
-| `KNN_MLP` | MLP with KNN imputation for missing modalities. |
-| `VAE_MLP` | MLP with VAE-based imputation for missing modalities. |
-| `pAM` | Prior-aware multimodal model. |
+| `ZI_MLP` | MultimodalMLP with zero imputation for missing modalities. |
+| `KNN_MLP` | MultimodalMLP with KNN imputation for missing modalities. |
+| `VAE_MLP` | MultimodalMLP with VAE-based imputation for missing modalities. |
+| `pAM` | Attention masking over unimodal predictions model. |
 | `Di-PAM` | Distilled version of pAM. |
 | `Di-MMLP` | Distilled multimodal MLP. |
 | `HealNet` | HealNet wrapper for modality-level embeddings. |
-| `SMILe` | SMILe-style multimodal learning method. |
+| `SMILe` | SMIL generalization for n>=2 modalities. |
 
 Hyperparameter grids live in `configs/hyperparams/`. Edit those files when you want to change the search space for a method.
 
@@ -351,7 +351,7 @@ Current notebooks include:
 
 | Notebook | Purpose |
 | --- | --- |
-| `h5_to_csvs.ipynb` | Convert prostate `.h5` files into modality CSVs. |
+| `h5_to_csvs.ipynb` | Convert `.h5` files into modality CSVs. |
 | `os_distribution_1001P.ipynb` | Inspect 1001Prostate OS distribution. |
 | `os_distribution_MIMM.ipynb` | Inspect MIMM OS distribution. |
 | `os_distribution_mmCRC.ipynb` | Inspect mmCRC OS distribution. |
@@ -383,26 +383,31 @@ For fixed-dataset analysis, make sure the notebook is pointed to `results_mode='
 
 ## 7. Practical Checks Before Long Runs
 
-Before launching a full experiment, run one model and one seed first:
+Before launching a full experiment, run each model with a relatively large HP grid separately:
 
 ```bash
 RUN_MODELS="ZI_MLP"
-SEEDS="22"
+SEEDS="22,..."
 ```
 
-Then verify:
+Then:
 
-- Processed modalities have the expected patients and columns.
-- `inner_hp_eval.csv` is created.
-- `inner_epoch_history.csv` contains learning curves.
-- `outer_test_metrics.csv` and `test_predictions.csv` are not empty.
-- W&B logging works if enabled.
+- Study recurrence of each HP and reduce grid
+- Validate learning curves shape
+- See whether you get better results with or without retraining on outer train set
 
 Only then expand to all models and seeds.
 
 ## 8. Current Implemented Results Notebooks
 
-| Mode | Launcher setting | Analysis notebook | Output folder |
-| --- | --- | --- | --- |
-| Missingness decay / ablation | `ABLATION_STUDY="true"` | `analysis/MM_decay_analysis.ipynb` | `analysis/MM_decay_analysis_outputs/` |
-| Fixed observed dataset | `ABLATION_STUDY="false"` | `analysis/fixed_dataset_analysis.ipynb` | `analysis/fixed_dataset_analysis_outputs/` |
+The current result-analysis notebooks are implemented for classification outputs only. Training supports survival configurations, but the survival-specific analysis notebooks and tables are not implemented yet.
+
+| Task | Mode | Launcher settings | Analysis notebook | Output folder |
+| --- | --- | --- | --- | --- |
+| Classification | Missingness decay / ablation | `TASK_TYPE="binary_classification"` + `ABLATION_STUDY="true"` | `analysis/MM_decay_analysis.ipynb` | `analysis/MM_decay_analysis_outputs/` |
+| Classification | Fixed observed dataset | `TASK_TYPE="binary_classification"` + `ABLATION_STUDY="false"` | `analysis/fixed_dataset_analysis.ipynb` | `analysis/fixed_dataset_analysis_outputs/` |
+
+Not currently implemented:
+
+- Survival task analysis notebooks.
+- Modality-specific decay analysis notebooks.

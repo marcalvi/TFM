@@ -30,6 +30,7 @@ MODEL_NAME_ALIASES = {
     "dipam": "dipam",
     "di-pam": "dipam",
     "di_mmlp": "di_mmlp",
+    "di-mmlp": "di_mmlp",
     "di-mlp": "di_mmlp",
     "dimmlp": "di_mmlp",
     "healnet": "healnet",
