@@ -1,0 +1,16 @@
+{"time":"2026-05-13T13:43:05.198765266+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-13T13:43:05.469507673+02:00","level":"INFO","msg":"stream: created new stream","id":"yumwnn24"}
+{"time":"2026-05-13T13:43:05.469551573+02:00","level":"INFO","msg":"handler: started","stream_id":"yumwnn24"}
+{"time":"2026-05-13T13:43:05.473014882+02:00","level":"INFO","msg":"stream: started","id":"yumwnn24"}
+{"time":"2026-05-13T13:43:05.473018822+02:00","level":"INFO","msg":"writer: started","stream_id":"yumwnn24"}
+{"time":"2026-05-13T13:43:05.473026362+02:00","level":"INFO","msg":"sender: started","stream_id":"yumwnn24"}
+{"time":"2026-05-13T13:43:06.00124425+02:00","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":39}
+{"time":"2026-05-13T13:43:06.00132906+02:00","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":1}
+{"time":"2026-05-13T13:43:06.00139471+02:00","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":72}
+{"time":"2026-05-13T13:43:06.001519929+02:00","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":10}
+{"time":"2026-05-13T13:43:07.134255447+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-13T13:43:07.371222832+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-13T13:43:07.372541929+02:00","level":"INFO","msg":"stream: closing","id":"yumwnn24"}
+{"time":"2026-05-13T13:43:07.372547629+02:00","level":"INFO","msg":"handler: closed","stream_id":"yumwnn24"}
+{"time":"2026-05-13T13:43:07.372898598+02:00","level":"INFO","msg":"sender: closed","stream_id":"yumwnn24"}
+{"time":"2026-05-13T13:43:07.372903468+02:00","level":"INFO","msg":"stream: closed","id":"yumwnn24"}
