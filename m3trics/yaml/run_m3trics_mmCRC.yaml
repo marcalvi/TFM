@@ -1,0 +1,12 @@
+description: 'pim pAM (MIMM all setups)'
+executable: /bin/bash
+args: ["-c", "/home/osiris-user/Desktop/TFM/m3trics/run_M3TRICS_mmCRC.sh"]
+env:
+worker_type: '5090'
+use_gpu: true
+max_cpus: 31
+max_memory_mb: 110000
+docker_image: harbor.vhio.net/geb-env-gpu:0.1.3
+mounts: []
+max_runtime_minutes: 10000000
+open_ports: []
