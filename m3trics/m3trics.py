@@ -119,6 +119,19 @@ def _parse_training_value_or_list(raw_value, dtype, to_lower=None):
     return parse_value_or_list(raw_value, dtype, to_lower=to_lower)
 
 
+def _parse_seed_list(raw_value):
+    try:
+        seeds = _parse_training_value_or_list(raw_value, int)
+    except Exception as exc:
+        raise ValueError(
+            f"Invalid --seeds value {raw_value!r}. Expected a comma-separated list of integers, "
+            "for example: 22,2002,4,18473,55602."
+        ) from exc
+    if not seeds:
+        raise ValueError("No seeds were provided. Expected at least one integer seed.")
+    return seeds
+
+
 # ------------------------ PREPROCESS REPORTS -------------------------
 
 def _print_missingness_report(summary_rows, modality_configs):
@@ -557,7 +570,8 @@ def run_training_from_args(args):
     num_modalities = len(modality_names)
     print(f"Dataframes read. Starting {args.model} training.")
 
-    seeds_list = _parse_training_value_or_list(args.seeds, int)
+    seeds_list = _parse_seed_list(args.seeds)
+    print(f"Parsed seeds: {seeds_list}")
     if bool(args.ablation_study):
         missing_locations = _parse_training_value_or_list(args.missing_location, str, to_lower=True)
         train_missing_props = _parse_training_value_or_list(args.train_missing_prop, float)
