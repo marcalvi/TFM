@@ -4,8 +4,13 @@ import os
 import sys
 import time
 from collections import OrderedDict
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 import pandas as pd
-from configs.hyperparams import get_model_config, list_available_model_configs
+from hyperparams import get_model_config, list_available_model_configs
 from dataset.preprocess_dataset import (
     align_complete_multimodal_cohort,
     impute_modality_df,
@@ -16,7 +21,7 @@ from dataset.preprocess_dataset import (
     summarize_missing_values,
     validate_imputation_requirements,
 )
-from utils import normalize_task_type
+from scripts.utils import normalize_task_type
 
 
 # ------------------------ GENERIC ARG HELPERS ------------------------
@@ -108,13 +113,13 @@ def _parse_modality_pooling(raw_value):
 
 
 def _normalize_model_name(model_name):
-    from utils import normalize_model_name
+    from scripts.utils import normalize_model_name
 
     return normalize_model_name(model_name)
 
 
 def _parse_training_value_or_list(raw_value, dtype, to_lower=None):
-    from utils import parse_value_or_list
+    from scripts.utils import parse_value_or_list
 
     return parse_value_or_list(raw_value, dtype, to_lower=to_lower)
 
@@ -554,8 +559,8 @@ def run_training_from_args(args):
 
     start_time = time.time()
     from dataset import MissingModalitySimulator, load_or_preprocess_dataset
-    from train_ncv import nested_cv
-    from utils import build_hyperparameter_grid
+    from scripts.train_ncv import nested_cv
+    from scripts.utils import build_hyperparameter_grid
 
     model_name_norm = _normalize_model_name(args.model)
     print("Running")

@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils import compute_survival_loss_from_logits, normalize_task_type
+from scripts.utils import compute_survival_loss_from_logits, normalize_task_type
 
 
 class UniversalReconstructionNet(nn.Module):

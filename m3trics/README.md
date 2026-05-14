@@ -1,8 +1,10 @@
-# M3TRICS
+<p align="center">
+  <img src="assets/logo.png" alt="M3TRICS" width="360">
+</p>
 
 M3TRICS is a multimodal training and analysis framework for comparing missing-modality learning methods across clinical datasets. It handles dataset preprocessing, modality alignment, nested cross-validation, missing-modality ablation studies, fixed-dataset training, binary classification, survival modelling, and downstream statistical analysis.
 
-This README describes the workflow from environment setup to result analysis. The project root referred to below is this directory, the one containing `m3trics.py` and the `run_M3TRICS_*.sh` scripts.
+This README describes the workflow from environment setup to result analysis. The project root referred to below is this directory, the one containing `scripts/m3trics.py` and the `run_M3TRICS_*.sh` scripts.
 
 ## What This Project Can Do
 
@@ -21,19 +23,16 @@ This README describes the workflow from environment setup to result analysis. Th
 
 ```text
 m3trics/
-├── m3trics.py                         # Main CLI entrypoint
 ├── run_M3TRICS_MIMM.sh                # MIMM training launcher
 ├── run_M3TRICS_mmCRC.sh               # mmCRC training launcher
 ├── run_M3TRICS_1001P.sh               # 1001Prostate training launcher
 ├── env/                               # Conda environment definitions and install guide
-├── configs/hyperparams/               # Hyperparameter grids per method
-├── dataset/                           # Dataset preprocessing, loaders, missingness simulator, pooling
+├── hyperparams/                       # Hyperparameter grids per method
+├── dataset/                           # Dataset preprocessing, loaders, missingness simulator, pooling, imputation
+├── scripts/                           # CLI entrypoint, nested-CV training logic, training loops, shared utilities
 ├── models/                            # Model implementations
 ├── analysis/                          # Result analysis notebooks and helper code
-├── results/                           # Generated processed data, model outputs, W&B logs
-├── train_ncv.py                       # Nested-CV training logic
-├── model_training.py                  # Training loops and model-level routines
-└── utils.py                           # Shared utilities, metrics, survival helpers
+└── results/                           # Generated processed data, model outputs, W&B logs
 ```
 
 ## Available Methods
@@ -51,7 +50,7 @@ Use these names in `RUN_MODELS` inside the `.sh` launchers.
 | `HealNet` | HealNet wrapper for modality-level embeddings. |
 | `SMILe` | SMIL generalization for n>=2 modalities. |
 
-Hyperparameter grids live in `configs/hyperparams/`. Edit those files when you want to change the search space for a method.
+Hyperparameter grids live in `hyperparams/`. Edit those files when you want to change the search space for a method.
 
 ## 1. Install The Environment
 
@@ -256,7 +255,7 @@ bash run_M3TRICS_mmCRC.sh
 bash run_M3TRICS_1001P.sh
 ```
 
-The scripts call `m3trics.py` with all configured arguments.
+The scripts call `scripts/m3trics.py` with all configured arguments.
 
 Direct CLI execution is also possible, but the `.sh` launchers are the source of truth because they keep dataset paths, modalities, task settings, and experiment mode in one place.
 

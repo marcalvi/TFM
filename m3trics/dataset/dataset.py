@@ -1,8 +1,8 @@
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader, Sampler
-from imputation_methods import build_imputer
-from utils import normalize_model_name, normalize_task_type
+from dataset.imputation_methods import build_imputer
+from scripts.utils import normalize_model_name, normalize_task_type
 import zlib
 
 # ------------------------ MM SIMULATOR --------------------------

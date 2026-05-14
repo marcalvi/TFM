@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
-from utils import select_device
+from scripts.utils import select_device
 
 
 def _extract_reference_modalities(reference_dataset):

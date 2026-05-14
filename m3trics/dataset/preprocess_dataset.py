@@ -7,7 +7,7 @@ import pandas as pd
 from sklearn.impute import KNNImputer
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
-from utils import (
+from scripts.utils import (
     SURVIVAL_CENSORSHIP_COL,
     SURVIVAL_Y_DISC_COL,
     add_survival_target_columns,

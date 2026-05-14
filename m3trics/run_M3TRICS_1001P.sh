@@ -249,4 +249,4 @@ if [[ "${WANDB_ENABLED_RESOLVED}" == "true" ]]; then
 fi
 
 M3TRICS_ARGS+=("${MODALITY_ARGS[@]}")
-python "${PROJECT_ROOT}/m3trics.py" "${M3TRICS_ARGS[@]}"
+python "${PROJECT_ROOT}/scripts/m3trics.py" "${M3TRICS_ARGS[@]}"

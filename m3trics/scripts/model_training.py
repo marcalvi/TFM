@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, Subset
 from dataset import MultimodalDatasetWithMissing, multimodal_collate
 from models import learn_priors as learn_smil_priors
 from models import meta_train_step as smil_meta_train_step
-from utils import (
+from scripts.utils import (
     build_model,
     compute_survival_loss_from_logits,
     normalize_model_name,

@@ -8,14 +8,14 @@ import pandas as pd
 import torch
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader
-from imputation_methods import build_imputer
+from dataset.imputation_methods import build_imputer
 from dataset import (
     MultimodalBaseDataset,
     MultimodalDatasetWithMissing,
     multimodal_collate,
     build_loaders,
 )
-from utils import (
+from scripts.utils import (
     build_model,
     normalize_task_type,
     primary_loss_name,
@@ -30,7 +30,7 @@ from utils import (
 )
 from dataset.preprocess_dataset import collapse_patient_rows, filter_by_patients
 from dataset.attention_pooling import AttentionPooler
-from model_training import (
+from scripts.model_training import (
     get_model_init_kwargs,
     train_model_on_full_dataset,
     train_model_with_validation,
