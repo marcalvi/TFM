@@ -1,22 +1,47 @@
-description: 'Functional test: run code'
+description: 'CUDA check 6000 worker'
 executable: /bin/bash
 args:
-- -lc
-- |
-  set -euo pipefail
-  echo "MY_VAR1: $MY_VAR1"
-  echo "MY_VAR2: $MY_VAR2"
-  nvidia-smi
-  . /home/osiris-user/geb-activate.sh
-  conda env list
+  - -lc
+  - |
+    set -euo pipefail
+
+    echo "=== paths ==="
+    echo "PATH=$PATH"
+    echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}"
+    echo
+
+    echo "=== nvidia-smi search ==="
+    command -v nvidia-smi || true
+    ls -l /usr/bin/nvidia-smi /usr/local/nvidia/bin/nvidia-smi 2>/dev/null || true
+    echo
+
+    echo "=== nvidia driver proc ==="
+    cat /proc/driver/nvidia/version 2>/dev/null || echo "/proc/driver/nvidia/version not found"
+    echo
+
+    echo "=== gpu devices ==="
+    ls -l /dev/nvidia* 2>/dev/null || echo "no /dev/nvidia devices"
+    echo
+
+    echo "=== nvcc ==="
+    command -v nvcc || true
+    nvcc --version 2>/dev/null || echo "nvcc not found"
+    echo
+
+    echo "=== conda ==="
+    . /home/osiris-user/geb-activate.sh
+    conda env list
+    echo
+
+    echo "=== pytorch if installed ==="
+    python -c "import torch; print('torch', torch.__version__); print('torch cuda runtime', torch.version.cuda); print('cuda available', torch.cuda.is_available()); print('gpu', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'none'); print('compute capability', torch.cuda.get_device_capability(0) if torch.cuda.is_available() else 'none')" || true
+
 worker_type: '6000'
 use_gpu: true
 max_cpus: 5
 max_memory_mb: 2880
 docker_image: harbor.vhio.net/geb-env-gpu:0.1.3
 mounts: []
-env:
-  MY_VAR1: value1
-  MY_VAR2: value2
+env: {}
 max_runtime_minutes: 1
 open_ports: []

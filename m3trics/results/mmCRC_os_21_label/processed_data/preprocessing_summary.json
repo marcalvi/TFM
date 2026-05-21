@@ -3,6 +3,11 @@
   "results_root": "/home/osiris-user/Desktop/TFM/m3trics/results/mmCRC_os_21_label",
   "endpoint_csv": "/nfs/rnas/projects/M3TRICS/data/inputs/mmCRC/mmCRC_endpoints.csv",
   "endpoint_col": "os_21_label",
+  "task_type": "binary_classification",
+  "survival_loss": null,
+  "survival_time_col": null,
+  "survival_event_col": null,
+  "survival_n_bins": null,
   "patient_id_col": "sap",
   "modality_imputation_config": {
     "path": {

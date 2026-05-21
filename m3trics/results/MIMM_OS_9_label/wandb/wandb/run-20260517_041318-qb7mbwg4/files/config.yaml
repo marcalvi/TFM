@@ -1,0 +1,185 @@
+_wandb:
+    value:
+        cli_version: 0.25.0
+        e:
+            1y8hnjes173aqd788y0vd2lu1ndkj0e3:
+                args:
+                    - --dataset
+                    - MIMM
+                    - --results_root
+                    - /home/osiris-user/Desktop/TFM/m3trics/results/MIMM_OS_9_label
+                    - --endpoint_csv
+                    - /nfs/rnas/projects/M3TRICS/data/inputs/MIMM/patients_mimm.csv
+                    - --patient_id_col
+                    - patient
+                    - --endpoint_col
+                    - OS_9_label
+                    - --task_type
+                    - binary_classification
+                    - --run_models
+                    - Di-PAM, Di-MMLP, HealNet, SMILe
+                    - --inner_splits
+                    - "5"
+                    - --outer_splits
+                    - "5"
+                    - --retrain_outer
+                    - "true"
+                    - --save_inner
+                    - "true"
+                    - --ablation_study
+                    - "true"
+                    - --hp_selection_epsilon
+                    - "0.02"
+                    - --scheduler_type
+                    - cosine_annealing
+                    - --seeds
+                    - 22,2002,4,18473,55602
+                    - --missing_pattern_seed
+                    - "2026"
+                    - --min_lr
+                    - "1e-6"
+                    - --missing_location
+                    - global
+                    - --train_missing_prop
+                    - 0.0,0.2,0.4,0.6,0.8
+                    - --test_missing_prop
+                    - 0.0,0.2,0.4,0.6,0.8
+                    - --wandb_mode
+                    - online
+                    - --wandb
+                    - --modality_csv
+                    - path=/nfs/rnas/projects/M3TRICS/data/inputs/MIMM/pathology_mimm.csv
+                    - --modality_csv
+                    - radio=/nfs/rnas/projects/M3TRICS/data/inputs/MIMM/radiology_mimm.csv
+                    - --drop_cols
+                    - radio=image_path,lesion_tag
+                    - --aggregation_method
+                    - radio=mean
+                    - --modality_csv
+                    - clin=/nfs/rnas/projects/M3TRICS/data/inputs/MIMM/clinical_mimm.csv
+                    - --modality_csv
+                    - blood=/nfs/rnas/projects/M3TRICS/data/inputs/MIMM/blood_mimm.csv
+                    - --modality_csv
+                    - radio_report=/nfs/rnas/projects/M3TRICS/data/inputs/MIMM/radioreports_mimm.csv
+                executable: /home/osiris-user/anaconda3/envs/TFM_5090/bin/python
+                host: 1be98ede45fd
+                os: Linux-6.13.0-061300-generic-x86_64-with-glibc2.39
+                program: /home/osiris-user/Desktop/TFM/m3trics/m3trics.py
+                python: CPython 3.9.18
+                root: /home/osiris-user/Desktop/TFM/m3trics/results/MIMM_OS_9_label/wandb
+                startedAt: "2026-05-17T02:13:18.603011Z"
+                writerId: 1y8hnjes173aqd788y0vd2lu1ndkj0e3
+        m: []
+        python_version: 3.9.18
+        t:
+            "1":
+                - 1
+                - 5
+                - 53
+            "2":
+                - 1
+                - 5
+                - 53
+            "3":
+                - 2
+                - 13
+                - 16
+                - 61
+            "4": 3.9.18
+            "5": 0.25.0
+            "12": 0.25.0
+            "13": linux-x86_64
+ablation_study:
+    value: true
+batch_size:
+    value: 32
+best_epoch_warmup:
+    value: 5
+dataset:
+    value: MIMM
+endpoint:
+    value: OS_9_label
+epochs:
+    value: 100
+eval_missing_locations_grid:
+    value: global,global,global,global,global
+healnet_attn_dropout:
+    value: 0.2
+healnet_cross_dim_head:
+    value: 8
+healnet_cross_heads:
+    value: 1
+healnet_depth:
+    value: 2
+healnet_ff_dropout:
+    value: 0.2
+healnet_latent_dim:
+    value: 8
+healnet_latent_dim_head:
+    value: 8
+healnet_latent_heads:
+    value: 2
+healnet_num_freq_bands:
+    value: 2
+healnet_num_latents:
+    value: 8
+healnet_self_per_cross_attn:
+    value: 0
+hp_grid_size:
+    value: 24
+hp_selection_epsilon:
+    value: 0.02
+imputation_method:
+    value: zero
+inner_fold:
+    value: 2
+inner_splits:
+    value: 5
+learning_rate:
+    value: 5e-05
+missing_location:
+    value: global
+missing_pattern_seed:
+    value: 2026
+modalities:
+    value:
+        - blood
+        - clin
+        - path
+        - radio
+        - radio_report
+modality_pooling:
+    value:
+        radio: mean
+model:
+    value: HealNet
+model_canonical:
+    value: healnet
+model_type:
+    value: inner
+name:
+    value: lr5e-05_bs32_depth2_nfb2_lat8_ldim8_xh1_lh2_cdh8_ldh8_adrop0p2_fdrop0p2_selfx0__wd1e-04trmiss40_trlocglobal
+outer_fold:
+    value: 3
+outer_splits:
+    value: 5
+phase:
+    value: selected_inner_model
+retrain_outer:
+    value: true
+save_inner:
+    value: true
+seed:
+    value: 2002
+selected_hp_name:
+    value: lr5e-05_bs32_depth2_nfb2_lat8_ldim8_xh1_lh2_cdh8_ldh8_adrop0p2_fdrop0p2_selfx0__wd1e-04trmiss40_trlocglobal
+task_type:
+    value: binary_classification
+test_eval_combinations:
+    value: 5
+test_missing_props_grid:
+    value: 0.0,0.2,0.4,0.6,0.8
+train_missing_prop:
+    value: 0.4
+weight_decay:
+    value: 0.0001

@@ -1,0 +1,14 @@
+{"time":"2026-05-20T13:26:49.4134586+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-20T13:26:49.70672207+02:00","level":"INFO","msg":"stream: created new stream","id":"fia7f5du"}
+{"time":"2026-05-20T13:26:49.70677279+02:00","level":"INFO","msg":"handler: started","stream_id":"fia7f5du"}
+{"time":"2026-05-20T13:26:49.709813584+02:00","level":"INFO","msg":"stream: started","id":"fia7f5du"}
+{"time":"2026-05-20T13:26:49.709915303+02:00","level":"INFO","msg":"writer: started","stream_id":"fia7f5du"}
+{"time":"2026-05-20T13:26:49.709927103+02:00","level":"INFO","msg":"sender: started","stream_id":"fia7f5du"}
+{"time":"2026-05-20T13:26:54.874974422+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-20T13:27:49.987934665+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/SMILe_MIMM/fia7f5du/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-05-20T13:28:47.574404305+02:00","level":"INFO","msg":"api: retrying HTTP error","status":429,"url":"https://api.wandb.ai/files/marc_albesa/SMILe_MIMM/fia7f5du/file_stream","body":"{\"error\":\"rate limit exceeded: per_run limit on filestream requests\"}"}
+{"time":"2026-05-20T13:28:52.993814754+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-20T13:28:52.994981941+02:00","level":"INFO","msg":"stream: closing","id":"fia7f5du"}
+{"time":"2026-05-20T13:28:52.994988901+02:00","level":"INFO","msg":"handler: closed","stream_id":"fia7f5du"}
+{"time":"2026-05-20T13:28:52.99544088+02:00","level":"INFO","msg":"sender: closed","stream_id":"fia7f5du"}
+{"time":"2026-05-20T13:28:52.99545181+02:00","level":"INFO","msg":"stream: closed","id":"fia7f5du"}
