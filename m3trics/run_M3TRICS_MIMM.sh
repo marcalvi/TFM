@@ -119,7 +119,7 @@ RADIO_REPORT_CSV="radioreports_mimm.csv"
 # -----------------------------------------------------------------------------------------
 
 # Methods
-RUN_MODELS="SMILe"
+RUN_MODELS="Di-PAM, Di-MMLP, HealNet, SMILe"
 
 # Nested CV
 RETRAIN_OUTER="true"
