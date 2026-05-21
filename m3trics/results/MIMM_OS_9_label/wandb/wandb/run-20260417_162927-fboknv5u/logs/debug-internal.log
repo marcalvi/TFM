@@ -1,0 +1,14 @@
+{"time":"2026-04-17T16:29:27.472836892+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-17T16:29:27.752897709+02:00","level":"INFO","msg":"stream: created new stream","id":"fboknv5u"}
+{"time":"2026-04-17T16:29:27.752957069+02:00","level":"INFO","msg":"handler: started","stream_id":"fboknv5u"}
+{"time":"2026-04-17T16:29:27.75607337+02:00","level":"INFO","msg":"stream: started","id":"fboknv5u"}
+{"time":"2026-04-17T16:29:27.75608911+02:00","level":"INFO","msg":"writer: started","stream_id":"fboknv5u"}
+{"time":"2026-04-17T16:29:27.75609123+02:00","level":"INFO","msg":"sender: started","stream_id":"fboknv5u"}
+{"time":"2026-04-17T16:29:29.500025548+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-17T16:31:54.37743319+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/HealNet_MIMM/fboknv5u/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-04-17T16:32:51.85061046+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/HealNet_MIMM/fboknv5u/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-04-17T16:33:21.347648818+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-17T16:33:21.348815587+02:00","level":"INFO","msg":"stream: closing","id":"fboknv5u"}
+{"time":"2026-04-17T16:33:21.348820937+02:00","level":"INFO","msg":"handler: closed","stream_id":"fboknv5u"}
+{"time":"2026-04-17T16:33:21.349341097+02:00","level":"INFO","msg":"sender: closed","stream_id":"fboknv5u"}
+{"time":"2026-04-17T16:33:21.349349767+02:00","level":"INFO","msg":"stream: closed","id":"fboknv5u"}

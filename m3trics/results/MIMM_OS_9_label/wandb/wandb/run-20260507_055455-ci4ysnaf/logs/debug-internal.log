@@ -1,0 +1,12 @@
+{"time":"2026-05-07T05:54:56.004143639+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-07T05:54:56.269765451+02:00","level":"INFO","msg":"stream: created new stream","id":"ci4ysnaf"}
+{"time":"2026-05-07T05:54:56.269816211+02:00","level":"INFO","msg":"handler: started","stream_id":"ci4ysnaf"}
+{"time":"2026-05-07T05:54:56.273542681+02:00","level":"INFO","msg":"stream: started","id":"ci4ysnaf"}
+{"time":"2026-05-07T05:54:56.273547381+02:00","level":"INFO","msg":"writer: started","stream_id":"ci4ysnaf"}
+{"time":"2026-05-07T05:54:56.273558761+02:00","level":"INFO","msg":"sender: started","stream_id":"ci4ysnaf"}
+{"time":"2026-05-07T05:54:57.696672655+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-07T05:54:57.883523629+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-07T05:54:57.885452329+02:00","level":"INFO","msg":"stream: closing","id":"ci4ysnaf"}
+{"time":"2026-05-07T05:54:57.885459869+02:00","level":"INFO","msg":"handler: closed","stream_id":"ci4ysnaf"}
+{"time":"2026-05-07T05:54:57.885868239+02:00","level":"INFO","msg":"sender: closed","stream_id":"ci4ysnaf"}
+{"time":"2026-05-07T05:54:57.885872479+02:00","level":"INFO","msg":"stream: closed","id":"ci4ysnaf"}

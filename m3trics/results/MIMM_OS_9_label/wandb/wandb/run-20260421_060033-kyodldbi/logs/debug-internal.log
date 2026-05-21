@@ -1,0 +1,12 @@
+{"time":"2026-04-21T06:00:33.538417798+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-21T06:00:33.811685677+02:00","level":"INFO","msg":"stream: created new stream","id":"kyodldbi"}
+{"time":"2026-04-21T06:00:33.811733217+02:00","level":"INFO","msg":"handler: started","stream_id":"kyodldbi"}
+{"time":"2026-04-21T06:00:33.816111185+02:00","level":"INFO","msg":"stream: started","id":"kyodldbi"}
+{"time":"2026-04-21T06:00:33.816145205+02:00","level":"INFO","msg":"sender: started","stream_id":"kyodldbi"}
+{"time":"2026-04-21T06:00:33.816142435+02:00","level":"INFO","msg":"writer: started","stream_id":"kyodldbi"}
+{"time":"2026-04-21T06:00:35.215984741+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-21T06:00:35.538153989+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-21T06:00:35.540029799+02:00","level":"INFO","msg":"stream: closing","id":"kyodldbi"}
+{"time":"2026-04-21T06:00:35.540036689+02:00","level":"INFO","msg":"handler: closed","stream_id":"kyodldbi"}
+{"time":"2026-04-21T06:00:35.540588538+02:00","level":"INFO","msg":"sender: closed","stream_id":"kyodldbi"}
+{"time":"2026-04-21T06:00:35.540595838+02:00","level":"INFO","msg":"stream: closed","id":"kyodldbi"}

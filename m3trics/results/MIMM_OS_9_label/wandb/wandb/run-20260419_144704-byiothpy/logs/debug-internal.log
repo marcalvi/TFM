@@ -1,0 +1,12 @@
+{"time":"2026-04-19T14:47:04.076171206+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-19T14:47:04.367893226+02:00","level":"INFO","msg":"stream: created new stream","id":"byiothpy"}
+{"time":"2026-04-19T14:47:04.367935276+02:00","level":"INFO","msg":"handler: started","stream_id":"byiothpy"}
+{"time":"2026-04-19T14:47:04.372289974+02:00","level":"INFO","msg":"stream: started","id":"byiothpy"}
+{"time":"2026-04-19T14:47:04.372316834+02:00","level":"INFO","msg":"writer: started","stream_id":"byiothpy"}
+{"time":"2026-04-19T14:47:04.372328104+02:00","level":"INFO","msg":"sender: started","stream_id":"byiothpy"}
+{"time":"2026-04-19T14:47:05.49559658+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-19T14:47:05.683809074+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-19T14:47:05.685572729+02:00","level":"INFO","msg":"stream: closing","id":"byiothpy"}
+{"time":"2026-04-19T14:47:05.685578759+02:00","level":"INFO","msg":"handler: closed","stream_id":"byiothpy"}
+{"time":"2026-04-19T14:47:05.686098488+02:00","level":"INFO","msg":"sender: closed","stream_id":"byiothpy"}
+{"time":"2026-04-19T14:47:05.686102308+02:00","level":"INFO","msg":"stream: closed","id":"byiothpy"}

@@ -1,0 +1,12 @@
+{"time":"2026-05-01T06:04:06.476684263+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-01T06:04:06.747889792+02:00","level":"INFO","msg":"stream: created new stream","id":"ups2moio"}
+{"time":"2026-05-01T06:04:06.747946242+02:00","level":"INFO","msg":"handler: started","stream_id":"ups2moio"}
+{"time":"2026-05-01T06:04:06.751248582+02:00","level":"INFO","msg":"stream: started","id":"ups2moio"}
+{"time":"2026-05-01T06:04:06.751272952+02:00","level":"INFO","msg":"writer: started","stream_id":"ups2moio"}
+{"time":"2026-05-01T06:04:06.751288122+02:00","level":"INFO","msg":"sender: started","stream_id":"ups2moio"}
+{"time":"2026-05-01T06:04:08.264239944+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-01T06:04:08.53358616+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-01T06:04:08.534982556+02:00","level":"INFO","msg":"stream: closing","id":"ups2moio"}
+{"time":"2026-05-01T06:04:08.534988576+02:00","level":"INFO","msg":"handler: closed","stream_id":"ups2moio"}
+{"time":"2026-05-01T06:04:08.535347065+02:00","level":"INFO","msg":"sender: closed","stream_id":"ups2moio"}
+{"time":"2026-05-01T06:04:08.535350535+02:00","level":"INFO","msg":"stream: closed","id":"ups2moio"}

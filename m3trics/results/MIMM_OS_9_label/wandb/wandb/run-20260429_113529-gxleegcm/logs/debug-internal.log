@@ -1,0 +1,12 @@
+{"time":"2026-04-29T11:35:29.083353007+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-29T11:35:29.355526201+02:00","level":"INFO","msg":"stream: created new stream","id":"gxleegcm"}
+{"time":"2026-04-29T11:35:29.355583381+02:00","level":"INFO","msg":"handler: started","stream_id":"gxleegcm"}
+{"time":"2026-04-29T11:35:29.359982016+02:00","level":"INFO","msg":"stream: started","id":"gxleegcm"}
+{"time":"2026-04-29T11:35:29.360004626+02:00","level":"INFO","msg":"writer: started","stream_id":"gxleegcm"}
+{"time":"2026-04-29T11:35:29.360021586+02:00","level":"INFO","msg":"sender: started","stream_id":"gxleegcm"}
+{"time":"2026-04-29T11:35:31.662846863+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-29T11:35:45.547357292+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-29T11:35:45.549498054+02:00","level":"INFO","msg":"stream: closing","id":"gxleegcm"}
+{"time":"2026-04-29T11:35:45.549504334+02:00","level":"INFO","msg":"handler: closed","stream_id":"gxleegcm"}
+{"time":"2026-04-29T11:35:45.550084965+02:00","level":"INFO","msg":"sender: closed","stream_id":"gxleegcm"}
+{"time":"2026-04-29T11:35:45.550088565+02:00","level":"INFO","msg":"stream: closed","id":"gxleegcm"}

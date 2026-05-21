@@ -1,0 +1,12 @@
+{"time":"2026-05-07T18:11:50.722748226+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-07T18:11:50.997429709+02:00","level":"INFO","msg":"stream: created new stream","id":"gicpyzvm"}
+{"time":"2026-05-07T18:11:50.997474289+02:00","level":"INFO","msg":"handler: started","stream_id":"gicpyzvm"}
+{"time":"2026-05-07T18:11:51.002045146+02:00","level":"INFO","msg":"stream: started","id":"gicpyzvm"}
+{"time":"2026-05-07T18:11:51.002071726+02:00","level":"INFO","msg":"writer: started","stream_id":"gicpyzvm"}
+{"time":"2026-05-07T18:11:51.002086626+02:00","level":"INFO","msg":"sender: started","stream_id":"gicpyzvm"}
+{"time":"2026-05-07T18:11:51.990104016+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-07T18:11:52.231729588+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-07T18:11:52.233437173+02:00","level":"INFO","msg":"stream: closing","id":"gicpyzvm"}
+{"time":"2026-05-07T18:11:52.233443553+02:00","level":"INFO","msg":"handler: closed","stream_id":"gicpyzvm"}
+{"time":"2026-05-07T18:11:52.234103661+02:00","level":"INFO","msg":"sender: closed","stream_id":"gicpyzvm"}
+{"time":"2026-05-07T18:11:52.234108281+02:00","level":"INFO","msg":"stream: closed","id":"gicpyzvm"}

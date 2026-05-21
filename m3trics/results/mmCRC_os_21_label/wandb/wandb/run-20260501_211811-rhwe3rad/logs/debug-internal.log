@@ -1,0 +1,12 @@
+{"time":"2026-05-01T21:18:11.153642726+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-01T21:18:11.428634936+02:00","level":"INFO","msg":"stream: created new stream","id":"rhwe3rad"}
+{"time":"2026-05-01T21:18:11.428676966+02:00","level":"INFO","msg":"handler: started","stream_id":"rhwe3rad"}
+{"time":"2026-05-01T21:18:11.431861132+02:00","level":"INFO","msg":"stream: started","id":"rhwe3rad"}
+{"time":"2026-05-01T21:18:11.431931962+02:00","level":"INFO","msg":"writer: started","stream_id":"rhwe3rad"}
+{"time":"2026-05-01T21:18:11.431953101+02:00","level":"INFO","msg":"sender: started","stream_id":"rhwe3rad"}
+{"time":"2026-05-01T21:18:13.134424952+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-01T21:18:13.374444129+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-01T21:18:13.375897613+02:00","level":"INFO","msg":"stream: closing","id":"rhwe3rad"}
+{"time":"2026-05-01T21:18:13.375904003+02:00","level":"INFO","msg":"handler: closed","stream_id":"rhwe3rad"}
+{"time":"2026-05-01T21:18:13.376323551+02:00","level":"INFO","msg":"sender: closed","stream_id":"rhwe3rad"}
+{"time":"2026-05-01T21:18:13.376326961+02:00","level":"INFO","msg":"stream: closed","id":"rhwe3rad"}

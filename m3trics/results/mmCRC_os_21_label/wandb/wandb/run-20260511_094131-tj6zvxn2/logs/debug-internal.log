@@ -1,0 +1,15 @@
+{"time":"2026-05-11T09:41:31.206903977+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-11T09:41:31.619703436+02:00","level":"INFO","msg":"stream: created new stream","id":"tj6zvxn2"}
+{"time":"2026-05-11T09:41:31.619749206+02:00","level":"INFO","msg":"handler: started","stream_id":"tj6zvxn2"}
+{"time":"2026-05-11T09:41:31.623873165+02:00","level":"INFO","msg":"stream: started","id":"tj6zvxn2"}
+{"time":"2026-05-11T09:41:31.623898685+02:00","level":"INFO","msg":"writer: started","stream_id":"tj6zvxn2"}
+{"time":"2026-05-11T09:41:31.623916945+02:00","level":"INFO","msg":"sender: started","stream_id":"tj6zvxn2"}
+{"time":"2026-05-11T09:41:32.333386916+02:00","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":39}
+{"time":"2026-05-11T09:41:32.333496326+02:00","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":1}
+{"time":"2026-05-11T09:41:32.92398669+02:00","level":"ERROR","msg":"runfiles: called UploadNow() after Finish()","path":"wandb-metadata.json"}
+{"time":"2026-05-11T09:41:33.472697021+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-11T09:41:33.730939785+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-11T09:41:33.732255861+02:00","level":"INFO","msg":"stream: closing","id":"tj6zvxn2"}
+{"time":"2026-05-11T09:41:33.732271111+02:00","level":"INFO","msg":"handler: closed","stream_id":"tj6zvxn2"}
+{"time":"2026-05-11T09:41:33.73274611+02:00","level":"INFO","msg":"sender: closed","stream_id":"tj6zvxn2"}
+{"time":"2026-05-11T09:41:33.73275023+02:00","level":"INFO","msg":"stream: closed","id":"tj6zvxn2"}

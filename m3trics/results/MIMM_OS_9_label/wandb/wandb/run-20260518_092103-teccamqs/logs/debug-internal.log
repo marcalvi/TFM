@@ -1,0 +1,12 @@
+{"time":"2026-05-18T09:21:03.782550735+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-18T09:21:04.056965439+02:00","level":"INFO","msg":"stream: created new stream","id":"teccamqs"}
+{"time":"2026-05-18T09:21:04.057003849+02:00","level":"INFO","msg":"handler: started","stream_id":"teccamqs"}
+{"time":"2026-05-18T09:21:04.061898093+02:00","level":"INFO","msg":"stream: started","id":"teccamqs"}
+{"time":"2026-05-18T09:21:04.061916783+02:00","level":"INFO","msg":"writer: started","stream_id":"teccamqs"}
+{"time":"2026-05-18T09:21:04.061934693+02:00","level":"INFO","msg":"sender: started","stream_id":"teccamqs"}
+{"time":"2026-05-18T09:21:05.358478349+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-18T09:21:05.806686062+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-18T09:21:05.807912158+02:00","level":"INFO","msg":"stream: closing","id":"teccamqs"}
+{"time":"2026-05-18T09:21:05.807918438+02:00","level":"INFO","msg":"handler: closed","stream_id":"teccamqs"}
+{"time":"2026-05-18T09:21:05.808581226+02:00","level":"INFO","msg":"sender: closed","stream_id":"teccamqs"}
+{"time":"2026-05-18T09:21:05.808585476+02:00","level":"INFO","msg":"stream: closed","id":"teccamqs"}

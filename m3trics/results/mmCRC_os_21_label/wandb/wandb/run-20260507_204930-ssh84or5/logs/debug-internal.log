@@ -1,0 +1,12 @@
+{"time":"2026-05-07T20:49:30.060628635+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-07T20:49:30.328461902+02:00","level":"INFO","msg":"stream: created new stream","id":"ssh84or5"}
+{"time":"2026-05-07T20:49:30.328503692+02:00","level":"INFO","msg":"handler: started","stream_id":"ssh84or5"}
+{"time":"2026-05-07T20:49:30.332423904+02:00","level":"INFO","msg":"stream: started","id":"ssh84or5"}
+{"time":"2026-05-07T20:49:30.332488824+02:00","level":"INFO","msg":"writer: started","stream_id":"ssh84or5"}
+{"time":"2026-05-07T20:49:30.332493494+02:00","level":"INFO","msg":"sender: started","stream_id":"ssh84or5"}
+{"time":"2026-05-07T20:49:31.937799924+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-07T20:49:32.178352143+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-07T20:49:32.180584853+02:00","level":"INFO","msg":"stream: closing","id":"ssh84or5"}
+{"time":"2026-05-07T20:49:32.180591053+02:00","level":"INFO","msg":"handler: closed","stream_id":"ssh84or5"}
+{"time":"2026-05-07T20:49:32.181204281+02:00","level":"INFO","msg":"sender: closed","stream_id":"ssh84or5"}
+{"time":"2026-05-07T20:49:32.181208671+02:00","level":"INFO","msg":"stream: closed","id":"ssh84or5"}

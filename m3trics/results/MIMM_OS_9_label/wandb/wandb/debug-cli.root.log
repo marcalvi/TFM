@@ -1,0 +1,16 @@
+2026-04-17 10:24:48 ERROR git root error
+Traceback (most recent call last):
+  File "/home/osiris-user/anaconda3/envs/TFM_5090/lib/python3.9/site-packages/wandb/sdk/lib/gitlib.py", line 93, in root
+    return self.repo.git.rev_parse("--show-toplevel")
+  File "/home/osiris-user/anaconda3/envs/TFM_5090/lib/python3.9/site-packages/git/cmd.py", line 1003, in <lambda>
+    return lambda *args, **kwargs: self._call_process(name, *args, **kwargs)
+  File "/home/osiris-user/anaconda3/envs/TFM_5090/lib/python3.9/site-packages/git/cmd.py", line 1616, in _call_process
+    return self.execute(call, **exec_kwargs)
+  File "/home/osiris-user/anaconda3/envs/TFM_5090/lib/python3.9/site-packages/git/cmd.py", line 1406, in execute
+    raise GitCommandError(redacted_command, status, stderr_value, stdout_value)
+git.exc.GitCommandError: Cmd('git') failed due to: exit code(128)
+  cmdline: git rev-parse --show-toplevel
+  stderr: 'fatal: detected dubious ownership in repository at '/nfs/rnas/workspaces/malbesa/TFM'
+To add an exception for this directory, call:
+
+	git config --global --add safe.directory /nfs/rnas/workspaces/malbesa/TFM'

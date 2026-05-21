@@ -1,0 +1,15 @@
+{"time":"2026-05-15T17:18:48.377155419+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-15T17:19:09.701764692+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": dial tcp 34.8.250.101:443: connect: network is unreachable"}
+{"time":"2026-05-15T17:19:12.492398418+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": dial tcp 34.8.250.101:443: connect: network is unreachable"}
+{"time":"2026-05-15T17:19:16.74800445+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": dial tcp 34.8.250.101:443: connect: network is unreachable"}
+{"time":"2026-05-15T17:19:26.722938227+02:00","level":"INFO","msg":"stream: created new stream","id":"9lqv8v41"}
+{"time":"2026-05-15T17:19:26.722989756+02:00","level":"INFO","msg":"handler: started","stream_id":"9lqv8v41"}
+{"time":"2026-05-15T17:19:26.729167316+02:00","level":"INFO","msg":"stream: started","id":"9lqv8v41"}
+{"time":"2026-05-15T17:19:26.729184106+02:00","level":"INFO","msg":"writer: started","stream_id":"9lqv8v41"}
+{"time":"2026-05-15T17:19:26.729195806+02:00","level":"INFO","msg":"sender: started","stream_id":"9lqv8v41"}
+{"time":"2026-05-15T17:19:27.917076773+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-15T17:19:28.129899854+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-15T17:19:28.131762158+02:00","level":"INFO","msg":"stream: closing","id":"9lqv8v41"}
+{"time":"2026-05-15T17:19:28.131768868+02:00","level":"INFO","msg":"handler: closed","stream_id":"9lqv8v41"}
+{"time":"2026-05-15T17:19:28.132096807+02:00","level":"INFO","msg":"sender: closed","stream_id":"9lqv8v41"}
+{"time":"2026-05-15T17:19:28.132100577+02:00","level":"INFO","msg":"stream: closed","id":"9lqv8v41"}
