@@ -2,7 +2,7 @@
   <img src="assets/logo.png" alt="M3TRICS" width="360">
 </p>
 
-M3TRICS is a multimodal training and analysis framework for comparing missing-modality learning methods across clinical datasets. It handles dataset preprocessing, modality alignment, nested cross-validation, missing-modality ablation studies, fixed-dataset training, binary classification, survival modelling, and downstream statistical analysis.
+M3TRICS is a multimodal training and analysis framework for comparing missing-modality learning methods across clinical datasets. It handles dataset preprocessing, modality alignment, nested cross-validation, progressive missingness studies, fixed-dataset training, binary classification, survival modelling, and downstream statistical analysis.
 
 This README describes the workflow from environment setup to result analysis. The project root referred to below is this directory, the one containing `scripts/m3trics.py` and the `run_M3TRICS_*.sh` scripts.
 
@@ -14,7 +14,7 @@ This README describes the workflow from environment setup to result analysis. Th
 - Aggregate duplicated patient rows with mean pooling or supervised attention pooling.
 - Impute missing values within each modality using configurable numeric/categorical strategies.
 - Compare multiple missing-modality methods under the same nested-CV setup.
-- Run either a synthetic missingness decay/ablation study or a fixed observed dataset experiment.
+- Run either a synthetic missingness decay/progressive missingness study or a fixed observed dataset experiment.
 - Evaluate binary classification and discrete-time survival tasks.
 - Save inner-CV, outer-test, epoch-history, split, prediction, and processed-data outputs.
 - Analyze trained results with notebooks in `analysis/`.
@@ -45,12 +45,14 @@ Use these names in `RUN_MODELS` inside the `.sh` launchers.
 | `KNN_MLP` | MultimodalMLP with KNN imputation for missing modalities. |
 | `VAE_MLP` | MultimodalMLP with VAE-based imputation for missing modalities. |
 | `pAM` | Attention masking over unimodal predictions model. |
-| `Di-PAM` | Distilled version of pAM. |
-| `Di-MMLP` | Distilled multimodal MLP. |
+| `Di-PAM` | Distilled version of pAM; teacher uses complete modalities, student receives the configured missingness mask. |
+| `Di-MMLP` | Distilled multimodal MLP; teacher uses complete modalities, student receives the configured missingness mask. |
 | `HealNet` | HealNet wrapper for modality-level embeddings. |
-| `SMILe` | SMIL generalization for n>=2 modalities. |
+| `SMILe` | SMIL generalization for n>=2 modalities with mask-aware latent reconstruction. |
 
 Hyperparameter grids live in `hyperparams/`. Edit those files when you want to change the search space for a method.
+
+SMILe learns its modality priors only from modality slots visible in the current training split and missingness condition. It does not recover synthetic hidden modalities from the complete base dataset.
 
 ## 1. Install The Environment
 
@@ -220,12 +222,12 @@ nll, ce_survival, cox
 
 For survival, models output `SURVIVAL_N_BINS` logits and the analysis uses task-specific metrics such as C-index and loss.
 
-### 6. Ablation Study
+### 6. Progressive Missingness Study
 
-Decay/ablation mode simulates missing modalities at train and test time.
+Decay/missingness-study mode simulates missing modalities at train and test time.
 
 ```bash
-ABLATION_STUDY="true"
+MISSINGNESS_STUDY="true"
 MISSING_LOCATION="global"
 TRAIN_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
 TEST_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
@@ -233,10 +235,10 @@ TEST_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
 
 Use this when you want to study robustness as missingness increases. The process requires a subset with all selected modalities available before synthetic missingness is applied.
 
-Fixed dataset mode disables synthetic missingness and trains on the observed dataset as-is.
+Fixed dataset mode disables synthetic missingness and trains on the observed dataset as-is for standard methods. For distillation methods (`Di-PAM`, `Di-MMLP`), M3TRICS first estimates the observed patient-modality missingness proportion in the original cohort, then trains on the complete-case subset and applies an equivalent synthetic missingness mask to the student branch only.
 
 ```bash
-ABLATION_STUDY="false"
+MISSINGNESS_STUDY="false"
 # MISSING_LOCATION, TRAIN_MISSING_PROP and TEST_MISSING_PROP are not passed.
 ```
 
@@ -275,7 +277,7 @@ Main folders:
 | `training_runs/` | Nested-CV outputs per method, seed, and missingness setting. |
 | `wandb/` | Local W&B files when logging is enabled. |
 
-Ablation mode output:
+Missingness-study mode output:
 
 ```text
 results/<DATASET>_<ENDPOINT_COL>/training_runs/<MODEL>_retrain<true|false>_k<K>/TRAIN_MISSING/<LOCATION>/<TRAIN_MISSING_PERCENT>/seed_<SEED>/
@@ -308,13 +310,13 @@ analysis/
 
 ### Missing-Modality Decay Analysis
 
-Use this for `ABLATION_STUDY=true` runs:
+Use this for `MISSINGNESS_STUDY=true` runs:
 
 ```text
 analysis/MM_decay_analysis.ipynb
 ```
 
-It loads ablation outputs, computes replicate AUC tables, global Friedman tests, Wilcoxon pairwise comparisons, robustness/decay curves, and heatmaps.
+It loads missingness-study outputs, computes replicate AUC tables, global Friedman tests, Wilcoxon pairwise comparisons, heatmaps, method-level performance/resilience metrics, and normalized degradation coefficients. Distillation methods are excluded from Training intuition and Train degradation coefficient.
 
 Outputs are saved to:
 
@@ -324,7 +326,7 @@ analysis/MM_decay_analysis_outputs/
 
 ### Fixed Dataset Analysis
 
-Use this for `ABLATION_STUDY=false` runs:
+Use this for `MISSINGNESS_STUDY=false` runs:
 
 ```text
 analysis/fixed_dataset_analysis.ipynb
@@ -374,7 +376,7 @@ For fixed-dataset analysis, make sure the notebook is pointed to `results_mode='
 2. Choose the dataset launcher closest to your experiment.
 3. Edit paths, endpoint, modality CSVs, dropped columns, and imputation settings.
 4. Choose `RUN_MODELS`, CV folds, seeds, task type, and scheduler.
-5. Set `ABLATION_STUDY=true` for decay analysis or `false` for fixed-dataset training.
+5. Set `MISSINGNESS_STUDY=true` for decay analysis or `false` for fixed-dataset training.
 6. Run the `.sh` launcher.
 7. Check `results/<DATASET>_<ENDPOINT_COL>/processed_data/` to verify preprocessing.
 8. Check `training_runs/` to verify every model/seed/missingness configuration completed.
@@ -403,8 +405,8 @@ The current result-analysis notebooks are implemented for classification outputs
 
 | Task | Mode | Launcher settings | Analysis notebook | Output folder |
 | --- | --- | --- | --- | --- |
-| Classification | Missingness decay / ablation | `TASK_TYPE="binary_classification"` + `ABLATION_STUDY="true"` | `analysis/MM_decay_analysis.ipynb` | `analysis/MM_decay_analysis_outputs/` |
-| Classification | Fixed observed dataset | `TASK_TYPE="binary_classification"` + `ABLATION_STUDY="false"` | `analysis/fixed_dataset_analysis.ipynb` | `analysis/fixed_dataset_analysis_outputs/` |
+| Classification | Progressive missingness study | `TASK_TYPE="binary_classification"` + `MISSINGNESS_STUDY="true"` | `analysis/MM_decay_analysis.ipynb` | `analysis/MM_decay_analysis_outputs/` |
+| Classification | Fixed observed dataset | `TASK_TYPE="binary_classification"` + `MISSINGNESS_STUDY="false"` | `analysis/fixed_dataset_analysis.ipynb` | `analysis/fixed_dataset_analysis_outputs/` |
 
 Not currently implemented:
 

@@ -129,7 +129,8 @@ def _knn_mode_impute(df, feature_cols, categorical_cols, numeric_cols, k):
     provisional_df = work_df.copy()
     for col in categorical_cols:
         fill_value = mode_of_series(provisional_df[col])
-        filled = provisional_df[col].fillna(fill_value)
+        filled = provisional_df[col].copy()
+        filled.loc[filled.isna()] = fill_value
         provisional_df[col] = filled.infer_objects(copy=False)
 
     for target_col in categorical_cols:
@@ -219,7 +220,8 @@ def impute_modality_df(
     if categorical_missing_cols:
         if categorical_imputation == "column_mode":
             for col in categorical_missing_cols:
-                filled = work_df[col].fillna(mode_of_series(work_df[col]))
+                filled = work_df[col].copy()
+                filled.loc[filled.isna()] = mode_of_series(work_df[col])
                 work_df[col] = filled.infer_objects(copy=False)
         elif categorical_imputation == "knn_mode":
             work_df = _knn_mode_impute(
@@ -506,7 +508,20 @@ def load_configured_modality_frames(
     return modality_frames, modality_configs
 
 
+def _build_cohort_summary(endpoint_df, aligned_endpoint_df, summary_rows, patient_id_col, alignment_mode):
+    return {
+        "alignment_mode": alignment_mode,
+        "endpoint_patients_before": int(endpoint_df[patient_id_col].nunique()),
+        "endpoint_patients_after": int(aligned_endpoint_df[patient_id_col].nunique()),
+        "dropped_from_endpoints": int(
+            endpoint_df[patient_id_col].nunique() - aligned_endpoint_df[patient_id_col].nunique()
+        ),
+        "cohort_summary_by_modality": summary_rows,
+    }
+
+
 def align_complete_multimodal_cohort(modality_frames, endpoint_df, patient_id_col):
+    """Restrict endpoints/modalities to patients with every configured modality."""
     if endpoint_df.empty:
         raise ValueError("Endpoint dataframe is empty before cohort alignment.")
     if not modality_frames:
@@ -550,12 +565,75 @@ def align_complete_multimodal_cohort(modality_frames, endpoint_df, patient_id_co
             id_col=patient_id_col,
         )
 
-    cohort_summary = {
-        "endpoint_patients_before": int(endpoint_df[patient_id_col].nunique()),
-        "endpoint_patients_after": int(aligned_endpoint_df[patient_id_col].nunique()),
-        "dropped_from_endpoints": int(endpoint_df[patient_id_col].nunique() - aligned_endpoint_df[patient_id_col].nunique()),
-        "cohort_summary_by_modality": summary_rows,
-    }
+    cohort_summary = _build_cohort_summary(
+        endpoint_df=endpoint_df,
+        aligned_endpoint_df=aligned_endpoint_df,
+        summary_rows=summary_rows,
+        patient_id_col=patient_id_col,
+        alignment_mode="complete_multimodal_cohort",
+    )
+    return aligned_modality_frames, aligned_endpoint_df, cohort_summary
+
+
+def align_observed_multimodal_cohort(modality_frames, endpoint_df, patient_id_col):
+    """Keep endpoint patients with at least one observed modality row.
+
+    This is used for fixed-dataset experiments, where naturally missing modalities
+    should be represented through the model present_mask instead of dropping the
+    patient from the cohort.
+    """
+    if endpoint_df.empty:
+        raise ValueError("Endpoint dataframe is empty before cohort alignment.")
+    if not modality_frames:
+        raise ValueError("At least one modality dataframe is required for cohort alignment.")
+
+    endpoint_ids = endpoint_df[patient_id_col].astype(str)
+    endpoint_set = set(endpoint_ids.tolist())
+    observed_ids = set()
+    summary_rows = []
+
+    for modality_name, df in modality_frames.items():
+        modality_ids = set(df[patient_id_col].astype(str).tolist())
+        observed_ids |= modality_ids
+        summary_rows.append(
+            {
+                "modality": modality_name,
+                "patients_before": int(len(modality_ids)),
+                "missing_vs_endpoints": int(len(endpoint_set - modality_ids)),
+            }
+        )
+
+    cohort_ids = endpoint_set & observed_ids
+    if not cohort_ids:
+        raise ValueError(
+            "No endpoint patients have at least one configured modality available."
+        )
+
+    endpoint_order = endpoint_ids.drop_duplicates().tolist()
+    ordered_cohort_ids = [pid for pid in endpoint_order if pid in cohort_ids]
+
+    aligned_endpoint_df = filter_by_patients(
+        endpoint_df.assign(**{patient_id_col: endpoint_ids}),
+        ordered_cohort_ids,
+        id_col=patient_id_col,
+    )
+    aligned_modality_frames = OrderedDict()
+    for modality_name, df in modality_frames.items():
+        work_df = df.copy()
+        work_df[patient_id_col] = work_df[patient_id_col].astype(str)
+        aligned_modality_frames[modality_name] = filter_by_patients(
+            work_df,
+            ordered_cohort_ids,
+            id_col=patient_id_col,
+        )
+
+    cohort_summary = _build_cohort_summary(
+        endpoint_df=endpoint_df,
+        aligned_endpoint_df=aligned_endpoint_df,
+        summary_rows=summary_rows,
+        patient_id_col=patient_id_col,
+        alignment_mode="observed_multimodal_cohort",
+    )
     return aligned_modality_frames, aligned_endpoint_df, cohort_summary
 
 

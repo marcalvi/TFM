@@ -27,15 +27,41 @@ DATA_ROOT="/nfs/rnas/projects/M3TRICS/data/inputs"
 
 # -----------------------------------------------------------------------------------------
 # 2. DATASET AND ENDPOINT
-# Define dataset name, patient ID column, and endpoint CSV file
+# Define dataset name and endpoint CSV file
 # -----------------------------------------------------------------------------------------
 
-DATASET="mmCRC"
-PATIENT_ID_COL="sap"
-ENDPOINTS_CSV="mmCRC_endpoints.csv"
+DATASET="MIMM"
+ENDPOINTS_CSV="patients_mimm.csv"
 
 # -----------------------------------------------------------------------------------------
-# 3. MODALITIES CONFIGURATION
+# 3. TASK CONFIGURATION
+# binary classification arguments:
+#   TASK_TYPE="binary_classification"
+#   PATIENT_ID_COL: patient identifier column shared by endpoint and modality files
+#   ENDPOINT_COL: binary label column used as the prediction target
+#
+# survival arguments:
+#   TASK_TYPE="survival"
+#   Available survival losses: nll, ce_survival, cox
+#   SURVIVAL_LOSS: survival loss to optimize
+#   SURVIVAL_TIME_COL: continuous survival time column
+#   SURVIVAL_EVENT_COL: binary event indicator column (1=event, 0=censored)
+#   SURVIVAL_N_BINS: number of discrete survival bins
+# -----------------------------------------------------------------------------------------
+
+TASK_TYPE="binary_classification"
+PATIENT_ID_COL="patient"
+ENDPOINT_COL="OS_9_label"
+# SURVIVAL_LOSS="nll"
+# SURVIVAL_TIME_COL=""
+# SURVIVAL_EVENT_COL=""
+# SURVIVAL_N_BINS=4
+
+# Output directory
+RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}_${ENDPOINT_COL}"
+
+# -----------------------------------------------------------------------------------------
+# 4. MODALITIES CONFIGURATION
 # Define modality names and corresponding CSV files
 
 # Optional
@@ -51,8 +77,8 @@ ENDPOINTS_CSV="mmCRC_endpoints.csv"
 # -----------------------------------------------------------------------------------------
 
 # Template:
-# PATH_NAME="path"
-# PATH_CSV="mmCRC_pathology_data.csv"
+# PATH_NAME="PATH"
+# PATH_CSV="pathology_mimm.csv"
 # PATH_DROP_COLS=""
 # PATH_AGGREGATION_METHOD=""
 # PATH_CATEGORICAL_IMPUTATION_METHOD="knn_mode"
@@ -62,36 +88,38 @@ ENDPOINTS_CSV="mmCRC_endpoints.csv"
 
 # Path modality
 PATH_NAME="path"
-PATH_CSV="mmCRC_pathology_data.csv"
+PATH_CSV="pathology_mimm.csv"
 
 # Radiology modality
 RADIO_NAME="radio"
-RADIO_CSV="mmCRC_radiology_data.csv"
+RADIO_CSV="radiology_mimm.csv"
+RADIO_DROP_COLS="image_path,lesion_tag"
+RADIO_AGGREGATION_METHOD="mean"
 
 # Clinical modality
 CLIN_NAME="clin"
-CLIN_CSV="mmCRC_clinical_data.csv"
-CLIN_DROP_COLS="braf_mut_wt"
-CLIN_CATEGORICAL_COLS="had_adj_treat_post_primary_surgery, had_adj_treat_post_met_surgery, had_neoadjuvant_treatment, had_surgery_liver, had_surgery_other_mets,had_surgery_primary, met_treatment_mechanism_qmt, met_treatment_mechanism_aag, met_treatment_mechanism_ttantiegfr, met_treatment_mechanism_ttnonantiegfr, met_treatment_mechanism_imm, sex_male, sync_met_yes, msi_status_MSI, ras_mut_wt, met_tumor_site_liver_liver_limited, met_tumor_site_liver_liver_w_other, met_tumor_site_liver_other, primary_tumor_site_simple_Colon (unspecified), primary_tumor_site_simple_Left, primary_tumor_site_simple_Right"
-CLIN_CATEGORICAL_IMPUTATION_METHOD="knn_mode"
-CLIN_KNN_NEIGHBORS=5
+CLIN_CSV="clinical_mimm.csv"
 
 # Blood modality
 BLOOD_NAME="blood"
-BLOOD_CSV="mmCRC_blood_data.csv"
+BLOOD_CSV="blood_mimm.csv"
+
+# Radio-report modality
+RADIO_REPORT_NAME="radio_report"
+RADIO_REPORT_CSV="radioreports_mimm.csv"
 
 # -----------------------------------------------------------------------------------------
-# 4. TRAINING CONFIGURATION
+# 5. TRAINING CONFIGURATION
 # Select the models to run after preprocessing.
 # Available methods: ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, Di-MMLP, HealNet, SMILe
 # Available scheduler types: cosine_annealing, reduce_lr_on_plateau
 #   cosine_annealing requires MIN_LR
 #   reduce_lr_on_plateau requires LR_PATIENCE
-# Missing pattern seed is fixed to ensure the same ablation patterns across seeds
+# Missing pattern seed is fixed to ensure the same missingness patterns across seeds
 # -----------------------------------------------------------------------------------------
 
 # Methods
-RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, Di-MMLP, HealNet, SMILe"
+RUN_MODELS="Di-PAM, Di-MMLP, HealNet, SMILe"
 
 # Nested CV
 RETRAIN_OUTER="true"
@@ -111,42 +139,19 @@ SEEDS="22,2002,4,18473,55602"
 MISSING_PATTERN_SEED=2026
 
 # -----------------------------------------------------------------------------------------
-# 5. TASK CONFIGURATION
-# binary classification arguments:
-#   TASK_TYPE="binary_classification"
-#   ENDPOINT_COL: binary label column used as the prediction target
-#
-# survival arguments:
-#   TASK_TYPE="survival"
-#   Available survival losses: nll, ce_survival, cox
-#   SURVIVAL_LOSS: survival loss to optimize
-#   SURVIVAL_TIME_COL: continuous survival time column
-#   SURVIVAL_EVENT_COL: binary event indicator column (1=event, 0=censored)
-#   SURVIVAL_N_BINS: number of discrete survival bins
-# -----------------------------------------------------------------------------------------
-
-TASK_TYPE="binary_classification"
-ENDPOINT_COL="os_21_label"
-# SURVIVAL_LOSS="nll"
-# SURVIVAL_TIME_COL=""
-# SURVIVAL_EVENT_COL=""
-# SURVIVAL_N_BINS=4
-
-# Output directory
-RESULTS_ROOT="${PROJECT_ROOT}/results/${DATASET}_${ENDPOINT_COL}"
-
-# -----------------------------------------------------------------------------------------
-# 6. ABLATION STUDY
-# Specify these values to perform the proposed ablation study and decay analysis.
+# 6. PROGRESSIVE MISSINGNESS STUDY
+# Specify these values to perform the proposed progressive missingness study and decay analysis.
 # Note: this process needs a subset with all modalities available, so make sure N is large
 # enough to support meaningful statistical comparisons.
-# If ABLATION_STUDY=false, synthetic missingness is disabled and the dataset is trained as-is.
+# If MISSINGNESS_STUDY=false, synthetic missingness is disabled and the dataset is trained as-is.
+# Distillation note: in fixed dataset mode, Di-PAM/Di-MMLP use a complete-case subset;
+# the student receives synthetic missingness matching the original cohort missingness proportion.
 # -----------------------------------------------------------------------------------------
 
-ABLATION_STUDY="false"
-# MISSING_LOCATION="global"
-# TRAIN_MISSING_PROP="0.0,0.25,0.5,0.75"
-# TEST_MISSING_PROP="0.0,0.25,0.5,0.75"
+MISSINGNESS_STUDY="true"
+MISSING_LOCATION="global"
+TRAIN_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
+TEST_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
 
 # -----------------------------------------------------------------------------------------
 # Wrap arguments and run m3trics script
@@ -188,6 +193,7 @@ add_modality_args "${PATH_NAME}" "${PATH_CSV}" "${PATH_DROP_COLS:-}" "${PATH_CAT
 add_modality_args "${RADIO_NAME}" "${RADIO_CSV}" "${RADIO_DROP_COLS:-}" "${RADIO_CATEGORICAL_COLS:-}" "${RADIO_AGGREGATION_METHOD:-}" "${RADIO_CATEGORICAL_IMPUTATION_METHOD:-}" "${RADIO_NUMERIC_IMPUTATION_METHOD:-}" "${RADIO_KNN_NEIGHBORS:-}"
 add_modality_args "${CLIN_NAME}" "${CLIN_CSV}" "${CLIN_DROP_COLS:-}" "${CLIN_CATEGORICAL_COLS:-}" "${CLIN_AGGREGATION_METHOD:-}" "${CLIN_CATEGORICAL_IMPUTATION_METHOD:-}" "${CLIN_NUMERIC_IMPUTATION_METHOD:-}" "${CLIN_KNN_NEIGHBORS:-}"
 add_modality_args "${BLOOD_NAME}" "${BLOOD_CSV}" "${BLOOD_DROP_COLS:-}" "${BLOOD_CATEGORICAL_COLS:-}" "${BLOOD_AGGREGATION_METHOD:-}" "${BLOOD_CATEGORICAL_IMPUTATION_METHOD:-}" "${BLOOD_NUMERIC_IMPUTATION_METHOD:-}" "${BLOOD_KNN_NEIGHBORS:-}"
+add_modality_args "${RADIO_REPORT_NAME}" "${RADIO_REPORT_CSV}" "${RADIO_REPORT_DROP_COLS:-}" "${RADIO_REPORT_CATEGORICAL_COLS:-}" "${RADIO_REPORT_AGGREGATION_METHOD:-}" "${RADIO_REPORT_CATEGORICAL_IMPUTATION_METHOD:-}" "${RADIO_REPORT_NUMERIC_IMPUTATION_METHOD:-}" "${RADIO_REPORT_KNN_NEIGHBORS:-}"
 
 M3TRICS_ARGS=(
   --dataset "${DATASET}"
@@ -201,7 +207,7 @@ M3TRICS_ARGS=(
   --outer_splits "${OUTER_SPLITS}"
   --retrain_outer "${RETRAIN_OUTER}"
   --save_inner "${SAVE_INNER}"
-  --ablation_study "${ABLATION_STUDY}"
+  --missingness_study "${MISSINGNESS_STUDY}"
   --hp_selection_epsilon "${HP_SELECTION_EPSILON}"
   --scheduler_type "${SCHEDULER_TYPE}"
   --seeds "${SEEDS}"
@@ -223,7 +229,7 @@ if [[ "${TASK_TYPE}" == "survival" ]]; then
   )
 fi
 
-if [[ "${ABLATION_STUDY}" == "true" ]]; then
+if [[ "${MISSINGNESS_STUDY}" == "true" ]]; then
   M3TRICS_ARGS+=(
     --missing_location "${MISSING_LOCATION}"
     --train_missing_prop "${TRAIN_MISSING_PROP}"

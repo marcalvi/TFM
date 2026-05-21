@@ -13,6 +13,7 @@ import pandas as pd
 from hyperparams import get_model_config, list_available_model_configs
 from dataset.preprocess_dataset import (
     align_complete_multimodal_cohort,
+    align_observed_multimodal_cohort,
     impute_modality_df,
     load_configured_modality_frames,
     load_endpoint_df,
@@ -278,7 +279,7 @@ def build_training_arg_parser():
         ),
     )
     parser.add_argument(
-        "--ablation_study",
+        "--missingness_study",
         type=_parse_bool_flag,
         default=True,
         help="If false, disable synthetic missingness and train only on the fixed observed multimodal dataset.",
@@ -424,9 +425,9 @@ def _build_output_dir(
     missing_location,
     train_missing_prop,
     seed,
-    ablation_study=True,
+    missingness_study=True,
 ):
-    if not bool(ablation_study):
+    if not bool(missingness_study):
         return os.path.join(base_odir, "FIXED", f"seed_{seed}")
     mapping = {
         "global": "GLOBAL",
@@ -559,7 +560,7 @@ def run_training_from_args(args):
 
     start_time = time.time()
     from dataset import MissingModalitySimulator, load_or_preprocess_dataset
-    from scripts.train_ncv import nested_cv
+    from scripts.train_ncv import nested_cv, _observed_modality_missing_prop
     from scripts.utils import build_hyperparameter_grid
 
     model_name_norm = _normalize_model_name(args.model)
@@ -573,11 +574,39 @@ def run_training_from_args(args):
     inst_df, dfs, label_col, patient_id_col, task_config = load_or_preprocess_dataset(args)
     modality_names = list(dfs.keys())
     num_modalities = len(modality_names)
+
+    fixed_distillation_student_missing_prop = None
+    fixed_distillation_complete_case = (
+        not bool(args.missingness_study)
+        and model_name_norm in {"dipam", "di_mmlp"}
+    )
+    if fixed_distillation_complete_case:
+        fixed_distillation_student_missing_prop = _observed_modality_missing_prop(
+            dfs=dfs,
+            inst_df=inst_df,
+            patient_id_col=patient_id_col,
+        )
+        patients_before = int(len(inst_df))
+        dfs, inst_df, fixed_complete_summary = align_complete_multimodal_cohort(
+            modality_frames=dfs,
+            endpoint_df=inst_df,
+            patient_id_col=patient_id_col,
+        )
+        patients_after = int(len(inst_df))
+        print(
+            "Fixed-dataset distillation uses complete-case subsampling: "
+            f"{patients_after}/{patients_before} patients retained."
+        )
+        print(
+            "Fixed-dataset distillation student missingness from pre-subsampling cohort: "
+            f"{fixed_distillation_student_missing_prop:.4f}"
+        )
+
     print(f"Dataframes read. Starting {args.model} training.")
 
     seeds_list = _parse_seed_list(args.seeds)
     print(f"Parsed seeds: {seeds_list}")
-    if bool(args.ablation_study):
+    if bool(args.missingness_study):
         missing_locations = _parse_training_value_or_list(args.missing_location, str, to_lower=True)
         train_missing_props = _parse_training_value_or_list(args.train_missing_prop, float)
         test_missing_props = _parse_training_value_or_list(args.test_missing_prop, float)
@@ -655,6 +684,19 @@ def run_training_from_args(args):
                     num_modalities=num_modalities,
                     modality_names=modality_names,
                 )
+                if fixed_distillation_complete_case and fixed_distillation_student_missing_prop > 0.0:
+                    test_eval_setups = [
+                        {
+                            "missing_location": "global",
+                            "missing_prop": float(fixed_distillation_student_missing_prop),
+                            "simulator": MissingModalitySimulator(
+                                num_modalities=num_modalities,
+                                modality_names=modality_names,
+                                missing_prop=float(fixed_distillation_student_missing_prop),
+                                missing_location="global",
+                            ),
+                        }
+                    ]
 
                 odir = _build_output_dir(
                     base_odir=args.odir,
@@ -664,7 +706,7 @@ def run_training_from_args(args):
                     missing_location=missing_location,
                     train_missing_prop=train_missing_prop,
                     seed=seed,
-                    ablation_study=bool(args.ablation_study),
+                    missingness_study=bool(args.missingness_study),
                 )
                 best_epoch_warmup = min(5, int(args.epochs))
                 print(
@@ -676,7 +718,7 @@ def run_training_from_args(args):
                 print(f"Best-epoch warmup: {best_epoch_warmup}")
                 print(f"Retrain outer train: {bool(args.retrain_outer)}")
                 print(f"Save inner outputs: {bool(args.save_inner)}")
-                print(f"Ablation study: {bool(args.ablation_study)}")
+                print(f"Progressive missingness study: {bool(args.missingness_study)}")
                 resolved_task_type = normalize_task_type(args.task_type)
                 print(f"Task type: {resolved_task_type}")
                 if resolved_task_type == "survival":
@@ -702,7 +744,13 @@ def run_training_from_args(args):
                     "task_type": normalize_task_type(args.task_type),
                     "retrain_outer": bool(args.retrain_outer),
                     "save_inner": bool(args.save_inner),
-                    "ablation_study": bool(args.ablation_study),
+                    "missingness_study": bool(args.missingness_study),
+                    "fixed_distillation_complete_case": bool(fixed_distillation_complete_case),
+                    "fixed_distillation_student_missing_prop": (
+                        None
+                        if fixed_distillation_student_missing_prop is None
+                        else float(fixed_distillation_student_missing_prop)
+                    ),
                     "best_epoch_warmup": best_epoch_warmup,
                     "inner_splits": args.inner_splits,
                     "outer_splits": args.outer_splits,
@@ -776,6 +824,8 @@ def run_training_from_args(args):
                     scheduler_type=str(args.scheduler_type),
                     lr_patience=int(args.lr_patience),
                     hp_selection_epsilon=float(args.hp_selection_epsilon),
+                    missingness_study=bool(args.missingness_study),
+                    fixed_distillation_student_missing_prop=fixed_distillation_student_missing_prop,
                     attention_pooling_kwargs={
                         "hidden_dim": int(args.attention_pooling_hidden_dim),
                         "dropout": float(args.attention_pooling_dropout),
@@ -813,7 +863,7 @@ def run_training_from_args(args):
                         missing_location=missing_location,
                         train_missing_prop=train_missing_prop,
                         seed=seed,
-                        ablation_study=bool(args.ablation_study),
+                        missingness_study=bool(args.missingness_study),
                     )
                     _save_run_outputs(
                         odir=auxiliary_odir,
@@ -871,8 +921,8 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
         str(bool(shared_args.retrain_outer)).lower(),
         "--save_inner",
         str(bool(shared_args.save_inner)).lower(),
-        "--ablation_study",
-        str(bool(shared_args.ablation_study)).lower(),
+        "--missingness_study",
+        str(bool(shared_args.missingness_study)).lower(),
         "--hp_selection_epsilon",
         str(float(shared_args.hp_selection_epsilon)),
         "--scheduler_type",
@@ -899,7 +949,7 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
                 str(int(shared_args.survival_n_bins)),
             ]
         )
-    if bool(shared_args.ablation_study):
+    if bool(shared_args.missingness_study):
         arg_list.extend(
             [
                 "--missing_location",
@@ -959,7 +1009,7 @@ def _run_selected_models(args, modality_configs):
     print(f"Outer splits: {args.outer_splits}")
     print(f"Retrain outer: {bool(args.retrain_outer)}")
     print(f"Save inner outputs: {bool(args.save_inner)}")
-    print(f"Ablation study: {bool(args.ablation_study)}")
+    print(f"Progressive missingness study: {bool(args.missingness_study)}")
     print(f"Task type: {normalize_task_type(args.task_type)}")
     if normalize_task_type(args.task_type) == "survival":
         print(
@@ -969,7 +1019,7 @@ def _run_selected_models(args, modality_configs):
         )
     print(f"HP selection epsilon: {float(args.hp_selection_epsilon):.4f}")
     _print_scheduler_config(args)
-    if bool(args.ablation_study):
+    if bool(args.missingness_study):
         print(f"Train missing prop: {args.train_missing_prop}")
         print(f"Test missing prop: {args.test_missing_prop}")
         print(f"Missing location: {args.missing_location}")
@@ -1035,7 +1085,7 @@ def build_preprocessing_arg_parser():
     parser.add_argument("--outer_splits", required=True, type=int)
     parser.add_argument("--retrain_outer", required=True, type=_parse_bool_flag)
     parser.add_argument("--save_inner", type=_parse_bool_flag, default=False)
-    parser.add_argument("--ablation_study", type=_parse_bool_flag, default=True)
+    parser.add_argument("--missingness_study", type=_parse_bool_flag, default=True)
     parser.add_argument("--hp_selection_epsilon", type=float, default=0.02)
     parser.add_argument(
         "--scheduler_type",
@@ -1083,15 +1133,23 @@ def main(argv=None):
         categorical_imputation_map=_parse_keyed_str_map(args.categorical_imputation, "--categorical_imputation"),
         knn_neighbors_map=_parse_keyed_str_map(args.knn_neighbors, "--knn_neighbors"),
     )
-    modality_frames, endpoint_df, cohort_alignment_summary = align_complete_multimodal_cohort(
-        modality_frames=modality_frames,
-        endpoint_df=endpoint_df,
-        patient_id_col=args.patient_id_col,
-    )
+    if bool(args.missingness_study):
+        modality_frames, endpoint_df, cohort_alignment_summary = align_complete_multimodal_cohort(
+            modality_frames=modality_frames,
+            endpoint_df=endpoint_df,
+            patient_id_col=args.patient_id_col,
+        )
+    else:
+        modality_frames, endpoint_df, cohort_alignment_summary = align_observed_multimodal_cohort(
+            modality_frames=modality_frames,
+            endpoint_df=endpoint_df,
+            patient_id_col=args.patient_id_col,
+        )
     print("\n=== Cohort Alignment ===")
+    print(f"Alignment mode: {cohort_alignment_summary['alignment_mode']}")
     print(
-        f"Endpoint patients before intersection: {cohort_alignment_summary['endpoint_patients_before']} | "
-        f"after intersection: {cohort_alignment_summary['endpoint_patients_after']} | "
+        f"Endpoint patients before alignment: {cohort_alignment_summary['endpoint_patients_before']} | "
+        f"after alignment: {cohort_alignment_summary['endpoint_patients_after']} | "
         f"dropped: {cohort_alignment_summary['dropped_from_endpoints']}"
     )
     for row in cohort_alignment_summary["cohort_summary_by_modality"]:

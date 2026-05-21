@@ -331,21 +331,50 @@ def learn_priors(
     batch_size=512,
     device=None,
 ):
-    """Learn per-modality priors with k-means over complete inner-train features."""
+    """Learn per-modality priors from modality slots visible to SMILe during training."""
     from sklearn.cluster import MiniBatchKMeans
 
-    if not hasattr(base_dataset, "indexed") or not hasattr(base_dataset, "patient_ids"):
+    # `base_dataset` can be either the raw MultimodalBaseDataset or the
+    # MultimodalDatasetWithMissing wrapper used by the training loader. When the
+    # wrapper is provided, use its fixed masks so synthetic missingness does not
+    # leak hidden modalities into the reconstruction priors.
+    visible_masks = None
+    if hasattr(base_dataset, "base_dataset"):
+        missing_dataset = base_dataset
+        source_dataset = missing_dataset.base_dataset
+        if getattr(missing_dataset, "fixed_present_masks", None) is not None:
+            visible_masks = [mask.detach().cpu().numpy().astype(bool) for mask in missing_dataset.fixed_present_masks]
+    else:
+        source_dataset = base_dataset
+
+    if not hasattr(source_dataset, "indexed") or not hasattr(source_dataset, "patient_ids"):
         raise ValueError("base_dataset must expose 'indexed' and 'patient_ids'.")
 
     device = device or next(encoders.parameters()).device
-    patient_ids = list(base_dataset.patient_ids)
-    modality_frames = list(base_dataset.indexed.values())
+    patient_ids = list(source_dataset.patient_ids)
+    modality_frames = list(source_dataset.indexed.values())
 
     priors = []
     rng = np.random.default_rng(0)
 
     for modality_idx in range(num_modalities):
-        arr = modality_frames[modality_idx].loc[patient_ids].to_numpy(dtype=np.float32, copy=True)
+        modality_frame = modality_frames[modality_idx]
+        available_patient_ids = []
+        for sample_idx, pid in enumerate(patient_ids):
+            if pid not in modality_frame.index:
+                continue
+            if visible_masks is not None and not bool(visible_masks[sample_idx][modality_idx]):
+                continue
+            available_patient_ids.append(pid)
+        if not available_patient_ids:
+            latent_dim = int(getattr(encoders[modality_idx], "out_features", 0))
+            if latent_dim <= 0:
+                raise ValueError(
+                    f"Cannot infer latent dimension for SMILe modality index {modality_idx}."
+                )
+            priors.append(torch.zeros(int(num_priors), latent_dim, dtype=torch.float32))
+            continue
+        arr = modality_frame.loc[available_patient_ids].to_numpy(dtype=np.float32, copy=True)
 
         features = []
         encoders[modality_idx].eval()
@@ -360,6 +389,7 @@ def learn_priors(
             n_clusters=n_clusters,
             random_state=0,
             batch_size=min(max(n_clusters, 1), features.shape[0]),
+            n_init=3,
         )
         kmeans.fit(features)
         centers = kmeans.cluster_centers_.astype(np.float32, copy=False)

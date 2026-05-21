@@ -8,7 +8,7 @@ import torch.optim as optim
 from sklearn.model_selection import StratifiedShuffleSplit
 from torch.utils.data import DataLoader, Subset
 
-from dataset import MultimodalDatasetWithMissing, multimodal_collate
+from dataset import multimodal_collate
 from models import learn_priors as learn_smil_priors
 from models import meta_train_step as smil_meta_train_step
 from scripts.utils import (
@@ -125,7 +125,13 @@ def _build_full_batch_from_patient_ids(base_dataset, pid_batch, device):
         }
     else:
         y_full = torch.stack(ys, dim=0).to(dtype=torch.float32, device=device)
-    full_mask = torch.ones((len(pid_batch), n_modalities), dtype=torch.bool, device=device)
+    if hasattr(base_dataset, "get_present_mask_by_patient_id"):
+        full_mask = torch.stack(
+            [base_dataset.get_present_mask_by_patient_id(pid) for pid in pid_batch],
+            dim=0,
+        ).to(dtype=torch.bool, device=device)
+    else:
+        full_mask = torch.ones((len(pid_batch), n_modalities), dtype=torch.bool, device=device)
     return xs_full, full_mask, y_full
 
 
@@ -302,15 +308,9 @@ def train_smil_e_with_meta_learning(
 
     meta_train_incomplete_ds = Subset(train_dataset, meta_train_idx.tolist())
     meta_val_incomplete_ds = Subset(train_dataset, meta_val_idx.tolist())
-
-    meta_complete_base_ds = MultimodalDatasetWithMissing(
-        base_dataset=base_dataset,
-        simulator=train_dataset.simulator,
-        apply_missing=False,
-        imputation_method="zero",
-        missing_pattern_seed=train_dataset.missing_pattern_seed,
-    )
-    meta_val_complete_ds = Subset(meta_complete_base_ds, meta_val_idx.tolist())
+    # Use the same masked training view as reference. Synthetic hidden modalities
+    # must not be recovered from the complete base dataset during SMILe training.
+    meta_val_reference_ds = Subset(train_dataset, meta_val_idx.tolist())
 
     meta_batch_size = _loader_batch_size(train_loader, fallback=16)
     meta_train_loader = DataLoader(
@@ -328,15 +328,15 @@ def train_smil_e_with_meta_learning(
         drop_last=False,
     )
     meta_val_complete_loader = DataLoader(
-        meta_val_complete_ds,
-        batch_size=min(meta_batch_size, max(len(meta_val_complete_ds), 1)),
+        meta_val_reference_ds,
+        batch_size=min(meta_batch_size, max(len(meta_val_reference_ds), 1)),
         shuffle=False,
         collate_fn=multimodal_collate,
         drop_last=False,
     )
 
     priors = learn_smil_priors(
-        base_dataset=base_dataset,
+        base_dataset=train_dataset,
         encoders=model.encoders,
         num_modalities=model.num_modalities,
         num_priors=model.num_priors,
@@ -521,14 +521,9 @@ def train_smil_e_on_full_dataset_with_meta_learning(
 
     meta_train_incomplete_ds = Subset(train_dataset, meta_train_idx.tolist())
     meta_val_incomplete_ds = Subset(train_dataset, meta_val_idx.tolist())
-    meta_complete_base_ds = MultimodalDatasetWithMissing(
-        base_dataset=base_dataset,
-        simulator=train_dataset.simulator,
-        apply_missing=False,
-        imputation_method="zero",
-        missing_pattern_seed=train_dataset.missing_pattern_seed,
-    )
-    meta_val_complete_ds = Subset(meta_complete_base_ds, meta_val_idx.tolist())
+    # Use the same masked training view as reference. Synthetic hidden modalities
+    # must not be recovered from the complete base dataset during SMILe training.
+    meta_val_reference_ds = Subset(train_dataset, meta_val_idx.tolist())
 
     meta_batch_size = _loader_batch_size(train_loader, fallback=16)
     meta_train_loader = DataLoader(
@@ -546,15 +541,15 @@ def train_smil_e_on_full_dataset_with_meta_learning(
         drop_last=False,
     )
     meta_val_complete_loader = DataLoader(
-        meta_val_complete_ds,
-        batch_size=min(meta_batch_size, max(len(meta_val_complete_ds), 1)),
+        meta_val_reference_ds,
+        batch_size=min(meta_batch_size, max(len(meta_val_reference_ds), 1)),
         shuffle=False,
         collate_fn=multimodal_collate,
         drop_last=False,
     )
 
     priors = learn_smil_priors(
-        base_dataset=base_dataset,
+        base_dataset=train_dataset,
         encoders=model.encoders,
         num_modalities=model.num_modalities,
         num_priors=model.num_priors,
@@ -743,7 +738,7 @@ def train_model_with_validation(
         if model_name_l in {"smil_e"}:
             base_dataset = train_loader.dataset.base_dataset
             priors = learn_smil_priors(
-                base_dataset=base_dataset,
+                base_dataset=train_loader.dataset,
                 encoders=model.encoders,
                 num_modalities=model.num_modalities,
                 num_priors=model.num_priors,
@@ -1018,7 +1013,7 @@ def train_model_on_full_dataset(
         if model_name_l in {"smil_e"}:
             base_dataset = train_loader.dataset.base_dataset
             priors = learn_smil_priors(
-                base_dataset=base_dataset,
+                base_dataset=train_loader.dataset,
                 encoders=model.encoders,
                 num_modalities=model.num_modalities,
                 num_priors=model.num_priors,

@@ -26,27 +26,6 @@ from scipy.stats import friedmanchisquare, wilcoxon
 from sklearn.metrics import roc_auc_score
 
 try:
-    import statsmodels.formula.api as smf
-    from statsmodels.tools.sm_exceptions import ConvergenceWarning
-    HAVE_STATSMODELS = True
-except ImportError:
-    import subprocess
-    import sys
-
-    try:
-        print(f"statsmodels not found in kernel env; attempting install with: {sys.executable}")
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'statsmodels'])
-        import statsmodels.formula.api as smf
-        from statsmodels.tools.sm_exceptions import ConvergenceWarning
-        HAVE_STATSMODELS = True
-        print('statsmodels installed successfully in the active kernel environment.')
-    except Exception as exc:
-        print(f'Could not install/import statsmodels in the active kernel environment: {exc}')
-        smf = None
-        ConvergenceWarning = Warning
-        HAVE_STATSMODELS = False
-
-try:
     import matplotlib.pyplot as plt
     from matplotlib.colors import ListedColormap, LinearSegmentedColormap, Normalize
     from matplotlib.patches import Patch, Rectangle
@@ -509,59 +488,6 @@ def build_cell_model_mean_matrix(level1_df: pd.DataFrame):
 
 
 
-def fit_mixedlm_slope(df: pd.DataFrame, predictor_col: str):
-    out = {
-        'slope': np.nan,
-        'p_value': np.nan,
-        'n_obs': 0,
-        'n_groups': 0,
-        'fit_status': 'not_run',
-    }
-    if not HAVE_STATSMODELS:
-        out['fit_status'] = 'statsmodels_not_available'
-        return out
-
-    required_cols = [predictor_col, 'auc', 'replicate_id']
-    sub_df = df[required_cols].dropna().copy()
-    if sub_df.empty:
-        out['fit_status'] = 'empty'
-        return out
-
-    sub_df[predictor_col] = sub_df[predictor_col].astype(float)
-    sub_df['auc'] = sub_df['auc'].astype(float)
-    sub_df['replicate_id'] = sub_df['replicate_id'].astype(str)
-    out['n_obs'] = int(len(sub_df))
-    out['n_groups'] = int(sub_df['replicate_id'].nunique())
-
-    if sub_df[predictor_col].nunique() < 2 or out['n_groups'] < 2:
-        out['fit_status'] = 'insufficient_data'
-        return out
-
-    formula = f'auc ~ {predictor_col}'
-    last_error = None
-    for method_name in ['lbfgs', 'powell', 'nm']:
-        try:
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore', ConvergenceWarning)
-                warnings.simplefilter('ignore', RuntimeWarning)
-                warnings.simplefilter('ignore', UserWarning)
-                fit = smf.mixedlm(formula, data=sub_df, groups=sub_df['replicate_id']).fit(
-                    reml=False,
-                    method=method_name,
-                    disp=False,
-                )
-            slope = float(fit.params.get(predictor_col, np.nan))
-            p_value = float(fit.pvalues.get(predictor_col, np.nan))
-            if np.isfinite(slope):
-                out['slope'] = slope
-                out['p_value'] = p_value
-                out['fit_status'] = f'ok_{method_name}'
-                return out
-        except Exception as exc:
-            last_error = exc
-    out['fit_status'] = f'failed_{type(last_error).__name__}' if last_error is not None else 'failed'
-    return out
-
 
 def build_post_adaptation_envelope(level1_df: pd.DataFrame):
     both_df = level1_df.loc[level1_df['scenario'] == 'both'].copy()
@@ -581,6 +507,42 @@ def build_post_adaptation_envelope(level1_df: pd.DataFrame):
     return envelope_df
 
 
+def _normalized_trapezoid_auc(curve_df: pd.DataFrame, x_col: str, y_col: str):
+    """Area under a performance-vs-missingness curve, normalized by x-range."""
+    if curve_df.empty:
+        return np.nan
+    sub_df = curve_df[[x_col, y_col]].dropna().copy()
+    if sub_df.empty:
+        return np.nan
+    sub_df[x_col] = sub_df[x_col].astype(float)
+    sub_df[y_col] = sub_df[y_col].astype(float)
+    sub_df = (
+        sub_df
+        .groupby(x_col, as_index=False)[y_col]
+        .mean()
+        .sort_values(x_col)
+    )
+    x = sub_df[x_col].to_numpy(dtype=float)
+    y = sub_df[y_col].to_numpy(dtype=float)
+    finite = np.isfinite(x) & np.isfinite(y)
+    x = x[finite]
+    y = y[finite]
+    if y.size == 0:
+        return np.nan
+    if y.size == 1 or np.isclose(float(np.max(x) - np.min(x)), 0.0):
+        return float(y[0])
+    trapezoid = getattr(np, 'trapezoid', np.trapz)
+    return float(trapezoid(y, x) / (float(np.max(x) - np.min(x))))
+
+
+def _safe_ratio(numerator, denominator):
+    numerator = float(numerator) if np.isfinite(numerator) else np.nan
+    denominator = float(denominator) if np.isfinite(denominator) else np.nan
+    if not np.isfinite(numerator) or not np.isfinite(denominator) or np.isclose(denominator, 0.0):
+        return np.nan
+    return float(numerator / denominator)
+
+
 def build_method_level_metrics(
     replicate_auc_df: pd.DataFrame,
     level1_df: pd.DataFrame,
@@ -590,7 +552,10 @@ def build_method_level_metrics(
     if both_df.empty:
         return pd.DataFrame(), pd.DataFrame()
 
-    distillation_model_set = {str(model_name) for model_name in (distillation_model_names or [])}
+    distillation_model_set = {
+        _normalize_model_label(model_name)
+        for model_name in (distillation_model_names or [])
+    }
 
     baseline_df = both_df.loc[
         np.isclose(both_df['train_missing_prop'], 0.0) & np.isclose(both_df['test_missing_prop'], 0.0),
@@ -599,40 +564,51 @@ def build_method_level_metrics(
     baseline_lookup = baseline_df.set_index('model_name')['mean_auc'].to_dict()
 
     envelope_df = build_post_adaptation_envelope(both_df)
-    envelope_lookup = envelope_df.groupby('model_name')['envelope_mean_auc'].mean().to_dict()
 
     rows = []
     model_names = sorted(both_df['model_name'].astype(str).unique().tolist())
     for model_name in model_names:
-        model_replicates_df = replicate_auc_df.loc[replicate_auc_df['model_name'].astype(str) == model_name].copy()
-        train_complete_df = model_replicates_df.loc[np.isclose(model_replicates_df['train_missing_prop'], 0.0)].copy()
-        test_complete_df = model_replicates_df.loc[np.isclose(model_replicates_df['test_missing_prop'], 0.0)].copy()
+        model_df = both_df.loc[both_df['model_name'].astype(str) == model_name].copy()
+        train_curve_df = model_df.loc[np.isclose(model_df['test_missing_prop'], 0.0)].copy()
+        test_curve_df = model_df.loc[np.isclose(model_df['train_missing_prop'], 0.0)].copy()
+        envelope_curve_df = envelope_df.loc[envelope_df['model_name'].astype(str) == model_name].copy()
 
-        test_time_resilience = fit_mixedlm_slope(train_complete_df, 'test_missing_prop')
-        exclude_from_intuition = model_name in distillation_model_set
-        if exclude_from_intuition:
-            intuition = {
-                'slope': np.nan,
-                'p_value': np.nan,
-                'fit_status': 'excluded_distillation_requires_complete_training_data',
-            }
-        else:
-            intuition = fit_mixedlm_slope(test_complete_df, 'train_missing_prop')
+        baseline_auc = float(baseline_lookup.get(model_name, np.nan))
+        is_distillation_method = _normalize_model_label(model_name) in distillation_model_set
+        training_intuition_aupmc = _normalized_trapezoid_auc(
+            train_curve_df,
+            x_col='train_missing_prop',
+            y_col='mean_auc',
+        )
+        if is_distillation_method:
+            training_intuition_aupmc = np.nan
+        inference_resilience_aupmc = _normalized_trapezoid_auc(
+            test_curve_df,
+            x_col='test_missing_prop',
+            y_col='mean_auc',
+        )
+        adapted_resilience_aupmc = _normalized_trapezoid_auc(
+            envelope_curve_df,
+            x_col='test_missing_prop',
+            y_col='envelope_mean_auc',
+        )
 
         rows.append({
             'model_name': model_name,
-            'baseline_mean_auc': float(baseline_lookup.get(model_name, np.nan)),
-            'excluded_from_intuition_ranking': bool(exclude_from_intuition),
-            'intuition_slope': float(intuition['slope']),
-            'intuition_p_value': float(intuition['p_value']) if np.isfinite(intuition['p_value']) else np.nan,
-            'intuition_fit_status': intuition['fit_status'],
-            'pure_test_time_resilience_slope': float(test_time_resilience['slope']),
-            'pure_test_time_resilience_p_value': float(test_time_resilience['p_value']) if np.isfinite(test_time_resilience['p_value']) else np.nan,
-            'pure_test_time_resilience_fit_status': test_time_resilience['fit_status'],
-            'resilience_post_adaptation_mean_auc': float(envelope_lookup.get(model_name, np.nan)),
+            'is_distillation_method': bool(is_distillation_method),
+            'baseline_performance_auc': baseline_auc,
+            'training_intuition_aupmc': float(training_intuition_aupmc),
+            'inference_resilience_aupmc': float(inference_resilience_aupmc),
+            'adapted_resilience_aupmc': float(adapted_resilience_aupmc),
+            'train_degradation_coefficient': _safe_ratio(training_intuition_aupmc, baseline_auc),
+            'test_degradation_coefficient': _safe_ratio(inference_resilience_aupmc, baseline_auc),
+            'minimum_degradation_coefficient': _safe_ratio(adapted_resilience_aupmc, baseline_auc),
         })
 
-    metrics_df = pd.DataFrame(rows).sort_values(['baseline_mean_auc', 'model_name'], ascending=[False, True]).reset_index(drop=True)
+    metrics_df = pd.DataFrame(rows).sort_values(
+        ['baseline_performance_auc', 'model_name'],
+        ascending=[False, True],
+    ).reset_index(drop=True)
     return metrics_df, envelope_df
 
 
@@ -708,19 +684,29 @@ def build_method_plot_summary(replicate_auc_df: pd.DataFrame, n_bootstrap=2000, 
 def build_metric_ordering_table(method_level_metrics_df: pd.DataFrame, distillation_model_names=None):
     if method_level_metrics_df.empty:
         return pd.DataFrame()
-    distillation_model_set = {str(model_name) for model_name in (distillation_model_names or [])}
+    distillation_model_set = {
+        _normalize_model_label(model_name)
+        for model_name in (distillation_model_names or [])
+    }
     metric_specs = [
-        ('baseline_mean_auc', 'Mean baseline performance'),
-        ('intuition_slope', 'Intuition'),
-        ('pure_test_time_resilience_slope', 'Pure test-time resilience'),
-        ('resilience_post_adaptation_mean_auc', 'Mean post-adaptation AUC'),
+        ('baseline_performance_auc', 'Baseline performance'),
+        ('training_intuition_aupmc', 'Training intuition'),
+        ('inference_resilience_aupmc', 'Inference resilience'),
+        ('adapted_resilience_aupmc', 'Adapted resilience'),
+        ('train_degradation_coefficient', 'Train degradation coefficient'),
+        ('test_degradation_coefficient', 'Test degradation coefficient'),
+        ('minimum_degradation_coefficient', 'Minimum degradation coefficient'),
     ]
     max_len = int(method_level_metrics_df['model_name'].nunique())
     out = {}
     for metric_col, label in metric_specs:
+        if metric_col not in method_level_metrics_df.columns:
+            continue
         metric_df = method_level_metrics_df[['model_name', metric_col]].copy()
-        if metric_col == 'intuition_slope' and distillation_model_set:
-            metric_df = metric_df.loc[~metric_df['model_name'].astype(str).isin(distillation_model_set)].copy()
+        if metric_col in {'training_intuition_aupmc', 'train_degradation_coefficient'} and distillation_model_set:
+            metric_df = metric_df.loc[
+                ~metric_df['model_name'].astype(str).map(_normalize_model_label).isin(distillation_model_set)
+            ].copy()
         ordered = (
             metric_df
             .sort_values([metric_col, 'model_name'], ascending=[False, True], na_position='last')
@@ -750,7 +736,7 @@ def plot_method_line_triplet(summary_df: pd.DataFrame, metric_col: str, title: s
     panels = [
         ('train', 'Missing at Train', 'train_prop'),
         ('test', 'Missing at Test', 'test_prop'),
-        ('envelope', 'Post-adaptation Curve', 'test_prop'),
+        ('envelope', 'Adapted Resilience Envelope', 'test_prop'),
     ]
 
     for ax, (scenario, panel_title, x_col) in zip(axes, panels):

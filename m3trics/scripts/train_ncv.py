@@ -10,6 +10,7 @@ from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader
 from dataset.imputation_methods import build_imputer
 from dataset import (
+    MissingModalitySimulator,
     MultimodalBaseDataset,
     MultimodalDatasetWithMissing,
     multimodal_collate,
@@ -307,6 +308,32 @@ def _fit_split_imputer(
         vae_kwargs=imputer_kwargs,
         imputer_seed=imputer_seed,
     )
+
+
+def _observed_modality_missing_prop(dfs, inst_df, patient_id_col):
+    """Fraction of patient-modality slots absent in the observed aligned cohort."""
+    if not dfs:
+        return 0.0
+
+    if patient_id_col in inst_df.columns:
+        patient_ids = inst_df[patient_id_col].astype(str).tolist()
+    else:
+        patient_ids = inst_df.index.astype(str).tolist()
+
+    if not patient_ids:
+        return 0.0
+
+    missing_slots = 0
+    for df in dfs.values():
+        if patient_id_col in df.columns:
+            available_ids = set(df[patient_id_col].astype(str).tolist())
+        else:
+            available_ids = set(df.index.astype(str).tolist())
+        missing_slots += sum(pid not in available_ids for pid in patient_ids)
+
+    total_slots = len(patient_ids) * len(dfs)
+    return float(missing_slots) / float(total_slots) if total_slots > 0 else 0.0
+
 
 # Function to predict on outer fold for each inner fold model
 def _predict_model_outputs(
@@ -759,6 +786,8 @@ def nested_cv(
     scheduler_type="cosine_annealing",
     lr_patience=5,
     hp_selection_epsilon=0.02,
+    missingness_study=True,
+    fixed_distillation_student_missing_prop=None,
 ):
     wandb_active = bool(wandb_enabled and wandb is not None)
     if wandb_enabled and wandb is None:
@@ -767,6 +796,16 @@ def nested_cv(
     # Train missingness is applied on both inner-train and inner-validation.
     apply_missing_train = float(getattr(train_missing_simulator, "missing_prop", 0.0)) > 0.0
     model_name_l = normalize_model_name(model_name)
+    if fixed_distillation_student_missing_prop is None:
+        fixed_distillation_student_missing_prop = 0.0
+        if not bool(missingness_study) and model_name_l in {"dipam", "di_mmlp"}:
+            fixed_distillation_student_missing_prop = _observed_modality_missing_prop(
+                dfs=dfs,
+                inst_df=inst_df,
+                patient_id_col=patient_id_col,
+            )
+    else:
+        fixed_distillation_student_missing_prop = float(fixed_distillation_student_missing_prop)
     predict_bypass_mask = (
         model_name_l == "mlp"
         and str(imputation_method).strip().lower() in {"knn", "vae"}
@@ -802,6 +841,25 @@ def nested_cv(
     # Input dims for each modality (removing patient column) and select device
     input_dims = [df.shape[1] - 1 for df in dfs.values()]
     modality_names = [str(name) for name in dfs.keys()]
+    student_train_missing_simulator = train_missing_simulator
+    apply_student_missing_train = apply_missing_train
+    if fixed_distillation_student_missing_prop > 0.0:
+        student_train_missing_simulator = MissingModalitySimulator(
+            num_modalities=len(modality_names),
+            modality_names=modality_names,
+            missing_prop=fixed_distillation_student_missing_prop,
+            missing_location="global",
+        )
+        apply_student_missing_train = True
+        if wandb_base_config is not None:
+            wandb_base_config = dict(wandb_base_config)
+            wandb_base_config["fixed_distillation_student_missing_prop"] = float(
+                fixed_distillation_student_missing_prop
+            )
+        print(
+            "Fixed-dataset distillation student missingness: "
+            f"{fixed_distillation_student_missing_prop:.4f}"
+        )
     device = select_device()
     if device.type == "cuda":
         gpu_name = torch.cuda.get_device_name(device)
@@ -906,8 +964,8 @@ def nested_cv(
             )
             prefit_inner_imputer = _fit_split_imputer(
                 split_dataset=train_split_dataset,
-                split_missing_simulator=train_missing_simulator,
-                apply_split_missing=apply_missing_train,
+                split_missing_simulator=student_train_missing_simulator,
+                apply_split_missing=apply_student_missing_train,
                 imputation_method=imputation_method,
                 missing_pattern_seed=missing_pattern_seed,
                 imputer_seed=int(seed + outer_fold_idx * 10_000 + inner_fold_idx * 100),
@@ -925,10 +983,10 @@ def nested_cv(
                     dfs_train_scaled=dfs_train_inner_scaled,
                     dfs_eval_scaled=dfs_val_inner_scaled,
                     label_col=label_col,
-                    missing_simulator=train_missing_simulator,
+                    missing_simulator=student_train_missing_simulator,
                     batch_size=hp_cfg["batch_size"],
-                    train_missing=apply_missing_train,
-                    val_missing=apply_missing_train,
+                    train_missing=apply_student_missing_train,
+                    val_missing=apply_student_missing_train,
                     imputation_method=imputation_method,
                     missing_pattern_seed=missing_pattern_seed,
                     model_name=model_name,
@@ -1172,8 +1230,8 @@ def nested_cv(
             )
             prefit_outer_imputer = _fit_split_imputer(
                 split_dataset=outer_train_split_dataset,
-                split_missing_simulator=train_missing_simulator,
-                apply_split_missing=apply_missing_train,
+                split_missing_simulator=student_train_missing_simulator,
+                apply_split_missing=apply_student_missing_train,
                 imputation_method=imputation_method,
                 missing_pattern_seed=missing_pattern_seed,
                 imputer_seed=int(seed + outer_fold_idx * 100_000),
@@ -1186,9 +1244,9 @@ def nested_cv(
                 dfs_train_scaled=dfs_train_outer_scaled,
                 dfs_eval_scaled=dfs_train_outer_scaled,
                 label_col=label_col,
-                missing_simulator=train_missing_simulator,
+                missing_simulator=student_train_missing_simulator,
                 batch_size=selected_hp_cfg["batch_size"],
-                train_missing=apply_missing_train,
+                train_missing=apply_student_missing_train,
                 val_missing=False,
                 imputation_method=imputation_method,
                 missing_pattern_seed=missing_pattern_seed,

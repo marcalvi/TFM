@@ -146,15 +146,19 @@ class MultimodalBaseDataset(Dataset):
         self.patient_ids = sorted(self.label_df.index.tolist())
         self.patient_id_to_index = {pid: i for i, pid in enumerate(self.patient_ids)}
         self.indexed = {}
+        self.modality_names = list(dfs.keys())
+        self.modality_dims = {}
+        self.present_by_patient = {pid: [] for pid in self.patient_ids}
 
-        # Keep one feature-only dataframe per modality (drop patient id column)
+        # Keep one feature-only dataframe per modality (drop patient id column).
+        # Missing modality rows are represented with zero vectors and a False
+        # present-mask entry instead of dropping the patient from fixed-dataset runs.
         for name, df in dfs.items():
             feat_df = df.drop(columns=[id_col], errors="ignore")
-            missing_ids = set(self.patient_ids) - set(feat_df.index.tolist())
-            if missing_ids:
-                raise ValueError(
-                    f"Base dataset has missing modality '{name}' for {len(missing_ids)} patients."
-                )
+            self.modality_dims[name] = int(feat_df.shape[1])
+            available_ids = set(feat_df.index.tolist())
+            for pid in self.patient_ids:
+                self.present_by_patient[pid].append(pid in available_ids)
             self.indexed[name] = feat_df
 
     def __len__(self):
@@ -164,8 +168,14 @@ class MultimodalBaseDataset(Dataset):
         p_id = self.patient_ids[idx]
         Xs = []
 
-        for df in self.indexed.values():
-            x = torch.tensor(df.loc[p_id].values, dtype=torch.float32)
+        for name, df in self.indexed.items():
+            if p_id in df.index:
+                values = df.loc[p_id].values
+                if getattr(values, "ndim", 1) > 1:
+                    values = values[0]
+                x = torch.tensor(values, dtype=torch.float32)
+            else:
+                x = torch.zeros(self.modality_dims[name], dtype=torch.float32)
             Xs.append(x)
 
         if self.task_type == "survival":
@@ -190,6 +200,14 @@ class MultimodalBaseDataset(Dataset):
         else:
             y = torch.tensor(float(self.label_df.loc[p_id, self.label_col]), dtype=torch.float32)
         return Xs, y, p_id
+
+    def get_present_mask_by_patient_id(self, patient_id):
+        if patient_id not in self.present_by_patient:
+            raise KeyError(f"Patient id '{patient_id}' not found in base dataset.")
+        return torch.as_tensor(self.present_by_patient[patient_id], dtype=torch.bool)
+
+    def has_missing_modalities(self):
+        return any(not all(mask) for mask in self.present_by_patient.values())
 
     def get_by_patient_id(self, patient_id):
         if patient_id not in self.patient_id_to_index:
@@ -259,9 +277,9 @@ class MultimodalDatasetWithMissing(Dataset):
 
         self.imputer = prefit_imputer
 
-        self.fixed_present_masks = None
-        if self.apply_missing:
-            self.fixed_present_masks = self._precompute_present_masks()
+        self.fixed_present_masks = self._precompute_present_masks()
+        if self.fixed_present_masks and all(bool(torch.all(mask)) for mask in self.fixed_present_masks):
+            self.fixed_present_masks = None
 
     def __len__(self):
         return len(self.base_dataset)
@@ -275,10 +293,31 @@ class MultimodalDatasetWithMissing(Dataset):
                 "for deterministic missing-pattern simulation."
             )
 
-        mask_array = self.simulator.generate_dataset_missing_masks(
-            patient_ids=patient_ids,
-            missing_pattern_seed=self.missing_pattern_seed,
-        )
+        if hasattr(self.base_dataset, "get_present_mask_by_patient_id"):
+            natural_masks = np.stack(
+                [
+                    self.base_dataset.get_present_mask_by_patient_id(pid).detach().cpu().numpy().astype(bool)
+                    for pid in patient_ids
+                ],
+                axis=0,
+            )
+        else:
+            natural_masks = np.ones((len(patient_ids), self.simulator.num_modalities), dtype=bool)
+
+        if self.apply_missing:
+            synthetic_masks = self.simulator.generate_dataset_missing_masks(
+                patient_ids=patient_ids,
+                missing_pattern_seed=self.missing_pattern_seed,
+            )
+            mask_array = np.logical_and(natural_masks, synthetic_masks)
+        else:
+            mask_array = natural_masks
+
+        if np.any(mask_array.sum(axis=1) == 0):
+            raise ValueError(
+                "At least one patient has no available modality after combining "
+                "observed and synthetic missingness masks."
+            )
         return [torch.as_tensor(mask_row, dtype=torch.bool) for mask_row in mask_array]
 
     def set_imputer(self, imputer, imputation_method=None):
@@ -294,12 +333,15 @@ class MultimodalDatasetWithMissing(Dataset):
         if len(Xs) != self.simulator.num_modalities:
             raise ValueError("Number of modalities in sample does not match simulator.")
 
-        if self.apply_missing:
-            # Clone tensors so masking does not mutate base dataset outputs.
-            Xs_missing = [m.clone() for m in Xs]
+        # Clone tensors so masking/imputation does not mutate base dataset outputs.
+        Xs_missing = [m.clone() for m in Xs]
+        if self.fixed_present_masks is not None:
             present_mask = self.fixed_present_masks[idx].clone()
+        else:
+            present_mask = torch.ones(self.simulator.num_modalities, dtype=torch.bool)
+
+        if not bool(torch.all(present_mask)):
             if self.imputation_method == "zero":
-                # Replace missing modalities by zeros.
                 for i, present in enumerate(present_mask):
                     if not bool(present):
                         Xs_missing[i] = torch.zeros_like(Xs_missing[i])
@@ -308,17 +350,12 @@ class MultimodalDatasetWithMissing(Dataset):
                     raise RuntimeError(
                         f"Imputer for method '{self.imputation_method}' has not been initialized."
                     )
-                # Replace missing modalities with the selected fitted imputer.
                 Xs_missing = self.imputer.impute_modalities(
                     modalities=Xs_missing,
                     present_mask=present_mask,
                     sample_index=idx,
                     sample_id=pid,
                 )
-        else:
-            # Validation/test path: keep all modalities as present.
-            present_mask = torch.ones(self.simulator.num_modalities, dtype=torch.bool)
-            Xs_missing = Xs
 
         return Xs_missing, present_mask, label, pid
 
@@ -524,7 +561,10 @@ def build_loaders(
     )
 
     method_l = str(imputation_method).strip().lower()
-    defer_imputer_fit = prefit_imputer is None and method_l != "zero" and (train_missing or val_missing)
+    natural_missing = train_base.has_missing_modalities() or val_base.has_missing_modalities()
+    defer_imputer_fit = prefit_imputer is None and method_l != "zero" and (
+        train_missing or val_missing or natural_missing
+    )
     dataset_init_method = "zero" if defer_imputer_fit else method_l
 
     train_ds = MultimodalDatasetWithMissing(
