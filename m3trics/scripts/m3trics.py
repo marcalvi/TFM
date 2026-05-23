@@ -361,10 +361,15 @@ def build_training_arg_parser():
         help="Train/validation missing proportion in [0, 1]. Supports scalar or comma-separated list.",
     )
     parser.add_argument(
+        "--degrading_modality",
         "--missing_location",
+        dest="degrading_modality",
         type=str,
         default="global",
-        help="Missing location: global or modality key (path, radio, clin, blood, radio_report). Supports scalar or comma-separated list.",
+        help=(
+            "Degrading modality: global or modality key (path, radio, clin, blood, radio_report). "
+            "Supports scalar or comma-separated list. --missing_location is kept as a deprecated alias."
+        ),
     )
     parser.add_argument(
         "--test_missing_prop",
@@ -422,7 +427,7 @@ def _build_output_dir(
     model_name,
     imputation_method,
     dataset_name,
-    missing_location,
+    degrading_modality,
     train_missing_prop,
     seed,
     missingness_study=True,
@@ -437,7 +442,7 @@ def _build_output_dir(
         "radio_report": "RADIO_REPORT",
         "blood": "BLOOD",
     }
-    key = str(missing_location).strip().lower()
+    key = str(degrading_modality).strip().lower()
     missing_modality_label = mapping.get(key, key.upper())
     missing_pct = str(float(train_missing_prop) * 100.0)
     return os.path.join(
@@ -464,7 +469,7 @@ def _save_run_outputs(
     split_df,
     test_predictions_df,
     seed,
-    missing_location,
+    degrading_modality,
     train_missing_prop,
 ):
     os.makedirs(odir, exist_ok=True)
@@ -476,19 +481,19 @@ def _save_run_outputs(
     test_predictions_df = test_predictions_df.copy()
 
     inner_df["seed"] = seed
-    inner_df["missing_location"] = missing_location
+    inner_df["degrading_modality"] = degrading_modality
     inner_df["train_missing_prop"] = float(train_missing_prop)
 
     outer_df["seed"] = seed
-    outer_df["missing_location"] = missing_location
+    outer_df["degrading_modality"] = degrading_modality
     outer_df["train_missing_prop"] = float(train_missing_prop)
 
     history_df["seed"] = seed
-    history_df["missing_location"] = missing_location
+    history_df["degrading_modality"] = degrading_modality
     history_df["train_missing_prop"] = float(train_missing_prop)
 
     split_df["seed"] = seed
-    split_df["missing_location"] = missing_location
+    split_df["degrading_modality"] = degrading_modality
     split_df["train_missing_prop"] = float(train_missing_prop)
 
     test_predictions_df["seed"] = seed
@@ -519,7 +524,7 @@ def _save_run_outputs(
 
 
 def _build_test_eval_setups_for_run(
-    missing_location,
+    degrading_modality,
     train_missing_prop,
     test_missing_props,
     num_modalities,
@@ -527,10 +532,10 @@ def _build_test_eval_setups_for_run(
 ):
     from dataset import MissingModalitySimulator
 
-    missing_location = str(missing_location).strip().lower()
+    degrading_modality = str(degrading_modality).strip().lower()
     train_missing_prop = float(train_missing_prop)
 
-    if missing_location == "global":
+    if degrading_modality == "global":
         eval_props = [float(p) for p in test_missing_props]
     elif train_missing_prop == 0.0:
         eval_props = [float(p) for p in test_missing_props]
@@ -540,13 +545,13 @@ def _build_test_eval_setups_for_run(
     setups = OrderedDict()
     for prop in eval_props:
         setups[float(prop)] = {
-            "missing_location": missing_location,
+            "degrading_modality": degrading_modality,
             "missing_prop": float(prop),
             "simulator": MissingModalitySimulator(
                 num_modalities=num_modalities,
                 modality_names=modality_names,
                 missing_prop=float(prop),
-                missing_location=missing_location,
+                degrading_modality=degrading_modality,
             ),
         }
     return list(setups.values())
@@ -607,24 +612,24 @@ def run_training_from_args(args):
     seeds_list = _parse_seed_list(args.seeds)
     print(f"Parsed seeds: {seeds_list}")
     if bool(args.missingness_study):
-        missing_locations = _parse_training_value_or_list(args.missing_location, str, to_lower=True)
+        degrading_modalities = _parse_training_value_or_list(args.degrading_modality, str, to_lower=True)
         train_missing_props = _parse_training_value_or_list(args.train_missing_prop, float)
         test_missing_props = _parse_training_value_or_list(args.test_missing_prop, float)
     else:
-        missing_locations = ["global"]
+        degrading_modalities = ["global"]
         train_missing_props = [0.0]
         test_missing_props = [0.0]
 
-    invalid_train_locations = [
-        loc for loc in missing_locations if loc != "global" and loc not in modality_names
+    invalid_degrading_modalities = [
+        loc for loc in degrading_modalities if loc != "global" and loc not in modality_names
     ]
     invalid_test_props = [p for p in test_missing_props if p < 0.0 or p > 1.0]
     invalid_train_props = [p for p in train_missing_props if p < 0.0 or p > 1.0]
     modality_pooling = _parse_modality_pooling(args.modality_pooling)
-    if invalid_train_locations:
+    if invalid_degrading_modalities:
         valid = ", ".join(["global"] + sorted(modality_names))
         raise ValueError(
-            f"Invalid --missing_location values: {', '.join(sorted(set(invalid_train_locations)))}. "
+            f"Invalid --degrading_modality values: {', '.join(sorted(set(invalid_degrading_modalities)))}. "
             f"Valid values: {valid}"
         )
     if invalid_train_props:
@@ -642,18 +647,18 @@ def run_training_from_args(args):
             f"Available modalities: {', '.join(sorted(modality_names))}"
         )
 
-    combo_count = len(seeds_list) * len(missing_locations) * len(train_missing_props)
+    combo_count = len(seeds_list) * len(degrading_modalities) * len(train_missing_props)
     test_eval_total = len(seeds_list) * sum(
         len(
             _build_test_eval_setups_for_run(
-                missing_location=loc,
+                degrading_modality=loc,
                 train_missing_prop=prop,
                 test_missing_props=test_missing_props,
                 num_modalities=num_modalities,
                 modality_names=modality_names,
             )
         )
-        for loc in missing_locations
+        for loc in degrading_modalities
         for prop in train_missing_props
     )
     print(f"Total training runs to execute: {combo_count}")
@@ -662,23 +667,23 @@ def run_training_from_args(args):
     wandb_enabled_flag = bool(args.wandb and args.wandb_mode != "disabled")
 
     for seed in seeds_list:
-        for missing_location in missing_locations:
+        for degrading_modality in degrading_modalities:
             for train_missing_prop in train_missing_props:
                 hp_configs = build_hyperparameter_grid(
                     args,
                     train_missing_prop=train_missing_prop,
-                    missing_location=missing_location,
+                    degrading_modality=degrading_modality,
                 )
 
                 train_missing_simulator = MissingModalitySimulator(
                     num_modalities=num_modalities,
                     modality_names=modality_names,
                     missing_prop=float(train_missing_prop),
-                    missing_location=missing_location,
+                    degrading_modality=degrading_modality,
                 )
 
                 test_eval_setups = _build_test_eval_setups_for_run(
-                    missing_location=missing_location,
+                    degrading_modality=degrading_modality,
                     train_missing_prop=train_missing_prop,
                     test_missing_props=test_missing_props,
                     num_modalities=num_modalities,
@@ -687,13 +692,13 @@ def run_training_from_args(args):
                 if fixed_distillation_complete_case and fixed_distillation_student_missing_prop > 0.0:
                     test_eval_setups = [
                         {
-                            "missing_location": "global",
+                            "degrading_modality": "global",
                             "missing_prop": float(fixed_distillation_student_missing_prop),
                             "simulator": MissingModalitySimulator(
                                 num_modalities=num_modalities,
                                 modality_names=modality_names,
                                 missing_prop=float(fixed_distillation_student_missing_prop),
-                                missing_location="global",
+                                degrading_modality="global",
                             ),
                         }
                     ]
@@ -703,7 +708,7 @@ def run_training_from_args(args):
                     model_name=args.model,
                     imputation_method=args.imputation_method,
                     dataset_name=args.dataset,
-                    missing_location=missing_location,
+                    degrading_modality=degrading_modality,
                     train_missing_prop=train_missing_prop,
                     seed=seed,
                     missingness_study=bool(args.missingness_study),
@@ -711,7 +716,7 @@ def run_training_from_args(args):
                 best_epoch_warmup = min(5, int(args.epochs))
                 print(
                     "Running seed="
-                    f"{seed}, missing_location={missing_location}, "
+                    f"{seed}, degrading_modality={degrading_modality}, "
                     f"train_missing_prop={train_missing_prop}"
                 )
                 print(f"Missing pattern seed: {int(args.missing_pattern_seed)}")
@@ -756,7 +761,7 @@ def run_training_from_args(args):
                     "outer_splits": args.outer_splits,
                     "hp_selection_epsilon": float(args.hp_selection_epsilon),
                     "train_missing_prop": float(train_missing_prop),
-                    "missing_location": str(missing_location).lower(),
+                    "degrading_modality": str(degrading_modality).lower(),
                     "missing_pattern_seed": int(args.missing_pattern_seed),
                     "imputation_method": args.imputation_method,
                     "modality_pooling": dict(modality_pooling),
@@ -764,8 +769,8 @@ def run_training_from_args(args):
                     "test_missing_props_grid": ",".join(
                         str(float(setup["missing_prop"])) for setup in test_eval_setups
                     ),
-                    "eval_missing_locations_grid": ",".join(
-                        str(setup["missing_location"]).lower() for setup in test_eval_setups
+                    "eval_degrading_modalities_grid": ",".join(
+                        str(setup["degrading_modality"]).lower() for setup in test_eval_setups
                     ),
                 }
                 if str(args.imputation_method).strip().lower() == "vae":
@@ -845,7 +850,7 @@ def run_training_from_args(args):
                     split_df=split_df,
                     test_predictions_df=test_predictions_df,
                     seed=seed,
-                    missing_location=missing_location,
+                    degrading_modality=degrading_modality,
                     train_missing_prop=float(train_missing_prop),
                 )
 
@@ -860,7 +865,7 @@ def run_training_from_args(args):
                         model_name=args.model,
                         imputation_method=args.imputation_method,
                         dataset_name=args.dataset,
-                        missing_location=missing_location,
+                        degrading_modality=degrading_modality,
                         train_missing_prop=train_missing_prop,
                         seed=seed,
                         missingness_study=bool(args.missingness_study),
@@ -873,7 +878,7 @@ def run_training_from_args(args):
                         split_df=split_df,
                         test_predictions_df=auxiliary_outputs["test_predictions_df"],
                         seed=seed,
-                        missing_location=missing_location,
+                        degrading_modality=degrading_modality,
                         train_missing_prop=float(train_missing_prop),
                     )
                     print(f"Saved retained-inner outputs to: {auxiliary_odir}")
@@ -952,8 +957,8 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
     if bool(shared_args.missingness_study):
         arg_list.extend(
             [
-                "--missing_location",
-                str(shared_args.missing_location),
+                "--degrading_modality",
+                str(shared_args.degrading_modality),
                 "--train_missing_prop",
                 str(shared_args.train_missing_prop),
                 "--test_missing_prop",
@@ -1022,7 +1027,7 @@ def _run_selected_models(args, modality_configs):
     if bool(args.missingness_study):
         print(f"Train missing prop: {args.train_missing_prop}")
         print(f"Test missing prop: {args.test_missing_prop}")
-        print(f"Missing location: {args.missing_location}")
+        print(f"Degrading modality: {args.degrading_modality}")
     else:
         print("Fixed dataset mode: synthetic missingness disabled.")
     if training_modality_pooling:
@@ -1095,7 +1100,7 @@ def build_preprocessing_arg_parser():
     )
     parser.add_argument("--min_lr", type=float, default=1e-6)
     parser.add_argument("--lr_patience", type=int, default=5)
-    parser.add_argument("--missing_location", default="global", type=str)
+    parser.add_argument("--degrading_modality", "--missing_location", dest="degrading_modality", default="global", type=str)
     parser.add_argument("--train_missing_prop", default="0", type=str)
     parser.add_argument("--test_missing_prop", default="0", type=str)
     parser.add_argument("--seeds", required=True, type=str)

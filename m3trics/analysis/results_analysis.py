@@ -85,7 +85,7 @@ def _parse_retrain_flag_from_run_name(run_name: str):
     return None
 
 
-def list_model_sources(results_root: Path, dataset_name: str, train_missing_location: str = 'GLOBAL', model_names=None, retrain_outer=None, results_mode: str = 'decay'):
+def list_model_sources(results_root: Path, dataset_name: str, train_degrading_modality: str = 'GLOBAL', model_names=None, retrain_outer=None, results_mode: str = 'decay'):
     sources = []
     requested = None if model_names is None else set(model_names)
     results_mode = str(results_mode).strip().lower()
@@ -108,7 +108,7 @@ def list_model_sources(results_root: Path, dataset_name: str, train_missing_loca
             if not run_data_dir.exists():
                 continue
         else:
-            run_data_dir = run_dir / 'TRAIN_MISSING' / train_missing_location.upper()
+            run_data_dir = run_dir / 'TRAIN_MISSING' / train_degrading_modality.upper()
             if not run_data_dir.exists():
                 continue
 
@@ -121,13 +121,13 @@ def list_model_sources(results_root: Path, dataset_name: str, train_missing_loca
     return sources
 
 
-def resolve_requested_model_names(results_root: Path, dataset_name: str, train_missing_location: str = 'GLOBAL', retrain_outer=None, results_mode: str = 'decay'):
+def resolve_requested_model_names(results_root: Path, dataset_name: str, train_degrading_modality: str = 'GLOBAL', retrain_outer=None, results_mode: str = 'decay'):
     return sorted({
         source['model_name']
         for source in list_model_sources(
             results_root,
             dataset_name,
-            train_missing_location,
+            train_degrading_modality,
             model_names=None,
             retrain_outer=retrain_outer,
             results_mode=results_mode,
@@ -145,6 +145,17 @@ def _parse_seed_from_path(path: Path):
     return np.nan
 
 
+def _has_git_conflict_markers(path: Path):
+    try:
+        with open(path, 'r', encoding='utf-8', errors='ignore') as handle:
+            for line in handle:
+                if line.startswith(('<<<<<<<', '=======', '>>>>>>>')):
+                    return True
+    except OSError:
+        return False
+    return False
+
+
 def _list_inner_model_prob_cols(df: pd.DataFrame):
     cols = []
     for col in df.columns:
@@ -157,6 +168,15 @@ def _list_inner_model_prob_cols(df: pd.DataFrame):
 
 def normalize_prediction_df(pred_df: pd.DataFrame):
     out = pred_df.copy()
+    legacy_column_map = {
+        'train_missing_location': 'train_degrading_modality',
+        'test_missing_location': 'test_degrading_modality',
+        'eval_missing_location': 'eval_degrading_modality',
+        'missing_location': 'degrading_modality',
+    }
+    for old_col, new_col in legacy_column_map.items():
+        if new_col not in out.columns and old_col in out.columns:
+            out[new_col] = out[old_col]
     required_cols = [
         'model_name',
         'patient',
@@ -187,13 +207,13 @@ def normalize_prediction_df(pred_df: pd.DataFrame):
     return out.reset_index(drop=True)
 
 
-def load_all_test_predictions(results_root: Path, dataset_name: str, train_missing_location: str = 'GLOBAL', model_names=None, retrain_outer=None, results_mode: str = 'decay'):
+def load_all_test_predictions(results_root: Path, dataset_name: str, train_degrading_modality: str = 'GLOBAL', model_names=None, retrain_outer=None, results_mode: str = 'decay'):
     frames = []
     missing_prediction_files = []
     for source in list_model_sources(
         results_root,
         dataset_name,
-        train_missing_location,
+        train_degrading_modality,
         model_names=model_names,
         retrain_outer=retrain_outer,
         results_mode=results_mode,
@@ -201,6 +221,11 @@ def load_all_test_predictions(results_root: Path, dataset_name: str, train_missi
         found_any = False
         for path in sorted(source['run_data_dir'].rglob('test_predictions.csv')):
             found_any = True
+            if _has_git_conflict_markers(path):
+                missing_prediction_files.append(
+                    f'Skipped corrupted prediction file with unresolved git conflict markers: {path}'
+                )
+                continue
             df = pd.read_csv(path)
             if df.empty:
                 continue
@@ -575,19 +600,19 @@ def build_method_level_metrics(
 
         baseline_auc = float(baseline_lookup.get(model_name, np.nan))
         is_distillation_method = _normalize_model_label(model_name) in distillation_model_set
-        training_intuition_aupmc = _normalized_trapezoid_auc(
+        train_time_aupmc = _normalized_trapezoid_auc(
             train_curve_df,
             x_col='train_missing_prop',
             y_col='mean_auc',
         )
         if is_distillation_method:
-            training_intuition_aupmc = np.nan
-        inference_resilience_aupmc = _normalized_trapezoid_auc(
+            train_time_aupmc = np.nan
+        test_time_aupmc = _normalized_trapezoid_auc(
             test_curve_df,
             x_col='test_missing_prop',
             y_col='mean_auc',
         )
-        adapted_resilience_aupmc = _normalized_trapezoid_auc(
+        best_adapted_aupmc = _normalized_trapezoid_auc(
             envelope_curve_df,
             x_col='test_missing_prop',
             y_col='envelope_mean_auc',
@@ -596,17 +621,17 @@ def build_method_level_metrics(
         rows.append({
             'model_name': model_name,
             'is_distillation_method': bool(is_distillation_method),
-            'baseline_performance_auc': baseline_auc,
-            'training_intuition_aupmc': float(training_intuition_aupmc),
-            'inference_resilience_aupmc': float(inference_resilience_aupmc),
-            'adapted_resilience_aupmc': float(adapted_resilience_aupmc),
-            'train_degradation_coefficient': _safe_ratio(training_intuition_aupmc, baseline_auc),
-            'test_degradation_coefficient': _safe_ratio(inference_resilience_aupmc, baseline_auc),
-            'minimum_degradation_coefficient': _safe_ratio(adapted_resilience_aupmc, baseline_auc),
+            'baseline_auc': baseline_auc,
+            'train_time_aupmc': float(train_time_aupmc),
+            'test_time_aupmc': float(test_time_aupmc),
+            'best_adapted_aupmc': float(best_adapted_aupmc),
+            'train_degradation_coefficient': _safe_ratio(baseline_auc, train_time_aupmc),
+            'test_degradation_coefficient': _safe_ratio(baseline_auc, test_time_aupmc),
+            'minimum_degradation_coefficient': _safe_ratio(baseline_auc, best_adapted_aupmc),
         })
 
     metrics_df = pd.DataFrame(rows).sort_values(
-        ['baseline_performance_auc', 'model_name'],
+        ['baseline_auc', 'model_name'],
         ascending=[False, True],
     ).reset_index(drop=True)
     return metrics_df, envelope_df
@@ -681,6 +706,70 @@ def build_method_plot_summary(replicate_auc_df: pd.DataFrame, n_bootstrap=2000, 
     return summary_df
 
 
+def build_degradation_curve_summary(method_plot_summary_df: pd.DataFrame, distillation_model_names=None):
+    """Build pointwise train/test/best-adapted degradation curves as baseline AUC / AUC."""
+    if method_plot_summary_df.empty:
+        return pd.DataFrame()
+
+    required_cols = {'model_name', 'scenario', 'train_prop', 'test_prop', 'mean_auc', 'auc_ci95'}
+    missing_cols = required_cols.difference(method_plot_summary_df.columns)
+    if missing_cols:
+        raise ValueError(f'Missing required columns for degradation curves: {sorted(missing_cols)}')
+
+    baseline_df = method_plot_summary_df.loc[
+        (method_plot_summary_df['scenario'] == 'both')
+        & np.isclose(method_plot_summary_df['train_prop'].astype(float), 0.0)
+        & np.isclose(method_plot_summary_df['test_prop'].astype(float), 0.0),
+        ['model_name', 'mean_auc']
+    ].copy()
+    baseline_lookup = baseline_df.set_index('model_name')['mean_auc'].to_dict()
+
+    out_df = method_plot_summary_df.loc[
+        method_plot_summary_df['scenario'].isin(['train', 'test', 'envelope'])
+    ].copy()
+    out_df['baseline_auc'] = out_df['model_name'].map(baseline_lookup).astype(float)
+    out_df['degradation_ratio'] = out_df.apply(
+        lambda row: _safe_ratio(row['baseline_auc'], row['mean_auc']),
+        axis=1,
+    )
+
+    def _degradation_ci_half_width(row):
+        baseline_auc = float(row['baseline_auc']) if np.isfinite(row['baseline_auc']) else np.nan
+        mean_auc = float(row['mean_auc']) if np.isfinite(row['mean_auc']) else np.nan
+        auc_ci = float(row['auc_ci95']) if np.isfinite(row['auc_ci95']) else 0.0
+        if not np.isfinite(baseline_auc) or not np.isfinite(mean_auc) or np.isclose(mean_auc, 0.0):
+            return np.nan
+        lower_mean_auc = max(mean_auc - auc_ci, 1e-12)
+        upper_mean_auc = max(mean_auc + auc_ci, 1e-12)
+        point_estimate = baseline_auc / mean_auc
+        lower_ratio = baseline_auc / upper_mean_auc
+        upper_ratio = baseline_auc / lower_mean_auc
+        return float(max(point_estimate - lower_ratio, upper_ratio - point_estimate))
+
+    out_df['degradation_ratio_ci95'] = out_df.apply(
+        _degradation_ci_half_width,
+        axis=1,
+    )
+    out_df['degradation_ratio_ci95_lower'] = out_df['degradation_ratio'] - out_df['degradation_ratio_ci95']
+    out_df['degradation_ratio_ci95_upper'] = out_df['degradation_ratio'] + out_df['degradation_ratio_ci95']
+
+    distillation_model_set = {
+        _normalize_model_label(model_name)
+        for model_name in (distillation_model_names or [])
+    }
+    out_df['excluded_from_train_degradation'] = (
+        (out_df['scenario'] == 'train')
+        & out_df['model_name'].astype(str).map(_normalize_model_label).isin(distillation_model_set)
+    )
+    train_excluded_mask = out_df['excluded_from_train_degradation']
+    out_df.loc[
+        train_excluded_mask,
+        ['degradation_ratio', 'degradation_ratio_ci95', 'degradation_ratio_ci95_lower', 'degradation_ratio_ci95_upper']
+    ] = np.nan
+
+    return out_df.sort_values(['scenario', 'model_name', 'train_prop', 'test_prop']).reset_index(drop=True)
+
+
 def build_metric_ordering_table(method_level_metrics_df: pd.DataFrame, distillation_model_names=None):
     if method_level_metrics_df.empty:
         return pd.DataFrame()
@@ -689,27 +778,27 @@ def build_metric_ordering_table(method_level_metrics_df: pd.DataFrame, distillat
         for model_name in (distillation_model_names or [])
     }
     metric_specs = [
-        ('baseline_performance_auc', 'Baseline performance'),
-        ('training_intuition_aupmc', 'Training intuition'),
-        ('inference_resilience_aupmc', 'Inference resilience'),
-        ('adapted_resilience_aupmc', 'Adapted resilience'),
-        ('train_degradation_coefficient', 'Train degradation coefficient'),
-        ('test_degradation_coefficient', 'Test degradation coefficient'),
-        ('minimum_degradation_coefficient', 'Minimum degradation coefficient'),
+        ('baseline_auc', 'Baseline AUC', False),
+        ('train_time_aupmc', 'Train-time AUPMC', False),
+        ('train_degradation_coefficient', 'Train degradation coefficient', True),
+        ('test_time_aupmc', 'Test-time AUPMC', False),
+        ('test_degradation_coefficient', 'Test degradation coefficient', True),
+        ('best_adapted_aupmc', 'Best-adapted AUPMC', False),
+        ('minimum_degradation_coefficient', 'Minimum degradation coefficient', True),
     ]
     max_len = int(method_level_metrics_df['model_name'].nunique())
     out = {}
-    for metric_col, label in metric_specs:
+    for metric_col, label, ascending_metric in metric_specs:
         if metric_col not in method_level_metrics_df.columns:
             continue
         metric_df = method_level_metrics_df[['model_name', metric_col]].copy()
-        if metric_col in {'training_intuition_aupmc', 'train_degradation_coefficient'} and distillation_model_set:
+        if metric_col in {'train_time_aupmc', 'train_degradation_coefficient'} and distillation_model_set:
             metric_df = metric_df.loc[
                 ~metric_df['model_name'].astype(str).map(_normalize_model_label).isin(distillation_model_set)
             ].copy()
         ordered = (
             metric_df
-            .sort_values([metric_col, 'model_name'], ascending=[False, True], na_position='last')
+            .sort_values([metric_col, 'model_name'], ascending=[ascending_metric, True], na_position='last')
             ['model_name']
             .tolist()
         )
@@ -719,7 +808,19 @@ def build_metric_ordering_table(method_level_metrics_df: pd.DataFrame, distillat
     return pd.DataFrame(out)
 
 
-def plot_method_line_triplet(summary_df: pd.DataFrame, metric_col: str, title: str, ylabel: str, figures_dir: Path, file_name: str, figsize=None):
+def plot_method_line_triplet(
+    summary_df: pd.DataFrame,
+    metric_col: str,
+    title: str,
+    ylabel: str,
+    figures_dir: Path,
+    file_name: str,
+    figsize=None,
+    ci_col: str = 'auc_ci95',
+    panel_titles=None,
+    y_limits=(0.0, 1.0),
+    clip_ci=True,
+):
     if not HAVE_MPL:
         print(f'Matplotlib is not available. Skipping {metric_col} line plot.')
         return
@@ -728,15 +829,21 @@ def plot_method_line_triplet(summary_df: pd.DataFrame, metric_col: str, title: s
         return
 
     color_map = _build_color_map(summary_df)
-    ci_col = 'auc_ci95'
     n_models = summary_df['model_name'].nunique() if not summary_df.empty else 1
     resolved_figsize = tuple(figsize) if figsize is not None else _resolve_plot_figsize('line', n_models)
     fig, axes = plt.subplots(1, 3, figsize=resolved_figsize, sharey=True)
 
+    default_panel_titles = {
+        'train': 'Missing at Train',
+        'test': 'Missing at Test',
+        'envelope': 'Adapted Resilience Envelope',
+    }
+    if panel_titles:
+        default_panel_titles.update(panel_titles)
     panels = [
-        ('train', 'Missing at Train', 'train_prop'),
-        ('test', 'Missing at Test', 'test_prop'),
-        ('envelope', 'Adapted Resilience Envelope', 'test_prop'),
+        ('train', default_panel_titles['train'], 'train_prop'),
+        ('test', default_panel_titles['test'], 'test_prop'),
+        ('envelope', default_panel_titles['envelope'], 'test_prop'),
     ]
 
     for ax, (scenario, panel_title, x_col) in zip(axes, panels):
@@ -754,20 +861,36 @@ def plot_method_line_triplet(summary_df: pd.DataFrame, metric_col: str, title: s
             model_df = scenario_df.loc[scenario_df['model_name'] == model_name].sort_values(x_col)
             x = model_df[x_col].to_numpy(dtype=float)
             y = model_df[metric_col].to_numpy(dtype=float)
-            ci = model_df[ci_col].fillna(0.0).to_numpy(dtype=float)
+            if ci_col in model_df.columns:
+                ci = model_df[ci_col].fillna(0.0).to_numpy(dtype=float)
+            else:
+                ci = np.zeros_like(y, dtype=float)
+            finite = np.isfinite(x) & np.isfinite(y)
+            x = x[finite]
+            y = y[finite]
+            ci = ci[finite]
+            if y.size == 0:
+                continue
             lower = y - ci
             upper = y + ci
-            lower = np.clip(lower, 0.0, 1.0)
-            upper = np.clip(upper, 0.0, 1.0)
+            if clip_ci and y_limits is not None:
+                lower = np.clip(lower, y_limits[0], y_limits[1])
+                upper = np.clip(upper, y_limits[0], y_limits[1])
 
             ax.plot(x, y, marker='o', linewidth=2, label=model_name, color=color_map[model_name])
             ax.fill_between(x, lower, upper, color=color_map[model_name], alpha=0.16)
         ax.set_xticks(sorted(scenario_df[x_col].dropna().unique().tolist()))
+        if y_limits is not None:
+            ax.set_ylim(*y_limits)
         ax.tick_params(axis='both', labelsize=12)
 
-    handles, labels = axes[0].get_legend_handles_labels()
-    if handles:
-        fig.legend(handles, labels, loc='center left', bbox_to_anchor=(0.92, 0.5))
+    legend_items = {}
+    for ax in axes:
+        handles, labels = ax.get_legend_handles_labels()
+        for handle, label in zip(handles, labels):
+            legend_items.setdefault(label, handle)
+    if legend_items:
+        fig.legend(list(legend_items.values()), list(legend_items.keys()), loc='center left', bbox_to_anchor=(0.92, 0.5))
 
     fig.suptitle(title, fontsize=15, y=0.955)
     fig.subplots_adjust(left=0.06, right=0.90, bottom=0.17, top=0.85, wspace=0.18)
@@ -1209,6 +1332,27 @@ def _format_winner_group_text(models_text: str, max_names_per_line=2):
     return '\n'.join(lines)
 
 
+def _winner_group_key(row: pd.Series):
+    raw_models = row.get('winner_group_models', '')
+    if pd.isna(raw_models) or not str(raw_models).strip():
+        raw_models = row.get('winner_group_text', '')
+    if pd.isna(raw_models) or not str(raw_models).strip():
+        raw_models = row.get('winner_model', '')
+
+    raw_text = str(raw_models).replace('|', ',')
+    models = [part.strip() for part in raw_text.split(',') if part.strip()]
+    if not models:
+        models = [str(row.get('winner_model', '')).strip()]
+    # Colour encodes the top-method combination, not the rank order in that cell.
+    return ' | '.join(sorted(dict.fromkeys(models)))
+
+
+def _contrast_text_color(rgba):
+    r, g, b = [float(value) for value in rgba[:3]]
+    luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return 'black' if luminance > 0.58 else 'white'
+
+
 def plot_level2_significant_pairs_heatmap(level2_plot_df: pd.DataFrame, title: str, figures_dir: Path, file_name: str):
     if not HAVE_MPL:
         print('Matplotlib is not available in this environment. Skipping condition-level summary heatmap.')
@@ -1217,11 +1361,13 @@ def plot_level2_significant_pairs_heatmap(level2_plot_df: pd.DataFrame, title: s
         print('No statistically significant condition-level summary pairs available for plotting after FDR correction.')
         return
 
-    winner_model_names = sorted(level2_plot_df['winner_model'].astype(str).unique().tolist())
-    color_lookup = {name: idx for idx, name in enumerate(winner_model_names)}
+    level2_plot_df = level2_plot_df.copy()
+    level2_plot_df['winner_group_key'] = level2_plot_df.apply(_winner_group_key, axis=1)
+    winner_group_keys = sorted(level2_plot_df['winner_group_key'].astype(str).unique().tolist())
+    color_lookup = {name: idx for idx, name in enumerate(winner_group_keys)}
     level2_hex = ['#012a4a', '#013a63', '#01497c', '#014f86', '#2a6f97', '#2c7da0', '#468faf', '#61a5c2', '#89c2d9', '#a9d6e5']
     base_cmap = LinearSegmentedColormap.from_list('level2_custom', level2_hex)
-    cmap = ListedColormap(base_cmap(np.linspace(0.0, 1.0, max(len(winner_model_names), 1))))
+    cmap = ListedColormap(base_cmap(np.linspace(0.0, 0.72, max(len(winner_group_keys), 1))))
     cmap.set_bad('#F2F2F2')
 
     train_props = sorted(level2_plot_df['train_missing_prop'].unique().tolist())
@@ -1230,7 +1376,7 @@ def plot_level2_significant_pairs_heatmap(level2_plot_df: pd.DataFrame, title: s
     for _, row in level2_plot_df.iterrows():
         i = train_props.index(float(row['train_missing_prop']))
         j = test_props.index(float(row['test_missing_prop']))
-        matrix[i, j] = float(color_lookup[row['winner_model']])
+        matrix[i, j] = float(color_lookup[row['winner_group_key']])
 
     fig, ax = plt.subplots(figsize=(7.2, 6.6))
     x_edges = np.arange(len(test_props) + 1, dtype=float)
@@ -1241,7 +1387,7 @@ def plot_level2_significant_pairs_heatmap(level2_plot_df: pd.DataFrame, title: s
         matrix,
         cmap=cmap,
         vmin=-0.5,
-        vmax=len(winner_model_names) - 0.5,
+        vmax=len(winner_group_keys) - 0.5,
         edgecolors='white',
         linewidth=0.55,
         shading='flat',
@@ -1250,13 +1396,13 @@ def plot_level2_significant_pairs_heatmap(level2_plot_df: pd.DataFrame, title: s
     ax.set_ylim(len(train_props), 0)
     ax.set_aspect('equal')
     ax.set_title(title, fontsize=13, pad=22, loc='center')
-    ax.set_xlabel('Test missing prop', fontsize=12)
-    ax.set_ylabel('Train missing prop', fontsize=12)
+    ax.set_xlabel('Test missing prop', fontsize=12, labelpad=14)
+    ax.set_ylabel('Train missing prop', fontsize=12, labelpad=14)
     ax.set_xticks(np.arange(len(test_props), dtype=float) + 0.5)
-    ax.set_xticklabels([f'{value:g}' for value in test_props], rotation=45, ha='right', fontsize=11)
+    ax.set_xticklabels([f'{value:g}' for value in test_props], rotation=0, ha='center', fontsize=11)
     ax.set_yticks(np.arange(len(train_props), dtype=float) + 0.5)
     ax.set_yticklabels([f'{value:g}' for value in train_props], fontsize=11)
-    ax.tick_params(axis='both', which='major', length=0)
+    ax.tick_params(axis='both', which='major', length=0, pad=8)
     for spine in ax.spines.values():
         spine.set_visible(False)
 
@@ -1281,7 +1427,7 @@ def plot_level2_significant_pairs_heatmap(level2_plot_df: pd.DataFrame, title: s
 
     figures_dir.mkdir(parents=True, exist_ok=True)
     figure_path = figures_dir / file_name
-    plt.savefig(figure_path, dpi=1000, bbox_inches='tight')
+    plt.savefig(figure_path, dpi=2000, bbox_inches='tight')
     print(f'Saved figure to: {figure_path}')
     plt.show()
 

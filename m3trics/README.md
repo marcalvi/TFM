@@ -228,7 +228,7 @@ Decay/missingness-study mode simulates missing modalities at train and test time
 
 ```bash
 MISSINGNESS_STUDY="true"
-MISSING_LOCATION="global"
+DEGRADING_MODALITY="global"
 TRAIN_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
 TEST_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
 ```
@@ -239,7 +239,7 @@ Fixed dataset mode disables synthetic missingness and trains on the observed dat
 
 ```bash
 MISSINGNESS_STUDY="false"
-# MISSING_LOCATION, TRAIN_MISSING_PROP and TEST_MISSING_PROP are not passed.
+# DEGRADING_MODALITY, TRAIN_MISSING_PROP and TEST_MISSING_PROP are not passed.
 ```
 
 ## 3. Run Training
@@ -316,7 +316,7 @@ Use this for `MISSINGNESS_STUDY=true` runs:
 analysis/MM_decay_analysis.ipynb
 ```
 
-It loads missingness-study outputs, computes replicate AUC tables, global Friedman tests, Wilcoxon pairwise comparisons, heatmaps, method-level performance/resilience metrics, and normalized degradation coefficients. Distillation methods are excluded from Training intuition and Train degradation coefficient.
+It loads missingness-study outputs, computes replicate AUC tables, global Friedman tests, Wilcoxon pairwise comparisons, heatmaps, method-level AUPMC metrics, and train/test/minimum degradation coefficients. Degradation coefficients are computed as baseline AUC divided by the corresponding AUPMC, so lower values indicate less degradation. Distillation methods are excluded from Train-time AUPMC and Train degradation coefficient.
 
 Outputs are saved to:
 
@@ -364,7 +364,7 @@ At the top of each analysis notebook, set the dataset/run parameters, for exampl
 ```python
 DATASET_NAME = "mmCRC"
 LABEL_NAME = "OS_21_label"
-TRAIN_MISSING_LOCATION = "GLOBAL"
+TRAIN_DEGRADING_MODALITY = "GLOBAL"
 RETRAIN_OUTER = True
 ```
 

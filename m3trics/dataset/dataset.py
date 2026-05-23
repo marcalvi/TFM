@@ -13,8 +13,11 @@ class MissingModalitySimulator:
         num_modalities,
         modality_names,
         missing_prop=0,
-        missing_location="global",
+        degrading_modality="global",
+        missing_location=None,
     ):
+        if missing_location is not None:
+            degrading_modality = missing_location
         if num_modalities < 1:
             raise ValueError("num_modalities must be >= 1")
         if missing_prop < 0 or missing_prop > 1:
@@ -30,22 +33,24 @@ class MissingModalitySimulator:
         # Semantics: exact fraction of modality values to remove from the dataset,
         # not an independent Bernoulli probability per value.
         self.missing_prop = float(missing_prop)
-        self.missing_location = str(missing_location).lower()
+        self.degrading_modality = str(degrading_modality).lower()
+        # Backward-compatible alias for older saved code paths.
+        self.missing_location = self.degrading_modality
 
-        if self.missing_location == "global":
+        if self.degrading_modality == "global":
             self.specific_missing_idx = None
         else:
-            if self.missing_location not in self.modality_name_to_idx:
+            if self.degrading_modality not in self.modality_name_to_idx:
                 valid = ", ".join(["global"] + sorted(self.modality_name_to_idx.keys()))
                 raise ValueError(
-                    f"Invalid missing_location='{missing_location}'. Expected one of: {valid}"
+                    f"Invalid degrading_modality='{degrading_modality}'. Expected one of: {valid}"
                 )
-            self.specific_missing_idx = self.modality_name_to_idx[self.missing_location]
+            self.specific_missing_idx = self.modality_name_to_idx[self.degrading_modality]
 
     def _stable_slot_score(self, patient_id, modality_idx, missing_pattern_seed):
         key = (
             f"{int(missing_pattern_seed)}|"
-            f"{self.missing_location}|"
+            f"{self.degrading_modality}|"
             f"{patient_id}|"
             f"{int(modality_idx)}"
         )

@@ -1,9 +1,9 @@
-Mean baseline performance,Intuition,Pure test-time resilience,Mean post-adaptation AUC
-HealNet,SMILe,SMILe,HealNet
-pAM,KNN_MLP,Di-MMLP,Di-MMLP
-KNN_MLP,Di-MMLP,ZI_MLP,ZI_MLP
-ZI_MLP,VAE_MLP,VAE_MLP,VAE_MLP
-VAE_MLP,HealNet,Di-PAM,KNN_MLP
-Di-MMLP,pAM,pAM,pAM
-Di-PAM,Di-PAM,KNN_MLP,Di-PAM
-SMILe,ZI_MLP,HealNet,SMILe
+Baseline AUC,Train-time AUPMC,Train degradation coefficient,Test-time AUPMC,Test degradation coefficient,Best-adapted AUPMC,Minimum degradation coefficient
+HealNet,HealNet,KNN_MLP,HealNet,Di-MMLP,HealNet,Di-MMLP
+pAM,KNN_MLP,ZI_MLP,Di-MMLP,SMILe,Di-MMLP,ZI_MLP
+KNN_MLP,pAM,SMILe,KNN_MLP,KNN_MLP,ZI_MLP,SMILe
+ZI_MLP,ZI_MLP,pAM,ZI_MLP,ZI_MLP,KNN_MLP,KNN_MLP
+VAE_MLP,VAE_MLP,VAE_MLP,VAE_MLP,Di-PAM,VAE_MLP,Di-PAM
+Di-MMLP,SMILe,HealNet,pAM,VAE_MLP,pAM,VAE_MLP
+Di-PAM,,,Di-PAM,pAM,Di-PAM,pAM
+SMILe,,,SMILe,HealNet,SMILe,HealNet

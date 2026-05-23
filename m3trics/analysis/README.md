@@ -12,27 +12,29 @@ These notebooks currently cover classification results only. Modality-specific d
 
 ## MM Decay / Progressive Missingness Study
 
-`MM_decay_analysis.ipynb` studies how each method behaves as missingness increases. For each method, seed, outer fold, and inner model, the notebook expands the stored predictions, computes replicate AUCs, aggregates them by missingness condition, and then builds rankings and statistical comparisons. Distillation methods are explicitly configured through `DISTILLATION_MODEL_NAMES`; they are excluded from Training intuition and Train degradation coefficient because train-time missingness is applied to the student while the teacher receives complete modality information.
+`MM_decay_analysis.ipynb` studies how each method behaves as missingness increases. The replicate unit depends on the execution mode: retained inner models use seed, outer fold, and inner model index, while outer-retrained models use seed and outer fold. The notebook expands the stored predictions, computes replicate AUCs, aggregates them by missingness condition, and then builds rankings and statistical comparisons. Distillation methods are explicitly configured through `DISTILLATION_MODEL_NAMES`; they are excluded from Train-time AUPMC and Train degradation coefficient because train-time missingness is applied to the student while the teacher receives complete modality information.
 
-### Level 0: Mean AUC Curves
+### Method-Level Curves
 
 ![MM decay mean AUC curves](assets/readme_figures/mmdecay_level0_mean_auc_curves.png)
 
-This figure shows the mean AUC trajectory for each method across missingness levels. It is the quickest view of performance degradation: flatter curves indicate stronger robustness as missing modalities increase, while steep drops indicate sensitivity to missingness.
+The notebook first plots method-level curves before showing the metric tables. The raw mean AUC curves summarize three trajectories: train-time missingness, test-time missingness, and the best-adapted envelope. It also generates pointwise degradation curves, where the method's baseline AUC is divided by the AUC at each missingness condition. These curves visualize relative degradation along each trajectory.
 
-### Level 1: Method Ranking Overview
+### Method-Level Metrics and Rankings
 
 ![MM decay level 1 rankings](assets/readme_figures/mmdecay_level1_global_overview.png)
 
-Level 1 summarizes method-level behavior into interpretable ranking axes. The tables behind this plot include baseline performance, training intuition, inference resilience, adapted resilience, and normalized degradation coefficients. For distillation methods, train missingness in both/adapted settings refers to the student branch. The ranking table is useful for identifying methods that are globally strong, not only methods that win a single missingness cell.
+The method-level tables summarize behavior into technical AUPMC metrics and degradation coefficients. The metrics are: Baseline AUC, Train-time AUPMC, Train degradation coefficient, Test-time AUPMC, Test degradation coefficient, Best-adapted AUPMC, and Minimum degradation coefficient. Degradation coefficients are computed as baseline AUC divided by the corresponding AUPMC, so lower values indicate less degradation. For distillation methods, train missingness in both/best-adapted settings refers to the student branch. The ranking table orders methods separately for each metric, making it useful for identifying methods that are globally strong, not only methods that win a single missingness cell.
 
 Main outputs:
 
 - `replicate_auc_table.csv`: replicate-level AUCs used as the statistical unit.
 - `method_condition_mean_auc_summary.csv`: mean AUC and confidence intervals per method and missingness condition.
-- `method_level_metrics.csv`: method-level performance/resilience metrics and normalized degradation coefficients.
+- `method_level_metrics.csv`: Baseline AUC, Train-time AUPMC, Train degradation coefficient, Test-time AUPMC, Test degradation coefficient, Best-adapted AUPMC, and Minimum degradation coefficient.
 - `method_metric_orderings.csv`: ranking/order table for each summary metric.
-- `resilience_post_adaptation_envelope.csv`: best adapted behavior over train-missingness settings, used for adapted resilience and minimum degradation coefficient.
+- `method_plot_summary.csv`: mean AUC curves for train-time missingness, test-time missingness, and the best-adapted envelope.
+- `degradation_curve_summary.csv`: pointwise degradation curves computed as baseline AUC divided by condition-level AUC.
+- `resilience_post_adaptation_envelope.csv`: best adapted behavior over train-missingness settings, used for Best-adapted AUPMC and Minimum degradation coefficient.
 - `level1_global_friedman.csv`: global Friedman test over paired replicate AUCs.
 
 ### Level 2: Pairwise Condition Matrices

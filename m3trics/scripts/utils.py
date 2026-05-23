@@ -155,7 +155,7 @@ def _format_training_control_suffix(cfg):
 
 
 # Format hp_name for runs' names
-def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
+def _format_hp_name(cfg, train_missing_pct, degrading_modality, model_name):
     model_name = normalize_model_name(model_name)
     lr_str = f"{cfg['learning_rate']:.0e}"
     bs_str = str(cfg["batch_size"])
@@ -170,7 +170,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"temp{temp_str}_"
             f"{training_suffix}"
             f"trmiss{train_missing_pct}_"
-            f"trloc{missing_location}"
+            f"degmod{degrading_modality}"
         )
     if model_name in {"dipam"}:
         dropout_str = str(cfg["pam_dropout"]).replace(".", "p")
@@ -186,7 +186,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"b{beta_str}_"
             f"{training_suffix}"
             f"trmiss{train_missing_pct}_"
-            f"trloc{missing_location}"
+            f"degmod{degrading_modality}"
         )
     if model_name in {"di_mmlp"}:
         fusion_str = str(cfg["fusion_hidden_dim"])
@@ -208,7 +208,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"b{beta_str}_"
             f"{training_suffix}"
             f"trmiss{train_missing_pct}_"
-            f"trloc{missing_location}"
+            f"degmod{degrading_modality}"
         )
     if model_name in {"smil_e"}:
         latent_str = str(cfg["smil_e_latent_dim"])
@@ -234,7 +234,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"mvf{meta_val_str}_"
             f"{training_suffix}"
             f"trmiss{train_missing_pct}_"
-            f"trloc{missing_location}"
+            f"degmod{degrading_modality}"
         )
         return name
     if model_name in {"healnet"}:
@@ -265,7 +265,7 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
             f"selfx{selfx_str}_"
             f"{training_suffix}"
             f"trmiss{train_missing_pct}_"
-            f"trloc{missing_location}"
+            f"degmod{degrading_modality}"
         )
 
     fusion_str = str(cfg["fusion_hidden_dim"])
@@ -283,14 +283,14 @@ def _format_hp_name(cfg, train_missing_pct, missing_location, model_name):
         f"drop{dropout_str}_"
         f"{training_suffix}"
         f"trmiss{train_missing_pct}_"
-        f"trloc{missing_location}"
+        f"degmod{degrading_modality}"
     )
 
 # Function to build hyperparameter grid from args (supports scalar and comma-separated list for each HP argument)
-def build_hyperparameter_grid(args, train_missing_prop, missing_location):
+def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
     # Train missingness config (used in run naming for reproducibility).
     train_missing_pct = f"{float(train_missing_prop) * 100:g}"
-    missing_location = str(missing_location).strip().lower()
+    degrading_modality = str(degrading_modality).strip().lower()
     model_name = normalize_model_name(args.model)
 
     # hp configs
@@ -330,7 +330,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 continue
             seen.add(key)
             cfg["name"] = _format_hp_name(
-                cfg, train_missing_pct, missing_location, model_name=model_name
+                cfg, train_missing_pct, degrading_modality, model_name=model_name
             )
             hp_configs.append(cfg)
     if model_name in {"dipam"}:
@@ -370,7 +370,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 continue
             seen.add(key)
             cfg["name"] = _format_hp_name(
-                cfg, train_missing_pct, missing_location, model_name=model_name
+                cfg, train_missing_pct, degrading_modality, model_name=model_name
             )
             hp_configs.append(cfg)
     if model_name in {"di_mmlp"}:
@@ -422,7 +422,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 continue
             seen.add(key)
             cfg["name"] = _format_hp_name(
-                cfg, train_missing_pct, missing_location, model_name=model_name
+                cfg, train_missing_pct, degrading_modality, model_name=model_name
             )
             hp_configs.append(cfg)
     if model_name in {"mlp"}:
@@ -466,7 +466,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 continue
             seen.add(key)
             cfg["name"] = _format_hp_name(
-                cfg, train_missing_pct, missing_location, model_name=model_name
+                cfg, train_missing_pct, degrading_modality, model_name=model_name
             )
             hp_configs.append(cfg)
     if model_name in {"smil_e"}:
@@ -528,7 +528,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 continue
             seen.add(key)
             cfg["name"] = _format_hp_name(
-                cfg, train_missing_pct, missing_location, model_name=model_name
+                cfg, train_missing_pct, degrading_modality, model_name=model_name
             )
             hp_configs.append(cfg)
     if model_name in {"healnet"}:
@@ -636,7 +636,7 @@ def build_hyperparameter_grid(args, train_missing_prop, missing_location):
                 continue
             seen.add(key)
             cfg["name"] = _format_hp_name(
-                cfg, train_missing_pct, missing_location, model_name=model_name
+                cfg, train_missing_pct, degrading_modality, model_name=model_name
             )
             hp_configs.append(cfg)
 

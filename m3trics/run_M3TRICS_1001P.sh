@@ -150,7 +150,7 @@ MISSING_PATTERN_SEED=2026
 # -----------------------------------------------------------------------------------------
 
 MISSINGNESS_STUDY="true"
-MISSING_LOCATION="global"
+DEGRADING_MODALITY="global"
 TRAIN_MISSING_PROP="0.0,0.33,0.66"
 TEST_MISSING_PROP="0.0,0.33,0.66"
 
@@ -230,7 +230,7 @@ fi
 
 if [[ "${MISSINGNESS_STUDY}" == "true" ]]; then
   M3TRICS_ARGS+=(
-    --missing_location "${MISSING_LOCATION}"
+    --degrading_modality "${DEGRADING_MODALITY}"
     --train_missing_prop "${TRAIN_MISSING_PROP}"
     --test_missing_prop "${TEST_MISSING_PROP}"
   )

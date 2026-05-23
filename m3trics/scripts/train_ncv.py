@@ -434,12 +434,12 @@ def _log_selected_inner_models_to_wandb(
     model_name_l,
     task_config,
 ):
-    missing_location = str((wandb_base_config or {}).get("missing_location", "na")).strip().lower()
+    degrading_modality = str((wandb_base_config or {}).get("degrading_modality", "na")).strip().lower()
     train_missing_prop = float((wandb_base_config or {}).get("train_missing_prop", 0.0))
 
     for candidate in selected_candidates:
         run_name = (
-            f"loc{missing_location}_"
+            f"degmod{degrading_modality}_"
             f"trainprop{train_missing_prop:g}_"
             f"seed{seed}_"
             f"outer{outer_fold_idx}_"
@@ -540,7 +540,7 @@ def _evaluate_retained_inner_models_on_outer_test(
 
     for eval_setup in test_eval_setups:
         eval_simulator = eval_setup["simulator"]
-        eval_missing_location = str(eval_setup["missing_location"]).lower()
+        eval_degrading_modality = str(eval_setup["degrading_modality"]).lower()
         eval_missing_prop = float(eval_setup["missing_prop"])
         apply_missing_eval = eval_missing_prop > 0.0
 
@@ -664,9 +664,9 @@ def _evaluate_retained_inner_models_on_outer_test(
                 "outer_fold": outer_fold_idx,
                 "outer_eval_target": "test_outer",
                 "patient": pid,
-                "train_missing_location": str(getattr(train_missing_simulator, "missing_location", "global")).lower(),
+                "train_degrading_modality": str(getattr(train_missing_simulator, "degrading_modality", "global")).lower(),
                 "train_missing_prop": float(getattr(train_missing_simulator, "missing_prop", 0.0)),
-                "test_missing_location": eval_missing_location,
+                "test_degrading_modality": eval_degrading_modality,
                 "test_missing_prop": eval_missing_prop,
             }
             if _is_survival(task_config):
@@ -728,7 +728,7 @@ def _evaluate_retained_inner_models_on_outer_test(
         result_row = {
             "outer_fold": outer_fold_idx,
             "outer_eval_target": "test_outer",
-            "eval_missing_location": eval_missing_location,
+            "eval_degrading_modality": eval_degrading_modality,
             "eval_missing_prop": eval_missing_prop,
             "inner_models_count": int(len(selected_candidates)),
             "selected_inner_hp_names": str(best_hp_row["hp_name"]),
@@ -819,11 +819,11 @@ def nested_cv(
     # by default evaluate once with the provided train simulator.
     if test_eval_setups is None:
         eval_missing_prop = float(getattr(train_missing_simulator, "missing_prop", 0.0))
-        eval_missing_location = str(getattr(train_missing_simulator, "missing_location", "global")).lower()
+        eval_degrading_modality = str(getattr(train_missing_simulator, "degrading_modality", "global")).lower()
         test_eval_setups = [
             {
                 "missing_prop": eval_missing_prop,
-                "missing_location": eval_missing_location,
+                "degrading_modality": eval_degrading_modality,
                 "simulator": train_missing_simulator,
             }
         ]
@@ -848,7 +848,7 @@ def nested_cv(
             num_modalities=len(modality_names),
             modality_names=modality_names,
             missing_prop=fixed_distillation_student_missing_prop,
-            missing_location="global",
+            degrading_modality="global",
         )
         apply_student_missing_train = True
         if wandb_base_config is not None:
@@ -1292,10 +1292,10 @@ def nested_cv(
                 )
 
             if wandb_active:
-                missing_location = str((wandb_base_config or {}).get("missing_location", "na")).strip().lower()
+                degrading_modality = str((wandb_base_config or {}).get("degrading_modality", "na")).strip().lower()
                 train_missing_prop = float((wandb_base_config or {}).get("train_missing_prop", 0.0))
                 run_name = (
-                    f"loc{missing_location}_"
+                    f"degmod{degrading_modality}_"
                     f"trainprop{train_missing_prop:g}_"
                     f"seed{seed}_"
                     f"outer{outer_fold_idx}_"
@@ -1387,7 +1387,7 @@ def nested_cv(
 
             for eval_setup in test_eval_setups:
                 eval_simulator = eval_setup["simulator"]
-                eval_missing_location = str(eval_setup["missing_location"]).lower()
+                eval_degrading_modality = str(eval_setup["degrading_modality"]).lower()
                 eval_missing_prop = float(eval_setup["missing_prop"])
                 apply_missing_eval = eval_missing_prop > 0.0
 
@@ -1439,9 +1439,9 @@ def nested_cv(
                         "outer_fold": outer_fold_idx,
                         "outer_eval_target": "test_outer",
                         "patient": pid,
-                        "train_missing_location": str(getattr(train_missing_simulator, "missing_location", "global")).lower(),
+                        "train_degrading_modality": str(getattr(train_missing_simulator, "degrading_modality", "global")).lower(),
                         "train_missing_prop": float(getattr(train_missing_simulator, "missing_prop", 0.0)),
-                        "test_missing_location": eval_missing_location,
+                        "test_degrading_modality": eval_degrading_modality,
                         "test_missing_prop": eval_missing_prop,
                     }
                     if _is_survival(task_config):
@@ -1486,7 +1486,7 @@ def nested_cv(
                 result_row = {
                     "outer_fold": outer_fold_idx,
                     "outer_eval_target": "test_outer",
-                    "eval_missing_location": eval_missing_location,
+                    "eval_degrading_modality": eval_degrading_modality,
                     "eval_missing_prop": eval_missing_prop,
                     "inner_models_count": 1,
                     "selected_inner_hp_names": str(best_hp_row["hp_name"]),
