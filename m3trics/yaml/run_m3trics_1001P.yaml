@@ -2,7 +2,7 @@ description: 'pim pAM (MIMM all setups)'
 executable: /bin/bash
 args: ["-c", "/home/osiris-user/Desktop/TFM/m3trics/run_M3TRICS_1001P.sh"]
 env:
-worker_type: '4090-64'
+worker_type: '4090-128'
 use_gpu: true
 max_cpus: 20
 max_memory_mb: 100000

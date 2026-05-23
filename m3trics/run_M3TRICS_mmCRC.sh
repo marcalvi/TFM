@@ -9,7 +9,7 @@ set -euo pipefail
 
 # Osiris cluster setup (VHIO)
 source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-conda activate TFM_5090
+conda activate TFM
 
 # Optional WandB configuration
 WANDB_LOGIN_KEY="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"
@@ -117,7 +117,7 @@ BLOOD_CSV="mmCRC_blood_data.csv"
 # -----------------------------------------------------------------------------------------
 
 # Methods
-RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, Di-MMLP, HealNet, SMILe"
+RUN_MODELS="SMILe"
 
 # Nested CV
 RETRAIN_OUTER="true"
@@ -146,10 +146,10 @@ MISSING_PATTERN_SEED=2026
 # the student receives synthetic missingness matching the original cohort missingness proportion.
 # -----------------------------------------------------------------------------------------
 
-MISSINGNESS_STUDY="false"
-# MISSING_LOCATION="global"
-# TRAIN_MISSING_PROP="0.0,0.25,0.5,0.75"
-# TEST_MISSING_PROP="0.0,0.25,0.5,0.75"
+MISSINGNESS_STUDY="true"
+MISSING_LOCATION="global"
+TRAIN_MISSING_PROP="0.0,0.25,0.5,0.75"
+TEST_MISSING_PROP="0.0,0.25,0.5,0.75"
 
 # -----------------------------------------------------------------------------------------
 # Wrap arguments and run m3trics script

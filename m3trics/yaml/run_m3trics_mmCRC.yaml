@@ -2,7 +2,7 @@ description: 'pim pAM (MIMM all setups)'
 executable: /bin/bash
 args: ["-c", "/home/osiris-user/Desktop/TFM/m3trics/run_M3TRICS_mmCRC.sh"]
 env:
-worker_type: '5090'
+worker_type: '4090-64'
 use_gpu: true
 max_cpus: 31
 max_memory_mb: 110000
