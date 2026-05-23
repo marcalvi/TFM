@@ -1,0 +1,12 @@
+{"time":"2026-05-21T08:20:57.261992007+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-21T08:20:57.531332738+02:00","level":"INFO","msg":"stream: created new stream","id":"stoqoihi"}
+{"time":"2026-05-21T08:20:57.531399278+02:00","level":"INFO","msg":"handler: started","stream_id":"stoqoihi"}
+{"time":"2026-05-21T08:20:57.536606674+02:00","level":"INFO","msg":"stream: started","id":"stoqoihi"}
+{"time":"2026-05-21T08:20:57.536633204+02:00","level":"INFO","msg":"writer: started","stream_id":"stoqoihi"}
+{"time":"2026-05-21T08:20:57.536650544+02:00","level":"INFO","msg":"sender: started","stream_id":"stoqoihi"}
+{"time":"2026-05-21T08:20:59.408476399+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-21T08:20:59.811105102+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-21T08:20:59.813272106+02:00","level":"INFO","msg":"stream: closing","id":"stoqoihi"}
+{"time":"2026-05-21T08:20:59.813278396+02:00","level":"INFO","msg":"handler: closed","stream_id":"stoqoihi"}
+{"time":"2026-05-21T08:20:59.813894724+02:00","level":"INFO","msg":"sender: closed","stream_id":"stoqoihi"}
+{"time":"2026-05-21T08:20:59.813897944+02:00","level":"INFO","msg":"stream: closed","id":"stoqoihi"}

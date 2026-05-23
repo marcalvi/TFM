@@ -3,6 +3,11 @@
   "results_root": "/home/osiris-user/Desktop/TFM/m3trics/results/1001P_OS_27_label",
   "endpoint_csv": "/nfs/rnas/projects/M3TRICS/data/inputs/1001Prostate/endpoints_1001Prostate.csv",
   "endpoint_col": "OS_27_label",
+  "task_type": "binary_classification",
+  "survival_loss": null,
+  "survival_time_col": null,
+  "survival_event_col": null,
+  "survival_n_bins": null,
   "patient_id_col": "patient",
   "modality_imputation_config": {
     "radio": {
@@ -98,6 +103,7 @@
     }
   },
   "cohort_alignment_summary": {
+    "alignment_mode": "complete_multimodal_cohort",
     "endpoint_patients_before": 117,
     "endpoint_patients_after": 83,
     "dropped_from_endpoints": 34,

@@ -120,7 +120,7 @@ RADIO_REPORT_DROP_COLS="study_date,time_to_diagnosis,source_file,report_text"
 # -----------------------------------------------------------------------------------------
 
 # Methods
-RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, Di-MMLP, HealNet, SMILe"
+RUN_MODELS="SMILe"
 
 # Nested CV
 RETRAIN_OUTER="true"
