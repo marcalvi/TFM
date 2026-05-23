@@ -50,7 +50,7 @@ Use these names in `RUN_MODELS` inside the `.sh` launchers.
 | `HealNet` | HealNet wrapper for modality-level embeddings. |
 | `SMILe` | SMIL generalization for n>=2 modalities with mask-aware latent reconstruction. |
 
-Hyperparameter grids live in `hyperparams/`. Edit those files when you want to change the search space for a method.
+Hyperparameter grids live in `hyperparams/`. Each method config uses one `args` dictionary. Scalar values are kept fixed, while comma-separated values are expanded automatically into the hyperparameter grid. Use `paired_args` only when two comma-separated arguments must vary together instead of as a Cartesian product.
 
 SMILe learns its modality priors only from modality slots visible in the current training split and missingness condition. It does not recover synthetic hidden modalities from the complete base dataset.
 

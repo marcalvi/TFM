@@ -1,17 +1,15 @@
 MODEL_CONFIG = {
     "display_name": "Di-PAM",
     "model": "Di-PAM",
-    "fixed_args": {
+    "args": {
         "epochs": 80,
         "early_stopping_patience": 20,
-        "weight_decay": "1e-4",
-    },
-    "hp_grid_args": {
-        "batch_size": "32",
+        "batch_size": "8,16",
         "learning_rate": "1e-4,5e-5,1e-5",
+        "weight_decay": "1e-4",
         "pam_dropout": "0.2,0.4",
         "pam_temperature": "1.0,2.0",
-        "distill_alpha": "1.0,2.0",
-        "distill_beta": "0.1,0.3",
+        "distill_alpha": "0.25",
+        "distill_beta": "0.05",
     },
 }

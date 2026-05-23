@@ -479,10 +479,26 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
         smil_e_betas = parse_value_or_list(args.smil_e_beta, float)
         meta_inner_lrs = parse_value_or_list(args.meta_inner_lr, float)
         meta_val_fractions = parse_value_or_list(args.meta_val_fraction, float)
+        paired_groups = {tuple(group) for group in parse_paired_hp_groups(getattr(args, "paired_hp_groups", ""))}
 
-        for bs, lr, weight_decay, latent_dim, num_priors, num_heads, dropout, classifier_hidden_dim, alpha, beta, meta_inner_lr, meta_val_fraction in product(
+        if ("learning_rate", "meta_inner_lr") in paired_groups:
+            if len(learning_rates) != len(meta_inner_lrs):
+                raise ValueError(
+                    "Paired hyperparameters 'learning_rate' and 'meta_inner_lr' must define the same number of values."
+                )
+            lr_meta_options = [
+                (float(learning_rate), float(meta_inner_lr))
+                for learning_rate, meta_inner_lr in zip(learning_rates, meta_inner_lrs)
+            ]
+        else:
+            lr_meta_options = [
+                (float(learning_rate), float(meta_inner_lr))
+                for learning_rate, meta_inner_lr in product(learning_rates, meta_inner_lrs)
+            ]
+
+        for bs, lr_meta_pair, weight_decay, latent_dim, num_priors, num_heads, dropout, classifier_hidden_dim, alpha, beta, meta_val_fraction in product(
             batch_sizes,
-            learning_rates,
+            lr_meta_options,
             weight_decays,
             smil_e_latent_dims,
             smil_e_num_priors,
@@ -491,9 +507,9 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
             classifier_hidden_dims,
             smil_e_alphas,
             smil_e_betas,
-            meta_inner_lrs,
             meta_val_fractions,
         ):
+            lr, meta_inner_lr = lr_meta_pair
             if int(latent_dim) % int(num_heads) != 0:
                 continue
             cfg = {

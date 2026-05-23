@@ -893,8 +893,29 @@ def training_cli_main(argv=None):
 
 # ------------------------ M3TRICS PREPROCESS CLI ---------------------
 
+def _model_config_args(model_config):
+    """Return model arguments from the current schema, with legacy fallback.
+
+    Values with comma-separated options are expanded later by
+    build_hyperparameter_grid; scalar values remain fixed automatically.
+    """
+    config_args = {}
+    config_args.update(dict(model_config.get("fixed_args", {})))
+    config_args.update(dict(model_config.get("hp_grid_args", {})))
+    config_args.update(dict(model_config.get("args", {})))
+    return config_args
+
+
+def _model_config_paired_groups(model_config):
+    return (
+        model_config.get("paired_args")
+        or model_config.get("paired_hp_grid_args")
+        or []
+    )
+
+
 def _build_training_args_from_model_config(shared_args, model_config, modality_pooling):
-    fixed_args = dict(model_config.get("fixed_args", {}))
+    config_args = _model_config_args(model_config)
     output_root = os.path.join(
         shared_args.results_root,
         "training_runs",
@@ -921,7 +942,7 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
         "--outer_splits",
         str(int(shared_args.outer_splits)),
         "--epochs",
-        str(int(fixed_args.get("epochs", 80))),
+        str(int(config_args.get("epochs", 80))),
         "--retrain_outer",
         str(bool(shared_args.retrain_outer)).lower(),
         "--save_inner",
@@ -965,7 +986,7 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
                 str(shared_args.test_missing_prop),
             ]
         )
-    for arg_name, arg_value in fixed_args.items():
+    for arg_name, arg_value in config_args.items():
         if arg_name == "epochs":
             continue
         arg_list.extend([f"--{arg_name}", str(arg_value)])
@@ -983,10 +1004,7 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
             ]
         )
 
-    for arg_name, arg_value in model_config.get("hp_grid_args", {}).items():
-        arg_list.extend([f"--{arg_name}", str(arg_value)])
-
-    paired_hp_groups = model_config.get("paired_hp_grid_args", [])
+    paired_hp_groups = _model_config_paired_groups(model_config)
     if paired_hp_groups:
         serialized_groups = ";".join(
             ",".join(str(name) for name in group)
