@@ -125,6 +125,7 @@ RUN_MODELS="ZI_MLP,KNN_MLP,VAE_MLP,pAM,Di-PAM,Di-MMLP,HealNet,SMILe"
 # Nested CV
 RETRAIN_OUTER="false"
 SAVE_INNER="true"
+USE_ENSEMBLE="true"
 k=5
 INNER_SPLITS=${k}
 OUTER_SPLITS=${k}
@@ -207,6 +208,7 @@ M3TRICS_ARGS=(
   --outer_splits "${OUTER_SPLITS}"
   --retrain_outer "${RETRAIN_OUTER}"
   --save_inner "${SAVE_INNER}"
+  --use_ensemble "${USE_ENSEMBLE}"
   --missingness_study "${MISSINGNESS_STUDY}"
   --hp_selection_epsilon "${HP_SELECTION_EPSILON}"
   --scheduler_type "${SCHEDULER_TYPE}"

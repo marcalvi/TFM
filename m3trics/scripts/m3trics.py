@@ -279,6 +279,15 @@ def build_training_arg_parser():
         ),
     )
     parser.add_argument(
+        "--use_ensemble",
+        type=_parse_bool_flag,
+        default=False,
+        help=(
+            "If true, save probability-averaged ensemble columns in test_predictions.csv "
+            "and use them as the analysis replicate in the provided notebooks."
+        ),
+    )
+    parser.add_argument(
         "--missingness_study",
         type=_parse_bool_flag,
         default=True,
@@ -723,6 +732,7 @@ def run_training_from_args(args):
                 print(f"Best-epoch warmup: {best_epoch_warmup}")
                 print(f"Retrain outer train: {bool(args.retrain_outer)}")
                 print(f"Save inner outputs: {bool(args.save_inner)}")
+                print(f"Use ensemble predictions: {bool(args.use_ensemble)}")
                 print(f"Progressive missingness study: {bool(args.missingness_study)}")
                 resolved_task_type = normalize_task_type(args.task_type)
                 print(f"Task type: {resolved_task_type}")
@@ -749,6 +759,7 @@ def run_training_from_args(args):
                     "task_type": normalize_task_type(args.task_type),
                     "retrain_outer": bool(args.retrain_outer),
                     "save_inner": bool(args.save_inner),
+                    "use_ensemble": bool(args.use_ensemble),
                     "missingness_study": bool(args.missingness_study),
                     "fixed_distillation_complete_case": bool(fixed_distillation_complete_case),
                     "fixed_distillation_student_missing_prop": (
@@ -831,6 +842,7 @@ def run_training_from_args(args):
                     hp_selection_epsilon=float(args.hp_selection_epsilon),
                     missingness_study=bool(args.missingness_study),
                     fixed_distillation_student_missing_prop=fixed_distillation_student_missing_prop,
+                    use_ensemble=bool(args.use_ensemble),
                     attention_pooling_kwargs={
                         "hidden_dim": int(args.attention_pooling_hidden_dim),
                         "dropout": float(args.attention_pooling_dropout),
@@ -947,6 +959,8 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
         str(bool(shared_args.retrain_outer)).lower(),
         "--save_inner",
         str(bool(shared_args.save_inner)).lower(),
+        "--use_ensemble",
+        str(bool(shared_args.use_ensemble)).lower(),
         "--missingness_study",
         str(bool(shared_args.missingness_study)).lower(),
         "--hp_selection_epsilon",
@@ -1032,6 +1046,7 @@ def _run_selected_models(args, modality_configs):
     print(f"Outer splits: {args.outer_splits}")
     print(f"Retrain outer: {bool(args.retrain_outer)}")
     print(f"Save inner outputs: {bool(args.save_inner)}")
+    print(f"Use ensemble predictions: {bool(args.use_ensemble)}")
     print(f"Progressive missingness study: {bool(args.missingness_study)}")
     print(f"Task type: {normalize_task_type(args.task_type)}")
     if normalize_task_type(args.task_type) == "survival":
@@ -1108,6 +1123,7 @@ def build_preprocessing_arg_parser():
     parser.add_argument("--outer_splits", required=True, type=int)
     parser.add_argument("--retrain_outer", required=True, type=_parse_bool_flag)
     parser.add_argument("--save_inner", type=_parse_bool_flag, default=False)
+    parser.add_argument("--use_ensemble", type=_parse_bool_flag, default=False)
     parser.add_argument("--missingness_study", type=_parse_bool_flag, default=True)
     parser.add_argument("--hp_selection_epsilon", type=float, default=0.02)
     parser.add_argument(

@@ -45,6 +45,34 @@ WANDB_INIT_TIMEOUT_SEC = int(os.getenv("WANDB_INIT_TIMEOUT_SEC", "180"))
 
 # ---------------------------- HELPER FUNCTIONS -----------------------------
 
+def _add_binary_ensemble_prediction_columns(row):
+    """Add probability-averaged ensemble prediction columns to a binary row."""
+    prob_items = []
+    for key, value in row.items():
+        key_str = str(key)
+        if not (key_str.startswith("inner_model_") and key_str.endswith("_prob")):
+            continue
+        try:
+            model_idx = int(key_str.split("_")[2])
+            prob_value = float(value)
+        except (ValueError, TypeError):
+            continue
+        if np.isfinite(prob_value):
+            prob_items.append((model_idx, prob_value))
+
+    if not prob_items:
+        return row
+
+    prob_items.sort(key=lambda item: item[0])
+    probs = np.asarray([value for _, value in prob_items], dtype=float)
+    ensemble_prob = float(np.mean(probs))
+    clipped_prob = float(np.clip(ensemble_prob, 1e-12, 1.0 - 1e-12))
+    row["ensemble_prob"] = ensemble_prob
+    row["ensemble_logit"] = float(np.log(clipped_prob / (1.0 - clipped_prob)))
+    row["ensemble_pred_label"] = int(ensemble_prob >= 0.5)
+    row["ensemble_n_models"] = int(probs.size)
+    return row
+
 # Function to transform outer test with each inner train scaler
 def _transform_modalities_with_fitted_scalers(dfs_raw, scalers, patient_id_col="patient"):
     """Apply pre-fitted per-modality scalers to raw modality dataframes."""
@@ -531,6 +559,7 @@ def _evaluate_retained_inner_models_on_outer_test(
     epsilon,
     best_mean_metric,
     task_config,
+    use_ensemble=False,
 ):
     outer_results = []
     test_prediction_rows = []
@@ -709,21 +738,36 @@ def _evaluate_retained_inner_models_on_outer_test(
                             for bin_idx, bin_value in enumerate(np.asarray(r_value).reshape(-1)):
                                 row[f"inner_model_{model_idx}_{modality_name}_R_bin_{bin_idx}"] = float(bin_value)
 
+            if bool(use_ensemble) and not _is_survival(task_config):
+                _add_binary_ensemble_prediction_columns(row)
             per_patient_prediction_rows.append(row)
 
         test_prediction_rows.extend(per_patient_prediction_rows)
 
         if _is_survival(task_config):
+            outer_metric_source = "mean_retained_inner_models"
             mean_outer_metrics = {
                 "LOSS": float(np.mean([float(metrics["LOSS"]) for metrics in model_outer_metrics])),
                 "CINDEX": float(np.mean([float(metrics["CINDEX"]) for metrics in model_outer_metrics])),
             }
+        elif bool(use_ensemble):
+            ensemble_probs = np.mean(
+                [np.asarray(pred_out["probs"], dtype=float) for pred_out in model_outputs],
+                axis=0,
+            )
+            mean_outer_metrics = safe_task_metrics(
+                task_config,
+                y_true=np.asarray(ref_targets, dtype=int),
+                y_prob=ensemble_probs,
+            )
+            outer_metric_source = "probability_averaged_ensemble"
         else:
             metric_names = ["LOGLOSS", "AUC", "AUCPR", "ACC", "SEN", "SP", "MCC"]
             mean_outer_metrics = {
                 name: float(np.mean([float(metrics[name]) for metrics in model_outer_metrics]))
                 for name in metric_names
             }
+            outer_metric_source = "mean_retained_inner_models"
 
         result_row = {
             "outer_fold": outer_fold_idx,
@@ -733,7 +777,7 @@ def _evaluate_retained_inner_models_on_outer_test(
             "inner_models_count": int(len(selected_candidates)),
             "selected_inner_hp_names": str(best_hp_row["hp_name"]),
             "hp_selection_epsilon": float(epsilon),
-            "outer_test_metric_source": "mean_retained_inner_models",
+            "outer_test_metric_source": outer_metric_source,
             "outer_refit_epochs": np.nan,
         }
         result_row[f"selected_inner_mean_{primary_metric_key}"] = float(
@@ -788,6 +832,7 @@ def nested_cv(
     hp_selection_epsilon=0.02,
     missingness_study=True,
     fixed_distillation_student_missing_prop=None,
+    use_ensemble=False,
 ):
     wandb_active = bool(wandb_enabled and wandb is not None)
     if wandb_enabled and wandb is None:
@@ -1468,6 +1513,8 @@ def nested_cv(
                         row["inner_model_1_logit"] = logit_value
                         row["inner_model_1_prob"] = prob_value
                         row["inner_model_1_pred_label"] = pred_label
+                        if bool(use_ensemble):
+                            _add_binary_ensemble_prediction_columns(row)
                     if model_name_l in {"pam", "dipam"} and pred_out["pam_details"] is not None:
                         for modality_idx, modality_name in enumerate(modality_names):
                             row[f"inner_model_1_{modality_name}_alpha"] = float(
@@ -1547,6 +1594,7 @@ def nested_cv(
                     epsilon=epsilon,
                     best_mean_metric=best_mean_metric,
                     task_config=task_config,
+                    use_ensemble=bool(use_ensemble),
                 )
                 saved_inner_outer_results.extend(inner_outer_results)
                 saved_inner_test_prediction_rows.extend(inner_test_prediction_rows)
@@ -1596,6 +1644,7 @@ def nested_cv(
                 epsilon=epsilon,
                 best_mean_metric=best_mean_metric,
                 task_config=task_config,
+                use_ensemble=bool(use_ensemble),
             )
             outer_results.extend(inner_outer_results)
             test_prediction_rows.extend(inner_test_prediction_rows)
