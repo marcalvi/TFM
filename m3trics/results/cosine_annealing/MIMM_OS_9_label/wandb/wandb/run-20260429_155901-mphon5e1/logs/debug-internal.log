@@ -1,0 +1,12 @@
+{"time":"2026-04-29T15:59:01.882993852+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-29T15:59:02.155833152+02:00","level":"INFO","msg":"stream: created new stream","id":"mphon5e1"}
+{"time":"2026-04-29T15:59:02.155875802+02:00","level":"INFO","msg":"handler: started","stream_id":"mphon5e1"}
+{"time":"2026-04-29T15:59:02.158766782+02:00","level":"INFO","msg":"stream: started","id":"mphon5e1"}
+{"time":"2026-04-29T15:59:02.158772332+02:00","level":"INFO","msg":"writer: started","stream_id":"mphon5e1"}
+{"time":"2026-04-29T15:59:02.158782072+02:00","level":"INFO","msg":"sender: started","stream_id":"mphon5e1"}
+{"time":"2026-04-29T15:59:05.367873301+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-29T15:59:06.021102179+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-29T15:59:06.023245078+02:00","level":"INFO","msg":"stream: closing","id":"mphon5e1"}
+{"time":"2026-04-29T15:59:06.023252018+02:00","level":"INFO","msg":"handler: closed","stream_id":"mphon5e1"}
+{"time":"2026-04-29T15:59:06.023822438+02:00","level":"INFO","msg":"sender: closed","stream_id":"mphon5e1"}
+{"time":"2026-04-29T15:59:06.023826378+02:00","level":"INFO","msg":"stream: closed","id":"mphon5e1"}

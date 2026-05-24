@@ -1,0 +1,17 @@
+{"time":"2026-05-04T16:20:41.191317579+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-04T16:20:41.464295035+02:00","level":"INFO","msg":"stream: created new stream","id":"xbkpx19e"}
+{"time":"2026-05-04T16:20:41.464345485+02:00","level":"INFO","msg":"handler: started","stream_id":"xbkpx19e"}
+{"time":"2026-05-04T16:20:41.469727912+02:00","level":"INFO","msg":"stream: started","id":"xbkpx19e"}
+{"time":"2026-05-04T16:20:41.469747722+02:00","level":"INFO","msg":"writer: started","stream_id":"xbkpx19e"}
+{"time":"2026-05-04T16:20:41.469759632+02:00","level":"INFO","msg":"sender: started","stream_id":"xbkpx19e"}
+{"time":"2026-05-04T16:21:11.471087252+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2026-05-04T16:21:43.690199332+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2026-05-04T16:22:18.359337936+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2026-05-04T16:22:57.31575413+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2026-05-04T16:23:41.564726237+02:00","level":"INFO","msg":"stream: closing","id":"xbkpx19e"}
+{"time":"2026-05-04T16:23:45.493618072+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2026-05-04T16:24:49.986774302+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2026-05-04T16:26:18.520575852+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-04T16:26:18.520609782+02:00","level":"INFO","msg":"handler: closed","stream_id":"xbkpx19e"}
+{"time":"2026-05-04T16:26:18.522203753+02:00","level":"INFO","msg":"sender: closed","stream_id":"xbkpx19e"}
+{"time":"2026-05-04T16:26:18.522210543+02:00","level":"INFO","msg":"stream: closed","id":"xbkpx19e"}

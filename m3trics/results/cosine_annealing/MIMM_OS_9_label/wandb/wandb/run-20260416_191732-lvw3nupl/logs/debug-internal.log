@@ -1,0 +1,13 @@
+{"time":"2026-04-16T19:17:32.320749418+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-16T19:17:32.635320392+02:00","level":"INFO","msg":"stream: created new stream","id":"lvw3nupl"}
+{"time":"2026-04-16T19:17:32.635380832+02:00","level":"INFO","msg":"handler: started","stream_id":"lvw3nupl"}
+{"time":"2026-04-16T19:17:32.638338462+02:00","level":"INFO","msg":"stream: started","id":"lvw3nupl"}
+{"time":"2026-04-16T19:17:32.638365632+02:00","level":"INFO","msg":"writer: started","stream_id":"lvw3nupl"}
+{"time":"2026-04-16T19:17:32.638371322+02:00","level":"INFO","msg":"sender: started","stream_id":"lvw3nupl"}
+{"time":"2026-04-16T19:17:33.848676912+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-16T19:18:34.416243529+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/ZI_MLP_MIMM/lvw3nupl/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-04-16T19:18:39.382905897+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-16T19:18:39.384361337+02:00","level":"INFO","msg":"stream: closing","id":"lvw3nupl"}
+{"time":"2026-04-16T19:18:39.384368127+02:00","level":"INFO","msg":"handler: closed","stream_id":"lvw3nupl"}
+{"time":"2026-04-16T19:18:39.384830777+02:00","level":"INFO","msg":"sender: closed","stream_id":"lvw3nupl"}
+{"time":"2026-04-16T19:18:39.384834337+02:00","level":"INFO","msg":"stream: closed","id":"lvw3nupl"}

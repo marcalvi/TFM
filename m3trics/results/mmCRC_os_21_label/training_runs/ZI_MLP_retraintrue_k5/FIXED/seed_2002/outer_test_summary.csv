@@ -1,7 +1,0 @@
-<<<<<<< HEAD:methods/results/mmCRC_os_21_label/training_runs/ZI_MLP_retraintrue_k5/FIXED/seed_2002/outer_test_summary.csv
-outer_test_metric_source,outer_test_AUC_mean,outer_test_AUC_std,outer_test_AUCPR_mean,outer_test_AUCPR_std,outer_test_ACC_mean,outer_test_ACC_std,outer_test_SEN_mean,outer_test_SEN_std,outer_test_SP_mean,outer_test_SP_std,outer_test_MCC_mean,outer_test_MCC_std,outer_test_LOGLOSS_mean,outer_test_LOGLOSS_std
-outer_refit_model,0.6077677224736048,0.11844755123770555,0.7072633027232794,0.060732228537826435,0.5535632183908046,0.08801400938223415,0.8,0.141665818574027,0.2230769230769231,0.1357855126916573,0.051170911383579806,0.23285454129378436,0.674862934986557,0.012101537899509926
-=======
-outer_test_metric_source,outer_test_LOGLOSS_mean,outer_test_LOGLOSS_std,outer_test_AUC_mean,outer_test_AUC_std,outer_test_AUCPR_mean,outer_test_AUCPR_std,outer_test_ACC_mean,outer_test_ACC_std,outer_test_SEN_mean,outer_test_SEN_std,outer_test_SP_mean,outer_test_SP_std,outer_test_MCC_mean,outer_test_MCC_std,seed
-outer_refit_model,0.6798397724983224,0.0124366275573112,0.5837104072398189,0.0906008779563378,0.6856592128476202,0.0804375960031844,0.5912068965517242,0.0544700644542225,0.738235294117647,0.2455022466766702,0.3926282051282052,0.310657349874041,0.1661447376155851,0.1441194727192679,2002
->>>>>>> cffde97b5fddc09d377f4de60bda781e5a7395f2:m3trics/results/mmCRC_os_21_label/training_runs/ZI_MLP_retraintrue_k5/FIXED/seed_2002/outer_test_summary.csv

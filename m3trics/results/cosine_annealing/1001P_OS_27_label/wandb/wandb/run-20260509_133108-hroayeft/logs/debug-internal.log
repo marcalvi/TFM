@@ -1,0 +1,14 @@
+{"time":"2026-05-09T13:31:08.463663356+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-09T13:31:08.750690369+02:00","level":"INFO","msg":"stream: created new stream","id":"hroayeft"}
+{"time":"2026-05-09T13:31:08.750782262+02:00","level":"INFO","msg":"handler: started","stream_id":"hroayeft"}
+{"time":"2026-05-09T13:31:08.754894909+02:00","level":"INFO","msg":"stream: started","id":"hroayeft"}
+{"time":"2026-05-09T13:31:08.754941798+02:00","level":"INFO","msg":"writer: started","stream_id":"hroayeft"}
+{"time":"2026-05-09T13:31:08.754979359+02:00","level":"INFO","msg":"sender: started","stream_id":"hroayeft"}
+{"time":"2026-05-09T13:31:09.443404929+02:00","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":182}
+{"time":"2026-05-09T13:31:09.444513403+02:00","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":12}
+{"time":"2026-05-09T13:31:10.168744804+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-09T13:31:10.411133815+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-09T13:31:10.415189786+02:00","level":"INFO","msg":"stream: closing","id":"hroayeft"}
+{"time":"2026-05-09T13:31:10.415207038+02:00","level":"INFO","msg":"handler: closed","stream_id":"hroayeft"}
+{"time":"2026-05-09T13:31:10.416368201+02:00","level":"INFO","msg":"sender: closed","stream_id":"hroayeft"}
+{"time":"2026-05-09T13:31:10.416379813+02:00","level":"INFO","msg":"stream: closed","id":"hroayeft"}

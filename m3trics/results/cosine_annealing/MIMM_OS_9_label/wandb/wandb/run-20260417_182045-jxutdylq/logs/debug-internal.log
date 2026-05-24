@@ -1,0 +1,15 @@
+{"time":"2026-04-17T18:20:45.914046548+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-17T18:20:46.728392824+02:00","level":"INFO","msg":"stream: created new stream","id":"jxutdylq"}
+{"time":"2026-04-17T18:20:46.728437694+02:00","level":"INFO","msg":"handler: started","stream_id":"jxutdylq"}
+{"time":"2026-04-17T18:20:46.732201532+02:00","level":"INFO","msg":"stream: started","id":"jxutdylq"}
+{"time":"2026-04-17T18:20:46.732207492+02:00","level":"INFO","msg":"writer: started","stream_id":"jxutdylq"}
+{"time":"2026-04-17T18:20:46.732208902+02:00","level":"INFO","msg":"sender: started","stream_id":"jxutdylq"}
+{"time":"2026-04-17T18:20:48.681488236+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-17T18:21:47.057611515+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/HealNet_MIMM/jxutdylq/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-04-17T18:22:53.013061351+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/HealNet_MIMM/jxutdylq/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-04-17T18:23:53.413401095+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/HealNet_MIMM/jxutdylq/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-04-17T18:24:35.49131153+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-17T18:24:35.492795898+02:00","level":"INFO","msg":"stream: closing","id":"jxutdylq"}
+{"time":"2026-04-17T18:24:35.492802568+02:00","level":"INFO","msg":"handler: closed","stream_id":"jxutdylq"}
+{"time":"2026-04-17T18:24:35.493276387+02:00","level":"INFO","msg":"sender: closed","stream_id":"jxutdylq"}
+{"time":"2026-04-17T18:24:35.493284117+02:00","level":"INFO","msg":"stream: closed","id":"jxutdylq"}
