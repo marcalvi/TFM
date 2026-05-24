@@ -1,0 +1,20 @@
+{"time":"2026-05-19T01:16:17.389303066+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-19T01:16:47.49516398+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2026-05-19T01:17:19.811106873+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2026-05-19T01:17:54.79761208+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2026-05-19T01:18:33.903054447+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2026-05-19T01:19:21.441243982+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2026-05-19T01:20:30.147432362+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2026-05-19T01:22:00.149145862+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2026-05-19T01:23:30.150099587+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2026-05-19T01:25:00.150361974+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2026-05-19T01:26:00.373654784+02:00","level":"INFO","msg":"stream: created new stream","id":"9ex1pblk"}
+{"time":"2026-05-19T01:26:00.373731553+02:00","level":"INFO","msg":"handler: started","stream_id":"9ex1pblk"}
+{"time":"2026-05-19T01:26:00.379712689+02:00","level":"INFO","msg":"stream: started","id":"9ex1pblk"}
+{"time":"2026-05-19T01:26:00.379749618+02:00","level":"INFO","msg":"writer: started","stream_id":"9ex1pblk"}
+{"time":"2026-05-19T01:26:00.379778578+02:00","level":"INFO","msg":"sender: started","stream_id":"9ex1pblk"}
+{"time":"2026-05-19T01:26:00.380076838+02:00","level":"INFO","msg":"stream: closing","id":"9ex1pblk"}
+{"time":"2026-05-19T01:26:01.613806661+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-19T01:26:01.613854651+02:00","level":"INFO","msg":"handler: closed","stream_id":"9ex1pblk"}
+{"time":"2026-05-19T01:26:01.614555459+02:00","level":"INFO","msg":"sender: closed","stream_id":"9ex1pblk"}
+{"time":"2026-05-19T01:26:01.614562749+02:00","level":"INFO","msg":"stream: closed","id":"9ex1pblk"}

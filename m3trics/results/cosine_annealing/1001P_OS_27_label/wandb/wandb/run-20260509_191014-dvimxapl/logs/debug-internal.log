@@ -1,0 +1,14 @@
+{"time":"2026-05-09T19:10:14.404837104+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-09T19:10:14.693126772+02:00","level":"INFO","msg":"stream: created new stream","id":"dvimxapl"}
+{"time":"2026-05-09T19:10:14.69324743+02:00","level":"INFO","msg":"handler: started","stream_id":"dvimxapl"}
+{"time":"2026-05-09T19:10:14.698353065+02:00","level":"INFO","msg":"stream: started","id":"dvimxapl"}
+{"time":"2026-05-09T19:10:14.698398661+02:00","level":"INFO","msg":"writer: started","stream_id":"dvimxapl"}
+{"time":"2026-05-09T19:10:14.69843524+02:00","level":"INFO","msg":"sender: started","stream_id":"dvimxapl"}
+{"time":"2026-05-09T19:10:15.105863902+02:00","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":152}
+{"time":"2026-05-09T19:10:15.106401227+02:00","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":9}
+{"time":"2026-05-09T19:10:16.27767592+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-09T19:10:16.540769692+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-09T19:10:16.544443782+02:00","level":"INFO","msg":"stream: closing","id":"dvimxapl"}
+{"time":"2026-05-09T19:10:16.544462488+02:00","level":"INFO","msg":"handler: closed","stream_id":"dvimxapl"}
+{"time":"2026-05-09T19:10:16.546101744+02:00","level":"INFO","msg":"sender: closed","stream_id":"dvimxapl"}
+{"time":"2026-05-09T19:10:16.546113867+02:00","level":"INFO","msg":"stream: closed","id":"dvimxapl"}

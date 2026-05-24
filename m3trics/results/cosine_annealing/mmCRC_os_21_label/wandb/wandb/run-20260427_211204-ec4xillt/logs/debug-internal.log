@@ -1,0 +1,14 @@
+{"time":"2026-04-27T21:12:04.610275563Z","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-27T21:12:04.895008481Z","level":"INFO","msg":"stream: created new stream","id":"ec4xillt"}
+{"time":"2026-04-27T21:12:04.895132177Z","level":"INFO","msg":"handler: started","stream_id":"ec4xillt"}
+{"time":"2026-04-27T21:12:04.898290965Z","level":"INFO","msg":"stream: started","id":"ec4xillt"}
+{"time":"2026-04-27T21:12:04.898333275Z","level":"INFO","msg":"writer: started","stream_id":"ec4xillt"}
+{"time":"2026-04-27T21:12:04.898368583Z","level":"INFO","msg":"sender: started","stream_id":"ec4xillt"}
+{"time":"2026-04-27T21:12:05.442969184Z","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":167}
+{"time":"2026-04-27T21:12:05.444815131Z","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":27}
+{"time":"2026-04-27T21:12:06.205975471Z","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-27T21:12:06.502910311Z","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-27T21:12:06.50647937Z","level":"INFO","msg":"stream: closing","id":"ec4xillt"}
+{"time":"2026-04-27T21:12:06.506506302Z","level":"INFO","msg":"handler: closed","stream_id":"ec4xillt"}
+{"time":"2026-04-27T21:12:06.507121684Z","level":"INFO","msg":"sender: closed","stream_id":"ec4xillt"}
+{"time":"2026-04-27T21:12:06.507150809Z","level":"INFO","msg":"stream: closed","id":"ec4xillt"}

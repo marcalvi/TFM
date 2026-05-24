@@ -1,0 +1,12 @@
+{"time":"2026-05-08T21:36:40.848594644+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-08T21:36:41.123515786+02:00","level":"INFO","msg":"stream: created new stream","id":"htsibo01"}
+{"time":"2026-05-08T21:36:41.123557956+02:00","level":"INFO","msg":"handler: started","stream_id":"htsibo01"}
+{"time":"2026-05-08T21:36:41.128722626+02:00","level":"INFO","msg":"stream: started","id":"htsibo01"}
+{"time":"2026-05-08T21:36:41.128774616+02:00","level":"INFO","msg":"writer: started","stream_id":"htsibo01"}
+{"time":"2026-05-08T21:36:41.128792436+02:00","level":"INFO","msg":"sender: started","stream_id":"htsibo01"}
+{"time":"2026-05-08T21:36:42.336089943+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-08T21:36:42.554428585+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-08T21:36:42.556562235+02:00","level":"INFO","msg":"stream: closing","id":"htsibo01"}
+{"time":"2026-05-08T21:36:42.556568755+02:00","level":"INFO","msg":"handler: closed","stream_id":"htsibo01"}
+{"time":"2026-05-08T21:36:42.557345665+02:00","level":"INFO","msg":"sender: closed","stream_id":"htsibo01"}
+{"time":"2026-05-08T21:36:42.557350055+02:00","level":"INFO","msg":"stream: closed","id":"htsibo01"}

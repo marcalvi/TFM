@@ -1,0 +1,12 @@
+{"time":"2026-04-18T06:52:29.304519814+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-18T06:52:29.576544298+02:00","level":"INFO","msg":"stream: created new stream","id":"istesvus"}
+{"time":"2026-04-18T06:52:29.576596478+02:00","level":"INFO","msg":"handler: started","stream_id":"istesvus"}
+{"time":"2026-04-18T06:52:29.580897723+02:00","level":"INFO","msg":"stream: started","id":"istesvus"}
+{"time":"2026-04-18T06:52:29.580930153+02:00","level":"INFO","msg":"sender: started","stream_id":"istesvus"}
+{"time":"2026-04-18T06:52:29.580925683+02:00","level":"INFO","msg":"writer: started","stream_id":"istesvus"}
+{"time":"2026-04-18T06:52:31.139335219+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-18T06:52:31.428130225+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-18T06:52:31.429737153+02:00","level":"INFO","msg":"stream: closing","id":"istesvus"}
+{"time":"2026-04-18T06:52:31.429742923+02:00","level":"INFO","msg":"handler: closed","stream_id":"istesvus"}
+{"time":"2026-04-18T06:52:31.430197993+02:00","level":"INFO","msg":"sender: closed","stream_id":"istesvus"}
+{"time":"2026-04-18T06:52:31.430201663+02:00","level":"INFO","msg":"stream: closed","id":"istesvus"}

@@ -1,0 +1,12 @@
+{"time":"2026-04-30T15:00:59.157667118+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-04-30T15:00:59.4277874+02:00","level":"INFO","msg":"stream: created new stream","id":"kfteagwa"}
+{"time":"2026-04-30T15:00:59.4278312+02:00","level":"INFO","msg":"handler: started","stream_id":"kfteagwa"}
+{"time":"2026-04-30T15:00:59.431105422+02:00","level":"INFO","msg":"stream: started","id":"kfteagwa"}
+{"time":"2026-04-30T15:00:59.431109912+02:00","level":"INFO","msg":"writer: started","stream_id":"kfteagwa"}
+{"time":"2026-04-30T15:00:59.431117822+02:00","level":"INFO","msg":"sender: started","stream_id":"kfteagwa"}
+{"time":"2026-04-30T15:01:00.372939496+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-30T15:01:00.786154784+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-04-30T15:01:00.788201429+02:00","level":"INFO","msg":"stream: closing","id":"kfteagwa"}
+{"time":"2026-04-30T15:01:00.788209219+02:00","level":"INFO","msg":"handler: closed","stream_id":"kfteagwa"}
+{"time":"2026-04-30T15:01:00.788762437+02:00","level":"INFO","msg":"sender: closed","stream_id":"kfteagwa"}
+{"time":"2026-04-30T15:01:00.788768517+02:00","level":"INFO","msg":"stream: closed","id":"kfteagwa"}
