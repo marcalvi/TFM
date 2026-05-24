@@ -120,7 +120,7 @@ RADIO_REPORT_DROP_COLS="study_date,time_to_diagnosis,source_file,report_text"
 # -----------------------------------------------------------------------------------------
 
 # Methods
-RUN_MODELS="SMILe"
+RUN_MODELS="ZI_MLP,KNN_MLP,VAE_MLP,pAM,Di-PAM,Di-MMLP,HealNet,SMILe"
 
 # Nested CV
 RETRAIN_OUTER="false"
@@ -132,11 +132,12 @@ OUTER_SPLITS=${k}
 # HPs
 HP_SELECTION_EPSILON="0.02"
 SCHEDULER_TYPE="reduce_lr_on_plateau"
-# MIN_LR="1e-6"
+MIN_LR="1e-6"
 LR_PATIENCE=6
 
 # Seeds
-SEEDS="22,2002,4,18473,55602"
+SEEDS="2002,4,18473"
+# SEEDS = "22,55602"
 MISSING_PATTERN_SEED=2026
 
 # -----------------------------------------------------------------------------------------

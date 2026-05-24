@@ -9,7 +9,7 @@ set -euo pipefail
 
 # Osiris cluster setup (VHIO)
 source /home/osiris-user/anaconda3/etc/profile.d/conda.sh
-conda activate TFM
+conda activate TFM_5090
 
 # Optional WandB configuration
 WANDB_LOGIN_KEY="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"
@@ -117,7 +117,7 @@ BLOOD_CSV="mmCRC_blood_data.csv"
 # -----------------------------------------------------------------------------------------
 
 # Methods
-RUN_MODELS="SMILe"
+RUN_MODELS="ZI_MLP,KNN_MLP,VAE_MLP,pAM,Di-PAM,Di-MMLP,HealNet,SMILe"
 
 # Nested CV
 RETRAIN_OUTER="false"
@@ -133,7 +133,8 @@ MIN_LR="1e-6"
 LR_PATIENCE=6
 
 # Seeds
-SEEDS="22,2002,4,18473,55602"
+SEEDS="2002,4,18473"
+# SEEDS = "22,55602"
 MISSING_PATTERN_SEED=2026
 
 # -----------------------------------------------------------------------------------------
@@ -147,7 +148,7 @@ MISSING_PATTERN_SEED=2026
 # -----------------------------------------------------------------------------------------
 
 MISSINGNESS_STUDY="true"
-MISSING_LOCATION="global"
+DEGRADING_MODALITY="global"
 TRAIN_MISSING_PROP="0.0,0.25,0.5,0.75"
 TEST_MISSING_PROP="0.0,0.25,0.5,0.75"
 
