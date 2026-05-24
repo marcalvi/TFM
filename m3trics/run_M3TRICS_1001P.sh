@@ -123,7 +123,7 @@ RADIO_REPORT_DROP_COLS="study_date,time_to_diagnosis,source_file,report_text"
 RUN_MODELS="SMILe"
 
 # Nested CV
-RETRAIN_OUTER="true"
+RETRAIN_OUTER="false"
 SAVE_INNER="true"
 k=5
 INNER_SPLITS=${k}
@@ -132,8 +132,8 @@ OUTER_SPLITS=${k}
 # HPs
 HP_SELECTION_EPSILON="0.02"
 SCHEDULER_TYPE="reduce_lr_on_plateau"
-MIN_LR="1e-6"
-LR_PATIENCE=5
+# MIN_LR="1e-6"
+LR_PATIENCE=6
 
 # Seeds
 SEEDS="22,2002,4,18473,55602"
