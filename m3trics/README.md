@@ -171,6 +171,7 @@ Select models, CV folds, seeds, scheduler and hyperparameter-selection behavior.
 RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, Di-MMLP, HealNet, SMILe"
 RETRAIN_OUTER="true"
 SAVE_INNER="true"
+USE_ENSEMBLE="true"
 k=5
 INNER_SPLITS=${k}
 OUTER_SPLITS=${k}
@@ -193,6 +194,7 @@ Nested-CV behavior:
 - `RETRAIN_OUTER="true"`: select HPs in inner CV, then refit on the full outer-train split and evaluate on outer-test.
 - `RETRAIN_OUTER="false"`: retain selected inner-fold models and evaluate them on outer-test.
 - `SAVE_INNER="true"`: when `RETRAIN_OUTER=true`, also saves retained-inner outputs under the matching `retrainfalse` directory.
+- `USE_ENSEMBLE="true"`: stores probability-averaged ensemble columns in `test_predictions.csv`; analysis notebooks can use `ensemble_prob` as one replicate per seed and outer fold.
 
 ### 5. Task Configuration
 
@@ -297,7 +299,7 @@ Typical CSVs inside each seed folder:
 | `inner_epoch_history.csv` | Per-epoch learning curves. |
 | `outer_test_metrics.csv` | Outer-test metrics. |
 | `outer_test_summary.csv` | Aggregated outer-test summary. |
-| `test_predictions.csv` | Patient-level predictions and model outputs. |
+| `test_predictions.csv` | Patient-level predictions and model outputs. When `USE_ENSEMBLE=true`, also includes `ensemble_prob`, `ensemble_logit`, `ensemble_pred_label`, and `ensemble_n_models`. |
 | `splits_manifest.csv` | Outer/inner split membership. |
 
 ## 5. Analyze Results
@@ -366,6 +368,7 @@ DATASET_NAME = "mmCRC"
 LABEL_NAME = "OS_21_label"
 TRAIN_DEGRADING_MODALITY = "GLOBAL"
 RETRAIN_OUTER = True
+USE_ENSEMBLE = True
 ```
 
 For fixed-dataset analysis, make sure the notebook is pointed to `results_mode='fixed_dataset'` or uses the provided fixed-dataset helper cells.

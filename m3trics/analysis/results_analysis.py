@@ -166,7 +166,28 @@ def _list_inner_model_prob_cols(df: pd.DataFrame):
     return cols
 
 
-def normalize_prediction_df(pred_df: pd.DataFrame):
+def add_ensemble_prediction_columns(pred_df: pd.DataFrame):
+    """Return a copy with probability-averaged ensemble prediction columns."""
+    out = pred_df.copy()
+    prob_cols = [col for _, col in _list_inner_model_prob_cols(out)]
+    if not prob_cols:
+        raise ValueError('Cannot compute ensemble predictions because no inner_model_*_prob columns were found.')
+
+    prob_df = out[prob_cols].apply(pd.to_numeric, errors='coerce')
+    ensemble_prob = prob_df.mean(axis=1, skipna=True)
+    ensemble_n_models = prob_df.notna().sum(axis=1)
+
+    out['ensemble_prob'] = ensemble_prob
+    out['ensemble_n_models'] = ensemble_n_models.astype(int)
+    clipped_prob = np.clip(ensemble_prob.astype(float), 1e-12, 1.0 - 1e-12)
+    out['ensemble_logit'] = np.log(clipped_prob / (1.0 - clipped_prob))
+    out.loc[ensemble_n_models.eq(0), ['ensemble_prob', 'ensemble_logit']] = np.nan
+    out['ensemble_pred_label'] = (out['ensemble_prob'].astype(float) >= 0.5).astype('Int64')
+    out.loc[out['ensemble_prob'].isna(), 'ensemble_pred_label'] = pd.NA
+    return out
+
+
+def normalize_prediction_df(pred_df: pd.DataFrame, use_ensemble: bool = False):
     out = pred_df.copy()
     legacy_column_map = {
         'train_missing_location': 'train_degrading_modality',
@@ -189,7 +210,10 @@ def normalize_prediction_df(pred_df: pd.DataFrame):
         raise ValueError(f'Missing required prediction columns: {missing_cols}')
 
     inner_prob_cols = _list_inner_model_prob_cols(out)
-    if not inner_prob_cols:
+    if bool(use_ensemble):
+        if 'ensemble_prob' not in out.columns:
+            out = add_ensemble_prediction_columns(out)
+    elif not inner_prob_cols:
         raise ValueError('No inner_model_*_prob columns found in prediction dataframe.')
 
     if 'outer_eval_target' in out.columns:
@@ -200,6 +224,15 @@ def normalize_prediction_df(pred_df: pd.DataFrame):
     out['train_missing_prop'] = out['train_missing_prop'].astype(float)
     out['test_missing_prop'] = out['test_missing_prop'].astype(float)
     out['y_true'] = out['y_true'].astype(int)
+    if bool(use_ensemble):
+        out['ensemble_prob'] = out['ensemble_prob'].astype(float)
+        if 'ensemble_logit' in out.columns:
+            out['ensemble_logit'] = out['ensemble_logit'].astype(float)
+        if 'ensemble_n_models' in out.columns:
+            out['ensemble_n_models'] = pd.to_numeric(
+                out['ensemble_n_models'],
+                errors='coerce',
+            ).fillna(0).astype(int)
     if 'seed' not in out.columns:
         out['seed'] = np.nan
     if 'outer_fold' not in out.columns:
@@ -207,7 +240,7 @@ def normalize_prediction_df(pred_df: pd.DataFrame):
     return out.reset_index(drop=True)
 
 
-def load_all_test_predictions(results_root: Path, dataset_name: str, train_degrading_modality: str = 'GLOBAL', model_names=None, retrain_outer=None, results_mode: str = 'decay'):
+def load_all_test_predictions(results_root: Path, dataset_name: str, train_degrading_modality: str = 'GLOBAL', model_names=None, retrain_outer=None, results_mode: str = 'decay', use_ensemble: bool = False):
     frames = []
     missing_prediction_files = []
     for source in list_model_sources(
@@ -239,23 +272,40 @@ def load_all_test_predictions(results_root: Path, dataset_name: str, train_degra
 
     if not frames:
         return pd.DataFrame(), missing_prediction_files
-    return normalize_prediction_df(pd.concat(frames, ignore_index=True)), missing_prediction_files
+    return normalize_prediction_df(pd.concat(frames, ignore_index=True), use_ensemble=use_ensemble), missing_prediction_files
 
 
-def expand_inner_model_predictions(pred_df: pd.DataFrame):
+def expand_inner_model_predictions(pred_df: pd.DataFrame, use_ensemble: bool = False):
     if pred_df.empty:
         return pd.DataFrame()
 
-    prob_cols = _list_inner_model_prob_cols(pred_df)
-    rows = []
     base_cols = [
         'model_name', 'patient', 'train_missing_prop', 'test_missing_prop', 'y_true',
         'seed', 'outer_fold'
     ]
+
+    if bool(use_ensemble):
+        if 'ensemble_prob' not in pred_df.columns:
+            pred_df = add_ensemble_prediction_columns(pred_df)
+        long_df = pred_df[base_cols + ['ensemble_prob']].copy()
+        long_df = long_df.rename(columns={'ensemble_prob': 'member_prob'})
+        long_df['inner_model_idx'] = 0
+        long_df['prediction_source'] = 'ensemble'
+        long_df['replicate_id'] = (
+            long_df['seed'].astype(str)
+            + '|outer_' + long_df['outer_fold'].astype(str)
+            + '|ensemble'
+        )
+        long_df['member_prob'] = long_df['member_prob'].astype(float)
+        return long_df.dropna(subset=['member_prob']).reset_index(drop=True)
+
+    prob_cols = _list_inner_model_prob_cols(pred_df)
+    rows = []
     for member_idx, prob_col in prob_cols:
         sub_df = pred_df[base_cols + [prob_col]].copy()
         sub_df = sub_df.rename(columns={prob_col: 'member_prob'})
         sub_df['inner_model_idx'] = int(member_idx)
+        sub_df['prediction_source'] = 'inner_model'
         sub_df['replicate_id'] = (
             sub_df['seed'].astype(str)
             + '|outer_' + sub_df['outer_fold'].astype(str)
@@ -273,9 +323,13 @@ def aggregate_member_patient_predictions(member_pred_df: pd.DataFrame):
     if member_pred_df.empty:
         return pd.DataFrame()
 
+    if 'prediction_source' not in member_pred_df.columns:
+        member_pred_df = member_pred_df.copy()
+        member_pred_df['prediction_source'] = 'inner_model'
+
     group_cols = [
         'model_name', 'train_missing_prop', 'test_missing_prop', 'seed', 'outer_fold',
-        'inner_model_idx', 'replicate_id', 'patient', 'y_true'
+        'prediction_source', 'inner_model_idx', 'replicate_id', 'patient', 'y_true'
     ]
     counts_df = (
         member_pred_df
@@ -287,7 +341,7 @@ def aggregate_member_patient_predictions(member_pred_df: pd.DataFrame):
     if not duplicated_df.empty:
         sample_rows = duplicated_df.head(10).to_dict(orient='records')
         raise ValueError(
-            'Found duplicated predictions for the same seed x outer_fold x inner_model x patient x missingness cell. '
+            'Found duplicated predictions for the same seed x outer_fold x replicate x patient x missingness cell. '
             'This notebook does not collapse them into a single predictor. Sample duplicated groups: '
             f'{sample_rows}'
         )
@@ -297,7 +351,7 @@ def aggregate_member_patient_predictions(member_pred_df: pd.DataFrame):
         .copy()
         .sort_values([
             'model_name', 'train_missing_prop', 'test_missing_prop', 'seed', 'outer_fold',
-            'inner_model_idx', 'patient'
+            'prediction_source', 'inner_model_idx', 'patient'
         ])
         .reset_index(drop=True)
     )
@@ -355,13 +409,16 @@ def bootstrap_mean_ci(values, n_bootstrap=2000, confidence=0.95, random_seed=42)
 def build_replicate_auc_table(member_patient_df: pd.DataFrame):
     if member_patient_df.empty:
         return pd.DataFrame()
+    if 'prediction_source' not in member_patient_df.columns:
+        member_patient_df = member_patient_df.copy()
+        member_patient_df['prediction_source'] = 'inner_model'
     rows = []
     group_cols = [
         'model_name', 'train_missing_prop', 'test_missing_prop', 'seed', 'outer_fold',
-        'inner_model_idx', 'replicate_id'
+        'prediction_source', 'inner_model_idx', 'replicate_id'
     ]
     for key, group_df in member_patient_df.groupby(group_cols, sort=True):
-        model_name, train_prop, test_prop, seed, outer_fold, inner_idx, replicate_id = key
+        model_name, train_prop, test_prop, seed, outer_fold, prediction_source, inner_idx, replicate_id = key
         auc_val = safe_auc(group_df['y_true'].to_numpy(), group_df['member_prob'].to_numpy())
         rows.append({
             'model_name': model_name,
@@ -369,13 +426,15 @@ def build_replicate_auc_table(member_patient_df: pd.DataFrame):
             'test_missing_prop': float(test_prop),
             'seed': seed,
             'outer_fold': outer_fold,
+            'prediction_source': str(prediction_source),
             'inner_model_idx': int(inner_idx),
             'replicate_id': str(replicate_id),
             'n_patients': int(group_df['patient'].nunique()),
             'auc': auc_val,
         })
     return pd.DataFrame(rows).sort_values([
-        'model_name', 'train_missing_prop', 'test_missing_prop', 'seed', 'outer_fold', 'inner_model_idx'
+        'model_name', 'train_missing_prop', 'test_missing_prop', 'seed', 'outer_fold',
+        'prediction_source', 'inner_model_idx'
     ]).reset_index(drop=True)
 
 

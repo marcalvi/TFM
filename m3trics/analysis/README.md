@@ -12,7 +12,7 @@ These notebooks currently cover classification results only. Modality-specific d
 
 ## MM Decay / Progressive Missingness Study
 
-`MM_decay_analysis.ipynb` studies how each method behaves as missingness increases. The replicate unit depends on the execution mode: retained inner models use seed, outer fold, and inner model index, while outer-retrained models use seed and outer fold. The notebook expands the stored predictions, computes replicate AUCs, aggregates them by missingness condition, and then builds rankings and statistical comparisons. Distillation methods are explicitly configured through `DISTILLATION_MODEL_NAMES`; they are excluded from Train-time AUPMC and Train degradation coefficient because train-time missingness is applied to the student while the teacher receives complete modality information.
+`MM_decay_analysis.ipynb` studies how each method behaves as missingness increases. The replicate unit depends on the execution mode. With `USE_ENSEMBLE=false`, retained inner models use seed, outer fold, and inner model index, while outer-retrained models use seed and outer fold. With `USE_ENSEMBLE=true`, the notebook uses `ensemble_prob` as one probability-averaged replicate per seed and outer fold. The notebook expands the stored predictions, computes replicate AUCs, aggregates them by missingness condition, and then builds rankings and statistical comparisons. Distillation methods are explicitly configured through `DISTILLATION_MODEL_NAMES`; they are excluded from Train-time AUPMC and Train degradation coefficient because train-time missingness is applied to the student while the teacher receives complete modality information.
 
 ### Method-Level Curves
 
@@ -28,7 +28,7 @@ The method-level tables summarize behavior into technical AUPMC metrics and degr
 
 Main outputs:
 
-- `replicate_auc_table.csv`: replicate-level AUCs used as the statistical unit.
+- `replicate_auc_table.csv`: replicate-level AUCs used as the statistical unit; when `USE_ENSEMBLE=true`, these are computed from `ensemble_prob`.
 - `method_condition_mean_auc_summary.csv`: mean AUC and confidence intervals per method and missingness condition.
 - `method_level_metrics.csv`: Baseline AUC, Train-time AUPMC, Train degradation coefficient, Test-time AUPMC, Test degradation coefficient, Best-adapted AUPMC, and Minimum degradation coefficient.
 - `method_metric_orderings.csv`: ranking/order table for each summary metric.
