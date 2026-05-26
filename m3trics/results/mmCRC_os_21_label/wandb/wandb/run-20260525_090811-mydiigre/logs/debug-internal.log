@@ -1,0 +1,12 @@
+{"time":"2026-05-25T09:08:11.63922943+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-25T09:08:11.917933499+02:00","level":"INFO","msg":"stream: created new stream","id":"mydiigre"}
+{"time":"2026-05-25T09:08:11.917973699+02:00","level":"INFO","msg":"handler: started","stream_id":"mydiigre"}
+{"time":"2026-05-25T09:08:11.922594777+02:00","level":"INFO","msg":"stream: started","id":"mydiigre"}
+{"time":"2026-05-25T09:08:11.922620537+02:00","level":"INFO","msg":"writer: started","stream_id":"mydiigre"}
+{"time":"2026-05-25T09:08:11.922622767+02:00","level":"INFO","msg":"sender: started","stream_id":"mydiigre"}
+{"time":"2026-05-25T09:08:13.881508655+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-25T09:08:14.107040696+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-25T09:08:14.10943443+02:00","level":"INFO","msg":"stream: closing","id":"mydiigre"}
+{"time":"2026-05-25T09:08:14.10944125+02:00","level":"INFO","msg":"handler: closed","stream_id":"mydiigre"}
+{"time":"2026-05-25T09:08:14.109826968+02:00","level":"INFO","msg":"sender: closed","stream_id":"mydiigre"}
+{"time":"2026-05-25T09:08:14.109832978+02:00","level":"INFO","msg":"stream: closed","id":"mydiigre"}

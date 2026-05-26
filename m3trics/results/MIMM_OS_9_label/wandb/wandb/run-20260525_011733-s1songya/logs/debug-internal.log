@@ -1,0 +1,12 @@
+{"time":"2026-05-25T01:17:33.668125668+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-25T01:17:33.942269895+02:00","level":"INFO","msg":"stream: created new stream","id":"s1songya"}
+{"time":"2026-05-25T01:17:33.942325215+02:00","level":"INFO","msg":"handler: started","stream_id":"s1songya"}
+{"time":"2026-05-25T01:17:33.946153481+02:00","level":"INFO","msg":"stream: started","id":"s1songya"}
+{"time":"2026-05-25T01:17:33.946164751+02:00","level":"INFO","msg":"writer: started","stream_id":"s1songya"}
+{"time":"2026-05-25T01:17:33.946189301+02:00","level":"INFO","msg":"sender: started","stream_id":"s1songya"}
+{"time":"2026-05-25T01:17:34.872723378+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-25T01:17:35.071615572+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-25T01:17:35.07399853+02:00","level":"INFO","msg":"stream: closing","id":"s1songya"}
+{"time":"2026-05-25T01:17:35.07400433+02:00","level":"INFO","msg":"handler: closed","stream_id":"s1songya"}
+{"time":"2026-05-25T01:17:35.07443325+02:00","level":"INFO","msg":"sender: closed","stream_id":"s1songya"}
+{"time":"2026-05-25T01:17:35.07443754+02:00","level":"INFO","msg":"stream: closed","id":"s1songya"}
