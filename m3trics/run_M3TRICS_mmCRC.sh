@@ -117,7 +117,7 @@ BLOOD_CSV="mmCRC_blood_data.csv"
 # -----------------------------------------------------------------------------------------
 
 # Methods
-RUN_MODELS="ZI_MLP,KNN_MLP,VAE_MLP,pAM,Di-PAM,Di-MMLP,HealNet,SMILe"
+RUN_MODELS="Di-PAM,Di-MMLP,HealNet,SMILe"
 
 # Nested CV
 RETRAIN_OUTER="false"
@@ -134,8 +134,8 @@ MIN_LR="1e-6"
 LR_PATIENCE=6
 
 # Seeds
-SEEDS="2002,4,18473"
-# SEEDS = "22,55602"
+# SEEDS="2002,4,18473"
+SEEDS="22,55602"
 MISSING_PATTERN_SEED=2026
 
 # -----------------------------------------------------------------------------------------
