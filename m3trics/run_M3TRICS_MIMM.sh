@@ -119,7 +119,7 @@ RADIO_REPORT_CSV="radioreports_mimm.csv"
 # -----------------------------------------------------------------------------------------
 
 # Methods
-RUN_MODELS="Di-PAM,Di-MMLP,HealNet,SMILe"
+RUN_MODELS="ZI_MLP"
 
 # Nested CV
 RETRAIN_OUTER="false"
@@ -152,7 +152,7 @@ MISSING_PATTERN_SEED=2026
 
 MISSINGNESS_STUDY="true"
 DEGRADING_MODALITY="global"
-TRAIN_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
+TRAIN_MISSING_PROP="0.4,0.6,0.8"
 TEST_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
 
 # -----------------------------------------------------------------------------------------
