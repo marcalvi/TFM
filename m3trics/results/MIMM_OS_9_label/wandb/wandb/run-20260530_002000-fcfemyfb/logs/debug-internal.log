@@ -1,0 +1,12 @@
+{"time":"2026-05-30T00:20:00.912568307+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-30T00:20:01.187001248+02:00","level":"INFO","msg":"stream: created new stream","id":"fcfemyfb"}
+{"time":"2026-05-30T00:20:01.187049618+02:00","level":"INFO","msg":"handler: started","stream_id":"fcfemyfb"}
+{"time":"2026-05-30T00:20:01.191110639+02:00","level":"INFO","msg":"stream: started","id":"fcfemyfb"}
+{"time":"2026-05-30T00:20:01.191119319+02:00","level":"INFO","msg":"writer: started","stream_id":"fcfemyfb"}
+{"time":"2026-05-30T00:20:01.191132539+02:00","level":"INFO","msg":"sender: started","stream_id":"fcfemyfb"}
+{"time":"2026-05-30T00:20:02.269007147+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-30T00:20:02.529127309+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-30T00:20:02.531320459+02:00","level":"INFO","msg":"stream: closing","id":"fcfemyfb"}
+{"time":"2026-05-30T00:20:02.531329809+02:00","level":"INFO","msg":"handler: closed","stream_id":"fcfemyfb"}
+{"time":"2026-05-30T00:20:02.531863299+02:00","level":"INFO","msg":"sender: closed","stream_id":"fcfemyfb"}
+{"time":"2026-05-30T00:20:02.531868389+02:00","level":"INFO","msg":"stream: closed","id":"fcfemyfb"}

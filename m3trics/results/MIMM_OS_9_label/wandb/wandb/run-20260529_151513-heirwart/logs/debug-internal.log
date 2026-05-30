@@ -1,0 +1,12 @@
+{"time":"2026-05-29T15:15:13.164641339+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-29T15:15:13.436063665+02:00","level":"INFO","msg":"stream: created new stream","id":"heirwart"}
+{"time":"2026-05-29T15:15:13.436122494+02:00","level":"INFO","msg":"handler: started","stream_id":"heirwart"}
+{"time":"2026-05-29T15:15:13.440896417+02:00","level":"INFO","msg":"stream: started","id":"heirwart"}
+{"time":"2026-05-29T15:15:13.440925107+02:00","level":"INFO","msg":"writer: started","stream_id":"heirwart"}
+{"time":"2026-05-29T15:15:13.440935977+02:00","level":"INFO","msg":"sender: started","stream_id":"heirwart"}
+{"time":"2026-05-29T15:15:14.603185611+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-29T15:15:14.796671108+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-29T15:15:14.798636174+02:00","level":"INFO","msg":"stream: closing","id":"heirwart"}
+{"time":"2026-05-29T15:15:14.798642164+02:00","level":"INFO","msg":"handler: closed","stream_id":"heirwart"}
+{"time":"2026-05-29T15:15:14.799056034+02:00","level":"INFO","msg":"sender: closed","stream_id":"heirwart"}
+{"time":"2026-05-29T15:15:14.799060164+02:00","level":"INFO","msg":"stream: closed","id":"heirwart"}

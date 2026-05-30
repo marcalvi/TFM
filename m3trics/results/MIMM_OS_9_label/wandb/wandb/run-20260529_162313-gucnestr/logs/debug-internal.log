@@ -1,0 +1,12 @@
+{"time":"2026-05-29T16:23:13.620203423+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-29T16:23:13.993747386+02:00","level":"INFO","msg":"stream: created new stream","id":"gucnestr"}
+{"time":"2026-05-29T16:23:13.993797936+02:00","level":"INFO","msg":"handler: started","stream_id":"gucnestr"}
+{"time":"2026-05-29T16:23:13.996968377+02:00","level":"INFO","msg":"stream: started","id":"gucnestr"}
+{"time":"2026-05-29T16:23:13.996987557+02:00","level":"INFO","msg":"writer: started","stream_id":"gucnestr"}
+{"time":"2026-05-29T16:23:13.997005917+02:00","level":"INFO","msg":"sender: started","stream_id":"gucnestr"}
+{"time":"2026-05-29T16:23:15.706797463+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-29T16:23:15.920546689+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-29T16:23:15.92234443+02:00","level":"INFO","msg":"stream: closing","id":"gucnestr"}
+{"time":"2026-05-29T16:23:15.92235076+02:00","level":"INFO","msg":"handler: closed","stream_id":"gucnestr"}
+{"time":"2026-05-29T16:23:15.92300525+02:00","level":"INFO","msg":"sender: closed","stream_id":"gucnestr"}
+{"time":"2026-05-29T16:23:15.92300885+02:00","level":"INFO","msg":"stream: closed","id":"gucnestr"}
