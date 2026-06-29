@@ -1131,11 +1131,12 @@ def _apply_fingerprint_hp_override(model_config, fingerprint_overrides):
             f"Available fingerprint grids: {available}"
         )
 
+    fixed_args = dict(spec.get("fixed_args", {}) or {})
     suggested_args = dict(spec.get("args", {}) or {})
     paired_groups = _parse_fingerprint_paired_groups(suggested_args.pop("paired_hp_groups", ""))
 
     overridden = {key: value for key, value in dict(model_config).items()}
-    overridden["fixed_args"] = {}
+    overridden["fixed_args"] = fixed_args
     overridden["hp_grid_args"] = {}
     overridden["args"] = suggested_args
     overridden["paired_args"] = paired_groups

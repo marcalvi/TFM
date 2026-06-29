@@ -332,6 +332,85 @@ def _normalise_hp_display_name(hp_name: str) -> str:
     return re.sub(r'trmiss[^_]*_degmod[^_]*$', '', str(hp_name)).rstrip('_')
 
 
+def _base_model_name(model_name: str) -> str:
+    """Normalise dashboard method names to their underlying model family."""
+    name = str(model_name or '').strip()
+    if name.endswith('_KD'):
+        name = name[:-3]
+    name_l = name.lower().replace('-', '_')
+    for prefix in ('zi_', 'knn_'):
+        if name_l.startswith(prefix):
+            name_l = name_l[len(prefix):]
+            break
+    aliases = {
+        'lr': 'lr',
+        'logistic_regression': 'lr',
+        'rf': 'rf',
+        'random_forest': 'rf',
+        'coxnet': 'coxnet',
+        'rsf': 'rsf',
+        'mlp': 'mlp',
+        'mmlp': 'mlp',
+        'vae_mlp': 'mlp',
+        'pam': 'pam',
+        'healnet': 'healnet',
+        'smile': 'smile',
+        'smile_e': 'smile',
+    }
+    return aliases.get(name_l, name_l)
+
+
+def _reportable_hp_columns(model_name: str) -> set[str] | None:
+    """
+    Return HP columns that are meaningful for the selected method family.
+
+    Sklearn baselines carry generic training columns in inner_hp_eval.csv because
+    the runner uses a common interface. Those values are fixed runtime
+    placeholders, not searched hyperparameters, so they should not define HP
+    signatures or dashboard columns for those methods.
+    """
+    family = _base_model_name(model_name)
+    common_neural = {
+        'batch_size', 'learning_rate', 'weight_decay',
+        'distill_alpha', 'distill_beta', 'knowledge_distillation',
+    }
+    if family == 'lr':
+        return {'lr_C', 'lr_penalty', 'lr_solver', 'lr_class_weight', 'lr_max_iter'}
+    if family == 'rf':
+        return {
+            'rf_n_estimators', 'rf_max_depth', 'rf_min_samples_split',
+            'rf_min_samples_leaf', 'rf_max_features', 'rf_class_weight', 'rf_n_jobs',
+        }
+    if family == 'coxnet':
+        return {'coxnet_alpha', 'coxnet_l1_ratio', 'coxnet_max_iter', 'coxnet_tol'}
+    if family == 'rsf':
+        return {
+            'rsf_n_estimators', 'rsf_max_depth', 'rsf_min_samples_split',
+            'rsf_min_samples_leaf', 'rsf_max_features', 'rsf_n_jobs',
+        }
+    if family == 'pam':
+        return common_neural | {'pam_dropout', 'pam_temperature'}
+    if family == 'healnet':
+        return common_neural | {
+            'healnet_depth', 'healnet_num_freq_bands', 'healnet_num_latents',
+            'healnet_latent_dim', 'healnet_cross_heads', 'healnet_latent_heads',
+            'healnet_cross_dim_head', 'healnet_latent_dim_head',
+            'healnet_attn_dropout', 'healnet_ff_dropout', 'healnet_self_per_cross_attn',
+        }
+    if family == 'smile':
+        return common_neural | {
+            'smil_e_latent_dim', 'smil_e_num_priors', 'smil_e_num_heads',
+            'smil_e_dropout', 'classifier_hidden_dim', 'smil_e_alpha', 'smil_e_beta',
+            'meta_inner_lr', 'meta_val_fraction',
+        }
+    if family == 'mlp':
+        return common_neural | {
+            'modality_hidden_layers', 'fusion_hidden_dim', 'fusion_hidden_layers',
+            'fusion_batchnorm', 'dropout',
+        }
+    return None
+
+
 def compute_hp_selection_summary(
     results_dir: Path,
     ds_key: str,
@@ -389,6 +468,7 @@ def compute_hp_selection_summary(
                     continue
 
                 # Map normalised hp_name -> parameter values from the full evaluated grid.
+                allowed_cols = _reportable_hp_columns(model_name)
                 for row in _read_csv(seed_dir / 'inner_hp_eval.csv'):
                     hp_name = str(row.get('hp_name') or row.get('name') or '').strip()
                     if not hp_name:
@@ -399,6 +479,8 @@ def compute_hp_selection_summary(
                         params = {}
                         for col, val in row.items():
                             if col in excluded_cols or any(col.startswith(p) for p in excluded_prefixes):
+                                continue
+                            if allowed_cols is not None and col not in allowed_cols:
                                 continue
                             fmt = _fmt_hp_value(val)
                             if fmt is not None:

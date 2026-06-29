@@ -448,26 +448,31 @@ def suggest_grid_for_method(method: str, fp: DatasetFingerprint, max_combination
         rationale.append("Imbalanced endpoint/event distribution: include class-balanced sklearn baselines.")
 
     if family == "LR":
-        args = {
+        fixed_args = {
             "epochs": "1",
             "early_stopping_patience": "1",
             "batch_size": "64",
             "learning_rate": "1.0",
             "weight_decay": "0.0",
+            "imputation_method": "knn" if method.startswith("KNN") else "zero",
+        }
+        args = {
             "lr_C": "0.01,0.1,1.0" if ctx["high_dim"] else "0.1,1.0,10.0",
             "lr_penalty": "l2",
             "lr_solver": "lbfgs",
             "lr_class_weight": _comma(class_weight_values),
             "lr_max_iter": "1000",
-            "imputation_method": "knn" if method.startswith("KNN") else "zero",
         }
     elif family == "RF":
-        args = {
+        fixed_args = {
             "epochs": "1",
             "early_stopping_patience": "1",
             "batch_size": "64",
             "learning_rate": "1.0",
             "weight_decay": "0.0",
+            "imputation_method": "knn" if method.startswith("KNN") else "zero",
+        }
+        args = {
             "rf_n_estimators": "200,500" if not ctx["tiny_n"] else "200",
             "rf_max_depth": "3,5,none" if ctx["small_n"] or ctx["high_dim"] else "5,10,none",
             "rf_min_samples_split": "2",
@@ -475,37 +480,41 @@ def suggest_grid_for_method(method: str, fp: DatasetFingerprint, max_combination
             "rf_max_features": "sqrt",
             "rf_class_weight": _comma(class_weight_values),
             "rf_n_jobs": "-1",
-            "imputation_method": "knn" if method.startswith("KNN") else "zero",
         }
     elif family == "CoxNet":
-        args = {
+        fixed_args = {
             "epochs": "1",
             "early_stopping_patience": "1",
             "batch_size": "64",
             "learning_rate": "1.0",
             "weight_decay": "0.0",
+            "imputation_method": "knn" if method.startswith("KNN") else "zero",
+        }
+        args = {
             "coxnet_alpha": "0.01,0.1,1.0" if ctx["high_dim"] else "0.001,0.01,0.1",
             "coxnet_l1_ratio": "0.1,0.5" if ctx["high_dim"] else "0.1,0.5,0.9",
             "coxnet_max_iter": "100000",
             "coxnet_tol": "1e-7",
-            "imputation_method": "knn" if method.startswith("KNN") else "zero",
         }
     elif family == "RSF":
-        args = {
+        fixed_args = {
             "epochs": "1",
             "early_stopping_patience": "1",
             "batch_size": "64",
             "learning_rate": "1.0",
             "weight_decay": "0.0",
+            "imputation_method": "knn" if method.startswith("KNN") else "zero",
+        }
+        args = {
             "rsf_n_estimators": "100,300" if not ctx["tiny_n"] else "100",
             "rsf_max_depth": "3,5" if ctx["small_n"] or ctx["high_dim"] else "5,none",
             "rsf_min_samples_split": "6",
             "rsf_min_samples_leaf": "3,5",
             "rsf_max_features": "sqrt",
             "rsf_n_jobs": "-1",
-            "imputation_method": "knn" if method.startswith("KNN") else "zero",
         }
     elif family == "pAM":
+        fixed_args = {}
         args = {
             "epochs": "80",
             "early_stopping_patience": "20",
@@ -517,6 +526,7 @@ def suggest_grid_for_method(method: str, fp: DatasetFingerprint, max_combination
         }
     elif family == "HealNet":
         latents = [8, 16] if ctx["small_n"] or ctx["high_dim"] else [16, 32]
+        fixed_args = {}
         args = {
             "epochs": "100",
             "early_stopping_patience": "20",
@@ -538,6 +548,7 @@ def suggest_grid_for_method(method: str, fp: DatasetFingerprint, max_combination
         }
     elif family == "SMILe":
         latent = [8, 16] if ctx["small_n"] or ctx["high_dim"] else [16, 32]
+        fixed_args = {}
         args = {
             "epochs": "80",
             "early_stopping_patience": "20",
@@ -556,6 +567,7 @@ def suggest_grid_for_method(method: str, fp: DatasetFingerprint, max_combination
             "paired_hp_groups": "learning_rate:meta_inner_lr",
         }
     else:  # MLP family
+        fixed_args = {}
         args = {
             "epochs": "80",
             "early_stopping_patience": "20",
@@ -577,6 +589,7 @@ def suggest_grid_for_method(method: str, fp: DatasetFingerprint, max_combination
     return {
         "family": family,
         "combination_count": count,
+        "fixed_args": fixed_args,
         "args": capped,
         "rationale": rationale + cap_notes,
     }

@@ -2862,7 +2862,11 @@ function rHpSelection(){
     String(a.hp_combination||'').localeCompare(String(b.hp_combination||'')));
 
   const baseCols=new Set(['model_name','hp_combination','train_prop','selected_count','selection_events','selected_pct']);
-  const preferred=['batch_size','learning_rate','weight_decay','dropout',
+  const preferred=['lr_C','lr_penalty','lr_solver','lr_class_weight','lr_max_iter',
+    'rf_n_estimators','rf_max_depth','rf_min_samples_split','rf_min_samples_leaf','rf_max_features','rf_class_weight',
+    'coxnet_alpha','coxnet_l1_ratio','coxnet_max_iter','coxnet_tol',
+    'rsf_n_estimators','rsf_max_depth','rsf_min_samples_split','rsf_min_samples_leaf','rsf_max_features',
+    'batch_size','learning_rate','weight_decay','dropout',
     'modality_hidden_layers','fusion_hidden_dim','fusion_hidden_layers','fusion_batchnorm',
     'distill_alpha','distill_beta','vae_latent_dim','knn_neighbors',
     'n_estimators','max_depth','l1_ratio','alpha'];
@@ -2878,6 +2882,12 @@ function rHpSelection(){
   ];
   const label=k=>{
     const explicit={
+      lr_C:'C',lr_penalty:'Penalty',lr_solver:'Solver',lr_class_weight:'Class weight',lr_max_iter:'Max iter',
+      rf_n_estimators:'Trees',rf_max_depth:'Max depth',rf_min_samples_split:'Min split',
+      rf_min_samples_leaf:'Min leaf',rf_max_features:'Max features',rf_class_weight:'Class weight',
+      coxnet_alpha:'Alpha',coxnet_l1_ratio:'L1 ratio',coxnet_max_iter:'Max iter',coxnet_tol:'Tolerance',
+      rsf_n_estimators:'Trees',rsf_max_depth:'Max depth',rsf_min_samples_split:'Min split',
+      rsf_min_samples_leaf:'Min leaf',rsf_max_features:'Max features',
       batch_size:'Batch size',learning_rate:'LR',weight_decay:'Weight decay',
       modality_hidden_layers:'Modality layers',fusion_hidden_dim:'Fusion dim',
       fusion_hidden_layers:'Fusion layers',fusion_batchnorm:'Fusion BN',
