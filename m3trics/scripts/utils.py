@@ -16,14 +16,18 @@ def normalize_model_name(model_name):
     """Map CLI model names/aliases to a canonical lowercase identifier."""
     name = str(model_name).strip().lower()
     compact = name.replace("_", "").replace("-", "")
+    if compact in {"lr", "logisticregression", "logreg"}:
+        return "lr"
+    if compact in {"rf", "randomforest", "randomforestclassifier", "randomforestbaseline"}:
+        return "rf"
+    if compact in {"coxnet", "coxnetbaseline"}:
+        return "coxnet"
+    if compact in {"rsf", "randomsurvivalforest", "randomsurvivalforestbaseline"}:
+        return "rsf"
     if compact == "mlp":
         return "mlp"
     if compact == "pam":
         return "pam"
-    if compact == "dipam":
-        return "dipam"
-    if compact == "dimmlp":
-        return "di_mmlp"
     if compact in {"smile", "smilee", "smilextended"}:
         return "smil_e"
     if compact in {"metasmile", "metasmilee", "metasmilextended"}:
@@ -154,12 +158,72 @@ def _format_training_control_suffix(cfg):
     return f"_wd{wd_str}"
 
 
+def _append_distillation_suffix(name, cfg):
+    if not bool(cfg.get("knowledge_distillation", False)):
+        return name
+    alpha_str = str(cfg.get("distill_alpha", 1.0)).replace(".", "p")
+    beta_str = str(cfg.get("distill_beta", 0.3)).replace(".", "p")
+    return f"{name}_kd_a{alpha_str}_b{beta_str}"
+
+
 # Format hp_name for runs' names
 def _format_hp_name(cfg, train_missing_pct, degrading_modality, model_name):
     model_name = normalize_model_name(model_name)
     lr_str = f"{cfg['learning_rate']:.0e}"
     bs_str = str(cfg["batch_size"])
     training_suffix = _format_training_control_suffix(cfg)
+    if model_name in {"lr"}:
+        c_str = f"{float(cfg['lr_C']):g}".replace(".", "p")
+        penalty_str = str(cfg["lr_penalty"]).replace("_", "")
+        solver_str = str(cfg["lr_solver"]).replace("_", "")
+        cw_str = str(cfg["lr_class_weight"]).replace("_", "")
+        return (
+            f"C{c_str}_"
+            f"pen{penalty_str}_"
+            f"solver{solver_str}_"
+            f"cw{cw_str}_"
+            f"maxit{int(cfg['lr_max_iter'])}_"
+            f"trmiss{train_missing_pct}_"
+            f"degmod{degrading_modality}"
+        )
+    if model_name in {"rf"}:
+        depth_str = str(cfg["rf_max_depth"]).replace("_", "").replace(".", "p")
+        features_str = str(cfg["rf_max_features"]).replace("_", "").replace(".", "p")
+        cw_str = str(cfg["rf_class_weight"]).replace("_", "")
+        return (
+            f"trees{int(cfg['rf_n_estimators'])}_"
+            f"depth{depth_str}_"
+            f"split{int(cfg['rf_min_samples_split'])}_"
+            f"leaf{int(cfg['rf_min_samples_leaf'])}_"
+            f"feat{features_str}_"
+            f"cw{cw_str}_"
+            f"trmiss{train_missing_pct}_"
+            f"degmod{degrading_modality}"
+        )
+    if model_name in {"coxnet"}:
+        alpha_str = f"{float(cfg['coxnet_alpha']):g}".replace(".", "p")
+        l1_str = f"{float(cfg['coxnet_l1_ratio']):g}".replace(".", "p")
+        tol_str = f"{float(cfg['coxnet_tol']):.0e}"
+        return (
+            f"alpha{alpha_str}_"
+            f"l1{l1_str}_"
+            f"maxit{int(cfg['coxnet_max_iter'])}_"
+            f"tol{tol_str}_"
+            f"trmiss{train_missing_pct}_"
+            f"degmod{degrading_modality}"
+        )
+    if model_name in {"rsf"}:
+        depth_str = str(cfg["rsf_max_depth"]).replace("_", "").replace(".", "p")
+        features_str = str(cfg["rsf_max_features"]).replace("_", "").replace(".", "p")
+        return (
+            f"trees{int(cfg['rsf_n_estimators'])}_"
+            f"depth{depth_str}_"
+            f"split{int(cfg['rsf_min_samples_split'])}_"
+            f"leaf{int(cfg['rsf_min_samples_leaf'])}_"
+            f"feat{features_str}_"
+            f"trmiss{train_missing_pct}_"
+            f"degmod{degrading_modality}"
+        )
     if model_name in {"pam"}:
         dropout_str = str(cfg["pam_dropout"]).replace(".", "p")
         temp_str = str(cfg["pam_temperature"]).replace(".", "p")
@@ -168,44 +232,6 @@ def _format_hp_name(cfg, train_missing_pct, degrading_modality, model_name):
             f"bs{bs_str}_"
             f"drop{dropout_str}_"
             f"temp{temp_str}_"
-            f"{training_suffix}"
-            f"trmiss{train_missing_pct}_"
-            f"degmod{degrading_modality}"
-        )
-    if model_name in {"dipam"}:
-        dropout_str = str(cfg["pam_dropout"]).replace(".", "p")
-        temp_str = str(cfg["pam_temperature"]).replace(".", "p")
-        alpha_str = str(cfg["distill_alpha"]).replace(".", "p")
-        beta_str = str(cfg["distill_beta"]).replace(".", "p")
-        return (
-            f"lr{lr_str}_"
-            f"bs{bs_str}_"
-            f"drop{dropout_str}_"
-            f"temp{temp_str}_"
-            f"a{alpha_str}_"
-            f"b{beta_str}_"
-            f"{training_suffix}"
-            f"trmiss{train_missing_pct}_"
-            f"degmod{degrading_modality}"
-        )
-    if model_name in {"di_mmlp"}:
-        fusion_str = str(cfg["fusion_hidden_dim"])
-        modality_layers_str = str(cfg["modality_hidden_layers"])
-        fusion_layers_str = str(cfg["fusion_hidden_layers"])
-        fusion_bn_str = "1" if bool(cfg.get("fusion_batchnorm", False)) else "0"
-        dropout_str = str(cfg["dropout"]).replace(".", "p")
-        alpha_str = str(cfg["distill_alpha"]).replace(".", "p")
-        beta_str = str(cfg["distill_beta"]).replace(".", "p")
-        return (
-            f"lr{lr_str}_"
-            f"bs{bs_str}_"
-            f"modL{modality_layers_str}_"
-            f"fusion{fusion_str}_"
-            f"fusionL{fusion_layers_str}_"
-            f"fusionBN{fusion_bn_str}_"
-            f"drop{dropout_str}_"
-            f"a{alpha_str}_"
-            f"b{beta_str}_"
             f"{training_suffix}"
             f"trmiss{train_missing_pct}_"
             f"degmod{degrading_modality}"
@@ -301,6 +327,194 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
     hp_configs = []
     seen = set()
 
+    if model_name in {"lr"}:
+        lr_C_values = parse_value_or_list(args.lr_C, float)
+        lr_penalties = parse_value_or_list(args.lr_penalty, str, to_lower=True)
+        lr_solvers = parse_value_or_list(args.lr_solver, str, to_lower=True)
+        lr_class_weights = parse_value_or_list(args.lr_class_weight, str, to_lower=True)
+        lr_max_iters = parse_value_or_list(args.lr_max_iter, int)
+
+        for bs, lr, weight_decay, lr_C, lr_penalty, lr_solver, lr_class_weight, lr_max_iter in product(
+            batch_sizes,
+            learning_rates,
+            weight_decays,
+            lr_C_values,
+            lr_penalties,
+            lr_solvers,
+            lr_class_weights,
+            lr_max_iters,
+        ):
+            cfg = {
+                "batch_size": int(bs),
+                "learning_rate": float(lr),
+                "weight_decay": float(weight_decay),
+                "lr_C": float(lr_C),
+                "lr_penalty": str(lr_penalty),
+                "lr_solver": str(lr_solver),
+                "lr_class_weight": str(lr_class_weight),
+                "lr_max_iter": int(lr_max_iter),
+            }
+            key = (
+                cfg["batch_size"],
+                cfg["learning_rate"],
+                cfg["weight_decay"],
+                cfg["lr_C"],
+                cfg["lr_penalty"],
+                cfg["lr_solver"],
+                cfg["lr_class_weight"],
+                cfg["lr_max_iter"],
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            cfg["name"] = _format_hp_name(
+                cfg, train_missing_pct, degrading_modality, model_name=model_name
+            )
+            hp_configs.append(cfg)
+
+    if model_name in {"rf"}:
+        rf_n_estimators = parse_value_or_list(args.rf_n_estimators, int)
+        rf_max_depths = parse_value_or_list(args.rf_max_depth, str, to_lower=True)
+        rf_min_samples_splits = parse_value_or_list(args.rf_min_samples_split, int)
+        rf_min_samples_leafs = parse_value_or_list(args.rf_min_samples_leaf, int)
+        rf_max_features = parse_value_or_list(args.rf_max_features, str, to_lower=True)
+        rf_class_weights = parse_value_or_list(args.rf_class_weight, str, to_lower=True)
+        rf_n_jobs = parse_value_or_list(args.rf_n_jobs, int)
+
+        for bs, lr, weight_decay, n_estimators, max_depth, min_split, min_leaf, max_features, class_weight, n_jobs in product(
+            batch_sizes,
+            learning_rates,
+            weight_decays,
+            rf_n_estimators,
+            rf_max_depths,
+            rf_min_samples_splits,
+            rf_min_samples_leafs,
+            rf_max_features,
+            rf_class_weights,
+            rf_n_jobs,
+        ):
+            cfg = {
+                "batch_size": int(bs),
+                "learning_rate": float(lr),
+                "weight_decay": float(weight_decay),
+                "rf_n_estimators": int(n_estimators),
+                "rf_max_depth": str(max_depth),
+                "rf_min_samples_split": int(min_split),
+                "rf_min_samples_leaf": int(min_leaf),
+                "rf_max_features": str(max_features),
+                "rf_class_weight": str(class_weight),
+                "rf_n_jobs": int(n_jobs),
+            }
+            key = (
+                cfg["batch_size"],
+                cfg["learning_rate"],
+                cfg["weight_decay"],
+                cfg["rf_n_estimators"],
+                cfg["rf_max_depth"],
+                cfg["rf_min_samples_split"],
+                cfg["rf_min_samples_leaf"],
+                cfg["rf_max_features"],
+                cfg["rf_class_weight"],
+                cfg["rf_n_jobs"],
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            cfg["name"] = _format_hp_name(
+                cfg, train_missing_pct, degrading_modality, model_name=model_name
+            )
+            hp_configs.append(cfg)
+
+    if model_name in {"coxnet"}:
+        coxnet_alphas = parse_value_or_list(args.coxnet_alpha, float)
+        coxnet_l1_ratios = parse_value_or_list(args.coxnet_l1_ratio, float)
+        coxnet_max_iters = parse_value_or_list(args.coxnet_max_iter, int)
+        coxnet_tols = parse_value_or_list(args.coxnet_tol, float)
+
+        for bs, lr, weight_decay, alpha, l1_ratio, max_iter, tol in product(
+            batch_sizes,
+            learning_rates,
+            weight_decays,
+            coxnet_alphas,
+            coxnet_l1_ratios,
+            coxnet_max_iters,
+            coxnet_tols,
+        ):
+            cfg = {
+                "batch_size": int(bs),
+                "learning_rate": float(lr),
+                "weight_decay": float(weight_decay),
+                "coxnet_alpha": float(alpha),
+                "coxnet_l1_ratio": float(l1_ratio),
+                "coxnet_max_iter": int(max_iter),
+                "coxnet_tol": float(tol),
+            }
+            key = (
+                cfg["batch_size"],
+                cfg["learning_rate"],
+                cfg["weight_decay"],
+                cfg["coxnet_alpha"],
+                cfg["coxnet_l1_ratio"],
+                cfg["coxnet_max_iter"],
+                cfg["coxnet_tol"],
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            cfg["name"] = _format_hp_name(
+                cfg, train_missing_pct, degrading_modality, model_name=model_name
+            )
+            hp_configs.append(cfg)
+
+    if model_name in {"rsf"}:
+        rsf_n_estimators = parse_value_or_list(args.rsf_n_estimators, int)
+        rsf_max_depths = parse_value_or_list(args.rsf_max_depth, str, to_lower=True)
+        rsf_min_samples_splits = parse_value_or_list(args.rsf_min_samples_split, int)
+        rsf_min_samples_leafs = parse_value_or_list(args.rsf_min_samples_leaf, int)
+        rsf_max_features = parse_value_or_list(args.rsf_max_features, str, to_lower=True)
+        rsf_n_jobs = parse_value_or_list(args.rsf_n_jobs, int)
+
+        for bs, lr, weight_decay, n_estimators, max_depth, min_split, min_leaf, max_features, n_jobs in product(
+            batch_sizes,
+            learning_rates,
+            weight_decays,
+            rsf_n_estimators,
+            rsf_max_depths,
+            rsf_min_samples_splits,
+            rsf_min_samples_leafs,
+            rsf_max_features,
+            rsf_n_jobs,
+        ):
+            cfg = {
+                "batch_size": int(bs),
+                "learning_rate": float(lr),
+                "weight_decay": float(weight_decay),
+                "rsf_n_estimators": int(n_estimators),
+                "rsf_max_depth": str(max_depth),
+                "rsf_min_samples_split": int(min_split),
+                "rsf_min_samples_leaf": int(min_leaf),
+                "rsf_max_features": str(max_features),
+                "rsf_n_jobs": int(n_jobs),
+            }
+            key = (
+                cfg["batch_size"],
+                cfg["learning_rate"],
+                cfg["weight_decay"],
+                cfg["rsf_n_estimators"],
+                cfg["rsf_max_depth"],
+                cfg["rsf_min_samples_split"],
+                cfg["rsf_min_samples_leaf"],
+                cfg["rsf_max_features"],
+                cfg["rsf_n_jobs"],
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            cfg["name"] = _format_hp_name(
+                cfg, train_missing_pct, degrading_modality, model_name=model_name
+            )
+            hp_configs.append(cfg)
+
     if model_name in {"pam"}:
         pam_dropouts = parse_value_or_list(args.pam_dropout, float)
         temperatures = parse_value_or_list(args.pam_temperature, float)
@@ -325,98 +539,6 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
                 cfg["weight_decay"],
                 cfg["pam_dropout"],
                 cfg["pam_temperature"],
-            )
-            if key in seen:
-                continue
-            seen.add(key)
-            cfg["name"] = _format_hp_name(
-                cfg, train_missing_pct, degrading_modality, model_name=model_name
-            )
-            hp_configs.append(cfg)
-    if model_name in {"dipam"}:
-        pam_dropouts = parse_value_or_list(args.pam_dropout, float)
-        temperatures = parse_value_or_list(args.pam_temperature, float)
-        distill_alphas = parse_value_or_list(args.distill_alpha, float)
-        distill_betas = parse_value_or_list(args.distill_beta, float)
-
-        for bs, lr, weight_decay, dropout, temp, alpha, beta in product(
-            batch_sizes,
-            learning_rates,
-            weight_decays,
-            pam_dropouts,
-            temperatures,
-            distill_alphas,
-            distill_betas,
-        ):
-            cfg = {
-                "batch_size": int(bs),
-                "learning_rate": float(lr),
-                "weight_decay": float(weight_decay),
-                "pam_dropout": float(dropout),
-                "pam_temperature": float(temp),
-                "distill_alpha": float(alpha),
-                "distill_beta": float(beta),
-            }
-            key = (
-                cfg["batch_size"],
-                cfg["learning_rate"],
-                cfg["weight_decay"],
-                cfg["pam_dropout"],
-                cfg["pam_temperature"],
-                cfg["distill_alpha"],
-                cfg["distill_beta"],
-            )
-            if key in seen:
-                continue
-            seen.add(key)
-            cfg["name"] = _format_hp_name(
-                cfg, train_missing_pct, degrading_modality, model_name=model_name
-            )
-            hp_configs.append(cfg)
-    if model_name in {"di_mmlp"}:
-        modality_hidden_layers = parse_value_or_list(args.modality_hidden_layers, int)
-        fusion_hidden_dims = parse_value_or_list(args.fusion_hidden_dim, int)
-        fusion_hidden_layers = parse_value_or_list(args.fusion_hidden_layers, int)
-        fusion_batchnorm_values = parse_bool_value_or_list(args.fusion_batchnorm)
-        dropouts = parse_value_or_list(args.dropout, float)
-        distill_alphas = parse_value_or_list(args.distill_alpha, float)
-        distill_betas = parse_value_or_list(args.distill_beta, float)
-
-        for bs, lr, weight_decay, mod_layers, fusion_dim, fusion_layers, fusion_batchnorm, dropout, alpha, beta in product(
-            batch_sizes,
-            learning_rates,
-            weight_decays,
-            modality_hidden_layers,
-            fusion_hidden_dims,
-            fusion_hidden_layers,
-            fusion_batchnorm_values,
-            dropouts,
-            distill_alphas,
-            distill_betas,
-        ):
-            cfg = {
-                "batch_size": int(bs),
-                "learning_rate": float(lr),
-                "weight_decay": float(weight_decay),
-                "modality_hidden_layers": int(mod_layers),
-                "fusion_hidden_dim": int(fusion_dim),
-                "fusion_hidden_layers": int(fusion_layers),
-                "fusion_batchnorm": bool(fusion_batchnorm),
-                "dropout": float(dropout),
-                "distill_alpha": float(alpha),
-                "distill_beta": float(beta),
-            }
-            key = (
-                cfg["batch_size"],
-                cfg["learning_rate"],
-                cfg["weight_decay"],
-                cfg["modality_hidden_layers"],
-                cfg["fusion_hidden_dim"],
-                cfg["fusion_hidden_layers"],
-                cfg["fusion_batchnorm"],
-                cfg["dropout"],
-                cfg["distill_alpha"],
-                cfg["distill_beta"],
             )
             if key in seen:
                 continue
@@ -658,6 +780,24 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
 
     if not hp_configs:
         raise ValueError("No hyperparameter combinations were generated.")
+
+    if bool(getattr(args, "knowledge_distillation", False)):
+        if model_name in {"lr", "rf", "coxnet", "rsf"}:
+            raise ValueError("Knowledge distillation is available only for torch models, not sklearn baselines.")
+        if model_name in {"smil_e"}:
+            raise ValueError("Knowledge distillation is not enabled for SMILe because it uses a dedicated meta-learning training loop.")
+        distill_alphas = parse_value_or_list(args.distill_alpha, float)
+        distill_betas = parse_value_or_list(args.distill_beta, float)
+        expanded_configs = []
+        for base_cfg in hp_configs:
+            for alpha, beta in product(distill_alphas, distill_betas):
+                cfg = dict(base_cfg)
+                cfg["knowledge_distillation"] = True
+                cfg["distill_alpha"] = float(alpha)
+                cfg["distill_beta"] = float(beta)
+                cfg["name"] = _append_distillation_suffix(str(base_cfg["name"]), cfg)
+                expanded_configs.append(cfg)
+        hp_configs = expanded_configs
 
     return hp_configs
 
@@ -942,17 +1082,25 @@ def safe_survival_metrics(
 
 # Helper function to build model based on name and input dimensions
 def build_model(model_name, input_dims, model_kwargs):
-    from models import MultimodalMLP, DiMMLP, PAM, DiPAM, SMILE, HealNetBinaryWrapper
+    from models import MultimodalMLP, PAM, SMILE, HealNetBinaryWrapper
 
     model_name = normalize_model_name(model_name)
+    if model_name in {"lr"}:
+        raise ValueError(
+            "Logistic regression is a sklearn baseline handled directly in scripts/train_ncv.py."
+        )
+    if model_name in {"rf"}:
+        raise ValueError(
+            "Random forest classification is a sklearn baseline handled directly in scripts/train_ncv.py."
+        )
+    if model_name in {"coxnet", "rsf"}:
+        raise ValueError(
+            "CoxNet and Random Survival Forest are sksurv baselines handled directly in scripts/train_ncv.py."
+        )
     if model_name in {"mlp"}:
         return MultimodalMLP(input_dims, **model_kwargs)
-    if model_name in {"di_mmlp"}:
-        return DiMMLP(input_dims, **model_kwargs)
     if model_name in {"pam"}:
         return PAM(input_dims, **model_kwargs)
-    if model_name in {"dipam"}:
-        return DiPAM(input_dims, **model_kwargs)
     if model_name in {"smil_e"}:
         init_kwargs = dict(model_kwargs or {})
         for key in {"meta_inner_lr", "meta_val_fraction", "meta_inner_steps"}:
@@ -961,7 +1109,7 @@ def build_model(model_name, input_dims, model_kwargs):
     if model_name in {"healnet"}:
         return HealNetBinaryWrapper(input_dims, **model_kwargs)
     raise ValueError(
-        f"Unsupported model '{model_name}'. Supported: mlp, di_mmlp, pam, dipam, smile, healnet"
+        f"Unsupported model '{model_name}'. Supported: lr, coxnet, rsf, mlp, pam, smile, healnet"
     )
 
 

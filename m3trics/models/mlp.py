@@ -82,7 +82,7 @@ class MultimodalMLP(nn.Module):
             in_dim = fusion_hidden_dim
         self.fusion_output = nn.Linear(fusion_hidden_dim, self.output_dim)
 
-    def forward(self, Xs, present_mask=None, return_aux=False):
+    def forward(self, Xs, present_mask=None, return_aux=False, kd=False):
         if len(Xs) != self.n_modalities:
             raise ValueError(f"Expected {self.n_modalities} modalities, got {len(Xs)}")
 
@@ -119,6 +119,9 @@ class MultimodalMLP(nn.Module):
             hidden = dropout(hidden)
 
         logits = self.fusion_output(hidden)
-        if return_aux:
-            return logits, final_pre_activation
+        if return_aux or kd:
+            return logits, {
+                "fusion_feature": fused,
+                "hidden_feature": final_pre_activation if final_pre_activation is not None else hidden,
+            }
         return logits

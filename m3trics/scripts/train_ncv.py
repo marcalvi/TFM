@@ -24,6 +24,7 @@ from scripts.utils import (
     safe_binary_metrics,
     safe_task_metrics,
     select_device,
+    concordance_index_censored,
     fit_and_transform_modalities,
     set_global_seed,
     normalize_model_name,
@@ -72,6 +73,393 @@ def _add_binary_ensemble_prediction_columns(row):
     row["ensemble_pred_label"] = int(ensemble_prob >= 0.5)
     row["ensemble_n_models"] = int(probs.size)
     return row
+
+
+class _ConstantBinaryClassifier:
+    """Fallback binary classifier used when a fold contains only one class."""
+
+    def __init__(self, positive_probability):
+        self.positive_probability = float(np.clip(positive_probability, 1e-7, 1.0 - 1e-7))
+
+    def predict_proba(self, X):
+        n_rows = int(np.asarray(X).shape[0])
+        pos = np.full(n_rows, self.positive_probability, dtype=np.float64)
+        neg = 1.0 - pos
+        return np.column_stack([neg, pos])
+
+
+def _is_lr_model(model_name_l):
+    return normalize_model_name(model_name_l) == "lr"
+
+
+def _is_sklearn_classification_model(model_name_l):
+    return normalize_model_name(model_name_l) in {"lr", "rf"}
+
+
+def _is_sklearn_survival_model(model_name_l):
+    return normalize_model_name(model_name_l) in {"coxnet", "rsf"}
+
+
+def _is_sklearn_baseline_model(model_name_l):
+    return normalize_model_name(model_name_l) in {"lr", "rf", "coxnet", "rsf"}
+
+
+def _normalize_lr_class_weight(raw_value):
+    value = str(raw_value).strip().lower()
+    if value in {"none", "null", "", "false"}:
+        return None
+    if value == "balanced":
+        return "balanced"
+    raise ValueError("lr_class_weight must be one of: none, balanced")
+
+
+def _build_lr_kwargs_from_hp_cfg(hp_cfg):
+    return {
+        "C": float(hp_cfg.get("lr_C", 1.0)),
+        "penalty": str(hp_cfg.get("lr_penalty", "l2")).strip().lower(),
+        "solver": str(hp_cfg.get("lr_solver", "lbfgs")).strip().lower(),
+        "class_weight": _normalize_lr_class_weight(hp_cfg.get("lr_class_weight", "none")),
+        "max_iter": int(hp_cfg.get("lr_max_iter", 1000)),
+    }
+
+
+def _normalize_rf_class_weight(raw_value):
+    value = str(raw_value).strip().lower()
+    if value in {"none", "null", "", "false"}:
+        return None
+    if value == "balanced":
+        return "balanced"
+    raise ValueError("rf_class_weight must be one of: none, balanced")
+
+
+def _parse_optional_int(raw_value):
+    value = str(raw_value).strip().lower()
+    if value in {"none", "null", "", "false"}:
+        return None
+    return int(float(value))
+
+
+def _parse_optional_float_or_str(raw_value):
+    value = str(raw_value).strip().lower()
+    if value in {"none", "null", "", "false"}:
+        return None
+    if value in {"sqrt", "log2", "auto"}:
+        return value
+    return float(value)
+
+
+def _build_coxnet_kwargs_from_hp_cfg(hp_cfg):
+    return {
+        "alphas": np.asarray([float(hp_cfg.get("coxnet_alpha", 0.1))], dtype=float),
+        "l1_ratio": float(hp_cfg.get("coxnet_l1_ratio", 0.5)),
+        "max_iter": int(hp_cfg.get("coxnet_max_iter", 100000)),
+        "tol": float(hp_cfg.get("coxnet_tol", 1e-7)),
+    }
+
+
+def _build_rsf_kwargs_from_hp_cfg(hp_cfg, seed):
+    return {
+        "n_estimators": int(hp_cfg.get("rsf_n_estimators", 100)),
+        "max_depth": _parse_optional_int(hp_cfg.get("rsf_max_depth", "none")),
+        "min_samples_split": int(hp_cfg.get("rsf_min_samples_split", 6)),
+        "min_samples_leaf": int(hp_cfg.get("rsf_min_samples_leaf", 3)),
+        "max_features": _parse_optional_float_or_str(hp_cfg.get("rsf_max_features", "sqrt")),
+        "n_jobs": int(hp_cfg.get("rsf_n_jobs", -1)),
+        "random_state": int(seed),
+    }
+
+
+def _build_rf_kwargs_from_hp_cfg(hp_cfg, seed):
+    return {
+        "n_estimators": int(hp_cfg.get("rf_n_estimators", 200)),
+        "max_depth": _parse_optional_int(hp_cfg.get("rf_max_depth", "none")),
+        "min_samples_split": int(hp_cfg.get("rf_min_samples_split", 2)),
+        "min_samples_leaf": int(hp_cfg.get("rf_min_samples_leaf", 1)),
+        "max_features": _parse_optional_float_or_str(hp_cfg.get("rf_max_features", "sqrt")),
+        "class_weight": _normalize_rf_class_weight(hp_cfg.get("rf_class_weight", "none")),
+        "n_jobs": int(hp_cfg.get("rf_n_jobs", -1)),
+        "random_state": int(seed),
+    }
+
+
+def _dataset_to_binary_matrix(dataset):
+    if len(dataset) == 0:
+        raise ValueError("Cannot build sklearn classification design matrix from an empty dataset.")
+
+    x_rows = []
+    y_values = []
+    patient_ids = []
+    for idx in range(len(dataset)):
+        Xs, _, y, pid = dataset[idx]
+        if isinstance(y, dict):
+            raise ValueError("LR and RF baselines only support binary classification.")
+        x_rows.append(
+            np.concatenate(
+                [x.detach().cpu().numpy().astype(np.float32, copy=False).reshape(-1) for x in Xs],
+                axis=0,
+            )
+        )
+        y_values.append(int(float(y.detach().cpu().item())))
+        patient_ids.append(pid)
+
+    return (
+        np.vstack(x_rows).astype(np.float32, copy=False),
+        np.asarray(y_values, dtype=np.int64),
+        list(patient_ids),
+    )
+
+
+def _tensor_scalar(value):
+    if hasattr(value, "detach"):
+        return value.detach().cpu().item()
+    return value
+
+
+def _dataset_to_survival_matrix(dataset):
+    if len(dataset) == 0:
+        raise ValueError("Cannot build survival design matrix from an empty dataset.")
+
+    x_rows = []
+    event_times = []
+    event_observed = []
+    censorship = []
+    y_disc = []
+    patient_ids = []
+    for idx in range(len(dataset)):
+        Xs, _, y, pid = dataset[idx]
+        if not isinstance(y, dict):
+            raise ValueError("CoxNet and RSF baselines only support task_type=survival.")
+        x_rows.append(
+            np.concatenate(
+                [x.detach().cpu().numpy().astype(np.float32, copy=False).reshape(-1) for x in Xs],
+                axis=0,
+            )
+        )
+        event_times.append(float(_tensor_scalar(y["event_time"])))
+        event_observed.append(bool(float(_tensor_scalar(y["event"])) > 0.5))
+        censorship.append(int(float(_tensor_scalar(y["censorship"]))))
+        y_disc.append(int(_tensor_scalar(y["y_disc"])))
+        patient_ids.append(pid)
+
+    y_struct = np.asarray(
+        list(zip(event_observed, event_times)),
+        dtype=[("event", bool), ("time", np.float64)],
+    )
+    return (
+        np.vstack(x_rows).astype(np.float32, copy=False),
+        y_struct,
+        np.asarray(event_times, dtype=np.float64),
+        np.asarray(event_observed, dtype=bool),
+        np.asarray(censorship, dtype=np.int64),
+        np.asarray(y_disc, dtype=np.int64),
+        list(patient_ids),
+    )
+
+
+def _fit_lr_classifier(dataset, hp_cfg, seed):
+    from sklearn.linear_model import LogisticRegression
+
+    X, y, _ = _dataset_to_binary_matrix(dataset)
+    unique_classes = np.unique(y)
+    if unique_classes.size < 2:
+        return _ConstantBinaryClassifier(float(np.mean(y)))
+
+    lr_kwargs = _build_lr_kwargs_from_hp_cfg(hp_cfg)
+    model = LogisticRegression(
+        C=lr_kwargs["C"],
+        penalty=lr_kwargs["penalty"],
+        solver=lr_kwargs["solver"],
+        class_weight=lr_kwargs["class_weight"],
+        max_iter=lr_kwargs["max_iter"],
+        random_state=int(seed),
+    )
+    model.fit(X, y)
+    return model
+
+
+def _fit_rf_classifier(dataset, hp_cfg, seed):
+    from sklearn.ensemble import RandomForestClassifier
+
+    X, y, _ = _dataset_to_binary_matrix(dataset)
+    unique_classes = np.unique(y)
+    if unique_classes.size < 2:
+        return _ConstantBinaryClassifier(float(np.mean(y)))
+
+    model = RandomForestClassifier(**_build_rf_kwargs_from_hp_cfg(hp_cfg, seed=seed))
+    model.fit(X, y)
+    return model
+
+
+def _fit_sklearn_classification_model(dataset, model_name_l, hp_cfg, seed):
+    model_name_l = normalize_model_name(model_name_l)
+    if model_name_l == "lr":
+        return _fit_lr_classifier(dataset=dataset, hp_cfg=hp_cfg, seed=seed)
+    if model_name_l == "rf":
+        return _fit_rf_classifier(dataset=dataset, hp_cfg=hp_cfg, seed=seed)
+    raise ValueError(f"Unsupported sklearn classification baseline: {model_name_l}")
+
+
+class _ConstantRiskSurvivalModel:
+    """Fallback survival model used when a split has no observed events."""
+
+    def predict(self, X):
+        return np.zeros(int(np.asarray(X).shape[0]), dtype=np.float64)
+
+
+def _fit_survival_baseline_model(dataset, model_name_l, hp_cfg, seed):
+    X, y_struct, _, event_observed, _, _, _ = _dataset_to_survival_matrix(dataset)
+    if np.unique(event_observed).size < 2 or not np.any(event_observed):
+        return _ConstantRiskSurvivalModel()
+
+    model_name_l = normalize_model_name(model_name_l)
+    try:
+        if model_name_l == "coxnet":
+            from sksurv.linear_model import CoxnetSurvivalAnalysis
+
+            model = CoxnetSurvivalAnalysis(**_build_coxnet_kwargs_from_hp_cfg(hp_cfg))
+        elif model_name_l == "rsf":
+            from sksurv.ensemble import RandomSurvivalForest
+
+            model = RandomSurvivalForest(**_build_rsf_kwargs_from_hp_cfg(hp_cfg, seed=seed))
+        else:
+            raise ValueError(f"Unsupported survival sklearn baseline: {model_name_l}")
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "ZI_CoxNet, KNN_CoxNet, ZI_RSF and KNN_RSF require scikit-survival. "
+            "Install it with conda-forge package 'scikit-survival'."
+        ) from exc
+
+    try:
+        model.fit(X, y_struct)
+    except Exception:
+        if model_name_l == "coxnet":
+            from sksurv.linear_model import CoxPHSurvivalAnalysis
+
+            # Rare small-fold fallback when the elastic-net path is numerically unstable.
+            model = CoxPHSurvivalAnalysis(alpha=float(hp_cfg.get("coxnet_alpha", 0.1)))
+            model.fit(X, y_struct)
+        else:
+            raise
+    return model
+
+
+def _predict_lr_outputs(model, dataset):
+    X, y_true, pids = _dataset_to_binary_matrix(dataset)
+    probs = model.predict_proba(X)[:, 1].astype(np.float32, copy=False)
+    clipped = np.clip(probs.astype(np.float64), 1e-12, 1.0 - 1e-12)
+    logits = np.log(clipped / (1.0 - clipped)).astype(np.float32, copy=False)
+    return {
+        "y_true": y_true,
+        "probs": probs,
+        "logits": logits,
+        "pids": pids,
+        "pam_details": None,
+    }
+
+
+def _predict_survival_baseline_outputs(model, dataset):
+    X, _, event_times, event_observed, censorship, y_disc, pids = _dataset_to_survival_matrix(dataset)
+    risk = np.asarray(model.predict(X), dtype=np.float64)
+    if risk.ndim > 1:
+        risk = risk[:, -1]
+    risk = risk.reshape(-1).astype(np.float32, copy=False)
+    n = risk.shape[0]
+    return {
+        "event_times": event_times,
+        "event_observed": event_observed.astype(np.int64, copy=False),
+        "censorship": censorship,
+        "y_disc": y_disc,
+        "risk": risk,
+        "logits": np.zeros((n, 0), dtype=np.float32),
+        "hazards": np.zeros((n, 0), dtype=np.float32),
+        "survival": np.zeros((n, 0), dtype=np.float32),
+        "pids": pids,
+        "pam_details": None,
+    }
+
+
+def _survival_risk_metrics_from_outputs(pred_out):
+    return {
+        "CINDEX": float(
+            concordance_index_censored(
+                event_observed=np.asarray(pred_out["event_observed"], dtype=bool),
+                event_times=np.asarray(pred_out["event_times"], dtype=np.float64),
+                risk_scores=np.asarray(pred_out["risk"], dtype=np.float64),
+            )
+        ),
+        "LOSS": np.nan,
+    }
+
+
+def _metrics_from_prediction_output(task_config, pred_out, model_name_l):
+    if _is_survival(task_config):
+        if _is_sklearn_survival_model(model_name_l):
+            return _survival_risk_metrics_from_outputs(pred_out)
+        return safe_task_metrics(
+            task_config,
+            event_times=pred_out["event_times"],
+            event_observed=pred_out["event_observed"],
+            censorship=pred_out["censorship"],
+            y_disc=pred_out["y_disc"],
+            logits=pred_out["logits"],
+        )
+    return safe_task_metrics(
+        task_config,
+        y_true=pred_out["y_true"],
+        y_prob=pred_out["probs"],
+    )
+
+
+def _lr_history_row(train_metrics, val_metrics=None):
+    val_metrics = train_metrics if val_metrics is None else val_metrics
+    return {
+        "epoch": 1,
+        "train_loss": float(train_metrics.get("LOGLOSS", np.nan)),
+        "train_auc": float(train_metrics.get("AUC", 0.0)),
+        "train_aucpr": float(train_metrics.get("AUCPR", 0.0)),
+        "train_acc": float(train_metrics.get("ACC", 0.0)),
+        "train_cindex": 0.0,
+        "val_loss": float(val_metrics.get("LOGLOSS", np.nan)),
+        "val_auc": float(val_metrics.get("AUC", 0.0)),
+        "val_aucpr": float(val_metrics.get("AUCPR", 0.0)),
+        "val_acc": float(val_metrics.get("ACC", 0.0)),
+        "val_cindex": 0.0,
+        "teacher_loss": 0.0,
+        "student_survival_loss": 0.0,
+        "student_repr_loss": 0.0,
+        "student_feature_loss": 0.0,
+        "smil_meta_train_loss": 0.0,
+        "smil_meta_val_loss": 0.0,
+        "smil_meta_val_ce": 0.0,
+        "smil_align_fusion": 0.0,
+        "smil_align_hidden": 0.0,
+    }
+
+
+def _survival_baseline_history_row(train_metrics, val_metrics=None):
+    val_metrics = train_metrics if val_metrics is None else val_metrics
+    return {
+        "epoch": 1,
+        "train_loss": float(train_metrics.get("LOSS", np.nan)),
+        "train_auc": 0.0,
+        "train_aucpr": 0.0,
+        "train_acc": 0.0,
+        "train_cindex": float(train_metrics.get("CINDEX", 0.0)),
+        "val_loss": float(val_metrics.get("LOSS", np.nan)),
+        "val_auc": 0.0,
+        "val_aucpr": 0.0,
+        "val_acc": 0.0,
+        "val_cindex": float(val_metrics.get("CINDEX", 0.0)),
+        "teacher_loss": 0.0,
+        "student_survival_loss": 0.0,
+        "student_repr_loss": 0.0,
+        "student_feature_loss": 0.0,
+        "smil_meta_train_loss": 0.0,
+        "smil_meta_val_loss": 0.0,
+        "smil_meta_val_ce": 0.0,
+        "smil_align_fusion": 0.0,
+        "smil_align_hidden": 0.0,
+    }
 
 # Function to transform outer test with each inner train scaler
 def _transform_modalities_with_fitted_scalers(dfs_raw, scalers, patient_id_col="patient"):
@@ -152,37 +540,45 @@ def _prepare_patient_level_modalities(
     return prepared, active_poolers
 
 
+def _add_distillation_kwargs(model_kwargs, hp_cfg):
+    resolved = dict(model_kwargs)
+    if bool(hp_cfg.get("knowledge_distillation", False)):
+        resolved["knowledge_distillation"] = True
+        resolved["distill_alpha"] = hp_cfg["distill_alpha"]
+        resolved["distill_beta"] = hp_cfg["distill_beta"]
+    return resolved
+
+
 def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
+    if model_name_l in {"lr"}:
+        return _build_lr_kwargs_from_hp_cfg(hp_cfg)
+    if model_name_l in {"rf"}:
+        return {
+            key: value
+            for key, value in hp_cfg.items()
+            if str(key).startswith("rf_")
+        }
+    if model_name_l in {"coxnet"}:
+        return _build_coxnet_kwargs_from_hp_cfg(hp_cfg)
+    if model_name_l in {"rsf"}:
+        return {
+            key: value
+            for key, value in hp_cfg.items()
+            if str(key).startswith("rsf_")
+        }
     if model_name_l in {"mlp"}:
-        return {
+        return _add_distillation_kwargs({
             "modality_hidden_layers": hp_cfg["modality_hidden_layers"],
             "fusion_hidden_dim": hp_cfg["fusion_hidden_dim"],
             "fusion_hidden_layers": hp_cfg["fusion_hidden_layers"],
             "dropout_p": hp_cfg["dropout"],
             "fusion_batchnorm": bool(hp_cfg["fusion_batchnorm"]),
-        }
+        }, hp_cfg)
     if model_name_l in {"pam"}:
-        return {
+        return _add_distillation_kwargs({
             "dropout_p": hp_cfg["pam_dropout"],
             "temperature": hp_cfg["pam_temperature"],
-        }
-    if model_name_l in {"dipam"}:
-        return {
-            "dropout_p": hp_cfg["pam_dropout"],
-            "temperature": hp_cfg["pam_temperature"],
-            "distill_alpha": hp_cfg["distill_alpha"],
-            "distill_beta": hp_cfg["distill_beta"],
-        }
-    if model_name_l in {"di_mmlp"}:
-        return {
-            "modality_hidden_layers": hp_cfg["modality_hidden_layers"],
-            "fusion_hidden_dim": hp_cfg["fusion_hidden_dim"],
-            "fusion_hidden_layers": hp_cfg["fusion_hidden_layers"],
-            "dropout_p": hp_cfg["dropout"],
-            "fusion_batchnorm": bool(hp_cfg["fusion_batchnorm"]),
-            "distill_alpha": hp_cfg["distill_alpha"],
-            "distill_beta": hp_cfg["distill_beta"],
-        }
+        }, hp_cfg)
     if model_name_l in {"smil_e"}:
         return {
             "latent_dim": hp_cfg["smil_e_latent_dim"],
@@ -196,7 +592,7 @@ def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
             "meta_val_fraction": hp_cfg["meta_val_fraction"],
         }
     if model_name_l in {"healnet"}:
-        return {
+        return _add_distillation_kwargs({
             "depth": hp_cfg["healnet_depth"],
             "num_freq_bands": hp_cfg["healnet_num_freq_bands"],
             "num_latents": hp_cfg["healnet_num_latents"],
@@ -208,9 +604,9 @@ def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
             "attn_dropout": hp_cfg["healnet_attn_dropout"],
             "ff_dropout": hp_cfg["healnet_ff_dropout"],
             "self_per_cross_attn": hp_cfg["healnet_self_per_cross_attn"],
-        }
+        }, hp_cfg)
     raise ValueError(
-        f"Unsupported model '{model_name_l}'. Supported: mlp, di_mmlp, pam, dipam, smile, healnet"
+        f"Unsupported model '{model_name_l}'. Supported: lr, rf, coxnet, rsf, mlp, pam, smile, healnet"
     )
 
 
@@ -270,18 +666,24 @@ def _save_candidate_bundle(
     imputer,
     modality_poolers,
 ):
+    model_name_l = normalize_model_name(model_name)
     bundle = {
-        "model_name": normalize_model_name(model_name),
+        "model_name": model_name_l,
         "input_dims": [int(dim) for dim in input_dims],
         "model_kwargs": get_model_init_kwargs(model_name, model_kwargs),
-        "model_state_dict": {
-            key: value.detach().cpu()
-            for key, value in model.state_dict().items()
-        },
         "scalers": scalers,
         "imputer": imputer,
         "modality_poolers": dict(modality_poolers or {}),
     }
+    if _is_sklearn_baseline_model(model_name_l):
+        bundle["model_type"] = "sklearn_baseline"
+        bundle["sklearn_model"] = model
+    else:
+        bundle["model_type"] = "torch"
+        bundle["model_state_dict"] = {
+            key: value.detach().cpu()
+            for key, value in model.state_dict().items()
+        }
     with open(bundle_path, "wb") as handle:
         pickle.dump(bundle, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -290,12 +692,15 @@ def _load_candidate_bundle(bundle_path, device):
     with open(bundle_path, "rb") as handle:
         bundle = pickle.load(handle)
 
-    model = build_model(
-        bundle["model_name"],
-        bundle["input_dims"],
-        get_model_init_kwargs(bundle["model_name"], bundle["model_kwargs"]),
-    ).to(device)
-    model.load_state_dict(bundle["model_state_dict"])
+    if bundle.get("model_type") in {"sklearn_baseline", "sklearn_lr"} or _is_sklearn_baseline_model(bundle["model_name"]):
+        model = bundle["sklearn_model"]
+    else:
+        model = build_model(
+            bundle["model_name"],
+            bundle["input_dims"],
+            get_model_init_kwargs(bundle["model_name"], bundle["model_kwargs"]),
+        ).to(device)
+        model.load_state_dict(bundle["model_state_dict"])
 
     modality_poolers = bundle.get("modality_poolers")
     if modality_poolers is None:
@@ -391,10 +796,9 @@ def _predict_model_outputs(
             if collect_pam_details:
                 model_out = model(Xs, model_mask, return_aux=True)
                 logits = model_out[0]
-                if model_name not in {"pam", "dipam"}:
+                if model_name not in {"pam"}:
                     raise ValueError(
-                        "collect_pam_details=True is only supported for model_name in "
-                        "{'pam', 'dipam'}."
+                        "collect_pam_details=True is only supported for model_name='pam'."
                     )
                 pam_alpha.append(model_out[2].detach().cpu().numpy())
                 pam_r_scores.append(model_out[3].detach().cpu().numpy())
@@ -512,7 +916,7 @@ def _log_selected_inner_models_to_wandb(
                         "best_inner_model/val_acc": float(hrow["val_acc"]),
                     }
                 )
-            if model_name_l in {"dipam", "di_mmlp"}:
+            if bool(candidate.get("model_kwargs", {}).get("knowledge_distillation", False)):
                 log_payload.update(
                     {
                         "best_inner_model/teacher_loss": float(hrow["teacher_loss"]),
@@ -627,15 +1031,26 @@ def _evaluate_retained_inner_models_on_outer_test(
                 drop_last=False,
             )
 
-            pred_out = _predict_model_outputs(
-                model=loaded_bundle["model"],
-                data_loader=outer_eval_loader,
-                device=device,
-                bypass_mask=predict_bypass_mask,
-                collect_pam_details=model_name_l in {"pam", "dipam"},
-                model_name=model_name_l,
-                task_config=task_config,
-            )
+            if _is_sklearn_classification_model(model_name_l):
+                pred_out = _predict_lr_outputs(
+                    model=loaded_bundle["model"],
+                    dataset=outer_eval_ds,
+                )
+            elif _is_sklearn_survival_model(model_name_l):
+                pred_out = _predict_survival_baseline_outputs(
+                    model=loaded_bundle["model"],
+                    dataset=outer_eval_ds,
+                )
+            else:
+                pred_out = _predict_model_outputs(
+                    model=loaded_bundle["model"],
+                    data_loader=outer_eval_loader,
+                    device=device,
+                    bypass_mask=predict_bypass_mask,
+                    collect_pam_details=model_name_l in {"pam"},
+                    model_name=model_name_l,
+                    task_config=task_config,
+                )
 
             if _is_survival(task_config):
                 aligned_targets = (
@@ -662,25 +1077,9 @@ def _evaluate_retained_inner_models_on_outer_test(
 
             model_outputs.append(pred_out)
             model_details.append(pred_out["pam_details"])
-            if _is_survival(task_config):
-                model_outer_metrics.append(
-                    safe_task_metrics(
-                        task_config,
-                        event_times=pred_out["event_times"],
-                        event_observed=pred_out["event_observed"],
-                        censorship=pred_out["censorship"],
-                        y_disc=pred_out["y_disc"],
-                        logits=pred_out["logits"],
-                    )
-                )
-            else:
-                model_outer_metrics.append(
-                    safe_task_metrics(
-                        task_config,
-                        y_true=pred_out["y_true"],
-                        y_prob=pred_out["probs"],
-                    )
-                )
+            model_outer_metrics.append(
+                _metrics_from_prediction_output(task_config, pred_out, model_name_l)
+            )
 
             del loaded_bundle["model"]
             gc.collect()
@@ -726,7 +1125,7 @@ def _evaluate_retained_inner_models_on_outer_test(
                     row[f"inner_model_{model_idx}_logit"] = float(pred_out["logits"][patient_idx])
                     row[f"inner_model_{model_idx}_prob"] = float(pred_out["probs"][patient_idx])
                     row[f"inner_model_{model_idx}_pred_label"] = int(pred_out["logits"][patient_idx] >= 0.0)
-                if model_name_l in {"pam", "dipam"} and details_arr is not None:
+                if model_name_l in {"pam"} and details_arr is not None:
                     for modality_idx, modality_name in enumerate(modality_names):
                         row[f"inner_model_{model_idx}_{modality_name}_alpha"] = float(
                             details_arr["alpha"][patient_idx, modality_idx]
@@ -746,8 +1145,10 @@ def _evaluate_retained_inner_models_on_outer_test(
 
         if _is_survival(task_config):
             outer_metric_source = "mean_retained_inner_models"
+            loss_values = np.asarray([float(metrics.get("LOSS", np.nan)) for metrics in model_outer_metrics], dtype=float)
+            finite_loss_values = loss_values[np.isfinite(loss_values)]
             mean_outer_metrics = {
-                "LOSS": float(np.mean([float(metrics["LOSS"]) for metrics in model_outer_metrics])),
+                "LOSS": float(np.mean(finite_loss_values)) if finite_loss_values.size else np.nan,
                 "CINDEX": float(np.mean([float(metrics["CINDEX"]) for metrics in model_outer_metrics])),
             }
         elif bool(use_ensemble):
@@ -831,7 +1232,6 @@ def nested_cv(
     lr_patience=5,
     hp_selection_epsilon=0.02,
     missingness_study=True,
-    fixed_distillation_student_missing_prop=None,
     use_ensemble=False,
 ):
     wandb_active = bool(wandb_enabled and wandb is not None)
@@ -841,16 +1241,10 @@ def nested_cv(
     # Train missingness is applied on both inner-train and inner-validation.
     apply_missing_train = float(getattr(train_missing_simulator, "missing_prop", 0.0)) > 0.0
     model_name_l = normalize_model_name(model_name)
-    if fixed_distillation_student_missing_prop is None:
-        fixed_distillation_student_missing_prop = 0.0
-        if not bool(missingness_study) and model_name_l in {"dipam", "di_mmlp"}:
-            fixed_distillation_student_missing_prop = _observed_modality_missing_prop(
-                dfs=dfs,
-                inst_df=inst_df,
-                patient_id_col=patient_id_col,
-            )
-    else:
-        fixed_distillation_student_missing_prop = float(fixed_distillation_student_missing_prop)
+    if _is_sklearn_classification_model(model_name_l) and _is_survival(task_config):
+        raise ValueError("ZI_LR, KNN_LR, ZI_RF and KNN_RF are classification-only baselines and do not support task_type=survival.")
+    if _is_sklearn_survival_model(model_name_l) and not _is_survival(task_config):
+        raise ValueError("ZI_CoxNet, KNN_CoxNet, ZI_RSF and KNN_RSF are survival-only baselines.")
     predict_bypass_mask = (
         model_name_l == "mlp"
         and str(imputation_method).strip().lower() in {"knn", "vae"}
@@ -888,23 +1282,6 @@ def nested_cv(
     modality_names = [str(name) for name in dfs.keys()]
     student_train_missing_simulator = train_missing_simulator
     apply_student_missing_train = apply_missing_train
-    if fixed_distillation_student_missing_prop > 0.0:
-        student_train_missing_simulator = MissingModalitySimulator(
-            num_modalities=len(modality_names),
-            modality_names=modality_names,
-            missing_prop=fixed_distillation_student_missing_prop,
-            degrading_modality="global",
-        )
-        apply_student_missing_train = True
-        if wandb_base_config is not None:
-            wandb_base_config = dict(wandb_base_config)
-            wandb_base_config["fixed_distillation_student_missing_prop"] = float(
-                fixed_distillation_student_missing_prop
-            )
-        print(
-            "Fixed-dataset distillation student missingness: "
-            f"{fixed_distillation_student_missing_prop:.4f}"
-        )
     device = select_device()
     if device.type == "cuda":
         gpu_name = torch.cuda.get_device_name(device)
@@ -1052,24 +1429,59 @@ def nested_cv(
                 )
 
                 # Train the model and evaluate on inner-val fold
-                model, history, best_metrics = train_model_with_validation(
-                    train_loader=train_loader,
-                    val_loader=val_loader,
-                    device=device,
-                    input_dims=input_dims,
-                    epochs=epochs,
-                    lr=hp_cfg["learning_rate"],
-                    weight_decay=hp_cfg["weight_decay"],
-                    early_stopping_patience=early_stopping_patience,
-                    min_lr=min_lr,
-                    scheduler_type=scheduler_type,
-                    lr_patience=lr_patience,
-                    model_name=model_name,
-                    imputation_method=imputation_method,
-                    model_kwargs=model_kwargs,
-                    train_seed=int(seed + outer_fold_idx * 10_000 + inner_fold_idx * 100 + hp_idx),
-                    task_config=task_config,
-                )
+                if _is_sklearn_classification_model(model_name_l):
+                    model = _fit_sklearn_classification_model(
+                        dataset=train_loader.dataset,
+                        model_name_l=model_name_l,
+                        hp_cfg=hp_cfg,
+                        seed=int(seed + outer_fold_idx * 10_000 + inner_fold_idx * 100 + hp_idx),
+                    )
+                    train_pred_out = _predict_lr_outputs(model, train_loader.dataset)
+                    val_pred_out = _predict_lr_outputs(model, val_loader.dataset)
+                    train_metrics = safe_task_metrics(
+                        task_config,
+                        y_true=train_pred_out["y_true"],
+                        y_prob=train_pred_out["probs"],
+                    )
+                    best_metrics = safe_task_metrics(
+                        task_config,
+                        y_true=val_pred_out["y_true"],
+                        y_prob=val_pred_out["probs"],
+                    )
+                    best_metrics["best_epoch"] = 1
+                    history = [_lr_history_row(train_metrics=train_metrics, val_metrics=best_metrics)]
+                elif _is_sklearn_survival_model(model_name_l):
+                    model = _fit_survival_baseline_model(
+                        dataset=train_loader.dataset,
+                        model_name_l=model_name_l,
+                        hp_cfg=hp_cfg,
+                        seed=int(seed + outer_fold_idx * 10_000 + inner_fold_idx * 100 + hp_idx),
+                    )
+                    train_pred_out = _predict_survival_baseline_outputs(model, train_loader.dataset)
+                    val_pred_out = _predict_survival_baseline_outputs(model, val_loader.dataset)
+                    train_metrics = _metrics_from_prediction_output(task_config, train_pred_out, model_name_l)
+                    best_metrics = _metrics_from_prediction_output(task_config, val_pred_out, model_name_l)
+                    best_metrics["best_epoch"] = 1
+                    history = [_survival_baseline_history_row(train_metrics=train_metrics, val_metrics=best_metrics)]
+                else:
+                    model, history, best_metrics = train_model_with_validation(
+                        train_loader=train_loader,
+                        val_loader=val_loader,
+                        device=device,
+                        input_dims=input_dims,
+                        epochs=epochs,
+                        lr=hp_cfg["learning_rate"],
+                        weight_decay=hp_cfg["weight_decay"],
+                        early_stopping_patience=early_stopping_patience,
+                        min_lr=min_lr,
+                        scheduler_type=scheduler_type,
+                        lr_patience=lr_patience,
+                        model_name=model_name,
+                        imputation_method=imputation_method,
+                        model_kwargs=model_kwargs,
+                        train_seed=int(seed + outer_fold_idx * 10_000 + inner_fold_idx * 100 + hp_idx),
+                        task_config=task_config,
+                    )
 
                 # Save inner evaluation METRICS for this HP config and inner fold
                 inner_eval_rows.append(
@@ -1166,7 +1578,8 @@ def nested_cv(
             )
             mean_primary = float(np.mean(primary_scores))
             std_primary = float(np.std(primary_scores))
-            mean_loss = float(np.mean(loss_scores))
+            finite_loss_scores = loss_scores[np.isfinite(loss_scores)]
+            mean_loss = float(np.mean(finite_loss_scores)) if finite_loss_scores.size else float("inf")
             hp_selection_rows.append(
                 {
                     "hp_name": hp_name,
@@ -1307,22 +1720,54 @@ def nested_cv(
                 survival_y_disc_col=(task_config or {}).get("survival_y_disc_col"),
             )
 
-            outer_train_model, outer_refit_history = train_model_on_full_dataset(
-                train_loader=outer_train_loader,
-                device=device,
-                input_dims=input_dims,
-                epochs=refit_epochs,
-                lr=selected_hp_cfg["learning_rate"],
-                weight_decay=selected_hp_cfg["weight_decay"],
-                min_lr=min_lr,
-                scheduler_type=scheduler_type,
-                lr_patience=lr_patience,
-                model_name=model_name,
-                imputation_method=imputation_method,
-                model_kwargs=selected_model_kwargs,
-                train_seed=int(seed + outer_fold_idx * 100_000 + 2),
-                task_config=task_config,
-            )
+            if _is_sklearn_classification_model(model_name_l):
+                outer_train_model = _fit_sklearn_classification_model(
+                    dataset=outer_train_loader.dataset,
+                    model_name_l=model_name_l,
+                    hp_cfg=selected_hp_cfg,
+                    seed=int(seed + outer_fold_idx * 100_000 + 2),
+                )
+                outer_train_pred_out = _predict_lr_outputs(outer_train_model, outer_train_loader.dataset)
+                outer_train_metrics = safe_task_metrics(
+                    task_config,
+                    y_true=outer_train_pred_out["y_true"],
+                    y_prob=outer_train_pred_out["probs"],
+                )
+                outer_refit_history = [_lr_history_row(train_metrics=outer_train_metrics)]
+            elif _is_sklearn_survival_model(model_name_l):
+                outer_train_model = _fit_survival_baseline_model(
+                    dataset=outer_train_loader.dataset,
+                    model_name_l=model_name_l,
+                    hp_cfg=selected_hp_cfg,
+                    seed=int(seed + outer_fold_idx * 100_000 + 2),
+                )
+                outer_train_pred_out = _predict_survival_baseline_outputs(
+                    outer_train_model,
+                    outer_train_loader.dataset,
+                )
+                outer_train_metrics = _metrics_from_prediction_output(
+                    task_config,
+                    outer_train_pred_out,
+                    model_name_l,
+                )
+                outer_refit_history = [_survival_baseline_history_row(train_metrics=outer_train_metrics)]
+            else:
+                outer_train_model, outer_refit_history = train_model_on_full_dataset(
+                    train_loader=outer_train_loader,
+                    device=device,
+                    input_dims=input_dims,
+                    epochs=refit_epochs,
+                    lr=selected_hp_cfg["learning_rate"],
+                    weight_decay=selected_hp_cfg["weight_decay"],
+                    min_lr=min_lr,
+                    scheduler_type=scheduler_type,
+                    lr_patience=lr_patience,
+                    model_name=model_name,
+                    imputation_method=imputation_method,
+                    model_kwargs=selected_model_kwargs,
+                    train_seed=int(seed + outer_fold_idx * 100_000 + 2),
+                    task_config=task_config,
+                )
 
             for hrow in outer_refit_history:
                 history_rows.append(
@@ -1383,7 +1828,7 @@ def nested_cv(
                             }
                         )
 
-                    if model_name_l in {"dipam", "di_mmlp"}:
+                    if bool(selected_model_kwargs.get("knowledge_distillation", False)):
                         log_payload.update(
                             {
                                 "outer_train_model/teacher_loss": float(hrow["teacher_loss"]),
@@ -1453,30 +1898,27 @@ def nested_cv(
                     drop_last=False,
                 )
 
-                pred_out = _predict_model_outputs(
-                    model=outer_train_model,
-                    data_loader=outer_eval_loader,
-                    device=device,
-                    bypass_mask=predict_bypass_mask,
-                    collect_pam_details=model_name_l in {"pam", "dipam"},
-                    model_name=model_name_l,
-                    task_config=task_config,
-                )
-                if _is_survival(task_config):
-                    outer_metrics = safe_task_metrics(
-                        task_config,
-                        event_times=pred_out["event_times"],
-                        event_observed=pred_out["event_observed"],
-                        censorship=pred_out["censorship"],
-                        y_disc=pred_out["y_disc"],
-                        logits=pred_out["logits"],
+                if _is_sklearn_classification_model(model_name_l):
+                    pred_out = _predict_lr_outputs(
+                        model=outer_train_model,
+                        dataset=outer_eval_ds,
+                    )
+                elif _is_sklearn_survival_model(model_name_l):
+                    pred_out = _predict_survival_baseline_outputs(
+                        model=outer_train_model,
+                        dataset=outer_eval_ds,
                     )
                 else:
-                    outer_metrics = safe_task_metrics(
-                        task_config,
-                        y_true=pred_out["y_true"],
-                        y_prob=pred_out["probs"],
+                    pred_out = _predict_model_outputs(
+                        model=outer_train_model,
+                        data_loader=outer_eval_loader,
+                        device=device,
+                        bypass_mask=predict_bypass_mask,
+                        collect_pam_details=model_name_l in {"pam"},
+                        model_name=model_name_l,
+                        task_config=task_config,
                     )
+                outer_metrics = _metrics_from_prediction_output(task_config, pred_out, model_name_l)
 
                 per_patient_prediction_rows = []
                 for patient_idx, pid in enumerate(pred_out["pids"]):
@@ -1515,7 +1957,7 @@ def nested_cv(
                         row["inner_model_1_pred_label"] = pred_label
                         if bool(use_ensemble):
                             _add_binary_ensemble_prediction_columns(row)
-                    if model_name_l in {"pam", "dipam"} and pred_out["pam_details"] is not None:
+                    if model_name_l in {"pam"} and pred_out["pam_details"] is not None:
                         for modality_idx, modality_name in enumerate(modality_names):
                             row[f"inner_model_1_{modality_name}_alpha"] = float(
                                 pred_out["pam_details"]["alpha"][patient_idx, modality_idx]

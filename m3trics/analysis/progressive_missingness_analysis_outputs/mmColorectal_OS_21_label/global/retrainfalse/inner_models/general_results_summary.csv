@@ -1,0 +1,6 @@
+summary_item,selected_method,selection_metric,selection_value,rank_basis,details
+Best method complete data,HealNet,baseline_auc,0.6475324283559578,highest Baseline AUC,Complete train / complete test cell.
+Best method train-time missingness,KNN_MLP,train_time_aupmc,0.6335389643036703,highest Train-time AUPMC,Train missingness increases while test data remain complete.
+Best method test-time missingness,KNN_MLP,test_time_aupmc,0.6224409250879838,highest Test-time AUPMC,Model trained on complete data and evaluated under increasing test missingness.
+Best method missing at both,KNN_MLP,best_fixed_train_aupmc,0.6272508798391151,highest Best fixed-train AUPMC,One train-time missingness setting is selected and evaluated across test-time missingness.
+Most flexible method,KNN_MLP,top_equivalent_group_count,6.0,highest number of top-equivalent group appearances,Appears in the top-equivalent group in 6/7 condition-level cells.

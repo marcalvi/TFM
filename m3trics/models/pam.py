@@ -54,7 +54,7 @@ class PAM(nn.Module):
             masks[:, i] = present
         return masks
 
-    def forward(self, Xs, present_mask=None, return_aux=False):
+    def forward(self, Xs, present_mask=None, return_aux=False, kd=False):
         if len(Xs) != self.n_modalities:
             raise ValueError(f"Expected {self.n_modalities} modalities, got {len(Xs)}")
 
@@ -98,10 +98,19 @@ class PAM(nn.Module):
         attn_weights = masked_scores / (masked_scores.sum(dim=1, keepdim=True) + 1e-9)
         output = (attn_weights.unsqueeze(-1) * R_masked).sum(dim=1)
 
-        if return_aux:
+        if return_aux or kd:
             # Count number of active modalities for each patient
             num_active = masks.sum(dim=1, keepdim=True)
             # Get the attention share for each modality relative to the number of active modalities
             alpha = attn_weights * num_active
+            hadamard_feature = (attn_weights.unsqueeze(-1) * R_masked).reshape(batch_size, -1)
+            if kd:
+                return output, {
+                    "fusion_feature": hadamard_feature,
+                    "hadamard_feature": hadamard_feature,
+                    "attention_weights": attn_weights,
+                    "alpha": alpha,
+                    "risk_scores": R_masked,
+                }
             return output, attn_weights, alpha, R_masked
         return output

@@ -1,0 +1,35 @@
+name: TFM
+
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.9
+
+  # Core scientific stack
+  - numpy>=1.24.0,<2.0
+  - pandas>=1.5.0
+  - scipy>=1.10.0
+  - scikit-learn>=1.2.0
+  - matplotlib>=3.7.0
+  - tqdm>=4.65.0
+  - h5py>=3.8.0
+
+  # PyTorch + CUDA runtime for Windows NVIDIA GPUs, e.g. RTX 3070/3090/4090
+  - pytorch>=2.5.0
+  - torchvision
+  - torchaudio
+  - pytorch-cuda=12.1
+
+  # Logging / explainability
+  - tensorboard>=2.13.0
+  - shap>=0.42.0
+
+  - pip
+  - pip:
+      - einops>=0.6.0
+      - torch-summary>=1.4.5
+      - wandb>=0.21.1
