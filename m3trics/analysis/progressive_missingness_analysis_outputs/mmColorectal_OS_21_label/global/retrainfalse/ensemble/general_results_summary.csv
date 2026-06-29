@@ -1,0 +1,6 @@
+summary_item,selected_method,selection_metric,selection_value,rank_basis,details
+Best method complete data,HealNet,baseline_auc,0.6846153846153846,highest Baseline AUC,Complete train / complete test cell.
+Best method train-time missingness,ZI_MLP,train_time_aupmc,0.6690950226244343,highest Train-time AUPMC,Train missingness increases while test data remain complete.
+Best method test-time missingness,Di-MMLP,test_time_aupmc,0.6671166415284061,highest Test-time AUPMC,Model trained on complete data and evaluated under increasing test missingness.
+Best method missing at both,Di-MMLP,best_fixed_train_aupmc,0.6671166415284061,highest Best fixed-train AUPMC,One train-time missingness setting is selected and evaluated across test-time missingness.
+Most flexible method,"Di-MMLP, Di-PAM",top_equivalent_group_count,1.0,highest number of top-equivalent group appearances,Appears in the top-equivalent group in 1/2 condition-level cells.

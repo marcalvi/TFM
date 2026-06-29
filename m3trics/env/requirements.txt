@@ -1,0 +1,3 @@
+# Optional dependency required by survival-only classical baselines:
+# ZI_CoxNet, KNN_CoxNet, ZI_RSF, KNN_RSF
+scikit-survival>=0.22.0

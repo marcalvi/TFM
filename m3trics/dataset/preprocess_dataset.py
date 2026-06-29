@@ -835,7 +835,7 @@ def _resolve_csv_path(dataset_dir, filename, required=False):
     return None
 
 
-def _load_mimm_pathology_df(patho_path, inst_df, id_col):
+def _load_mmimmuno_pathology_df(patho_path, inst_df, id_col):
     path_df = pd.read_csv(patho_path)
     path_df = path_df.rename(columns=lambda x: x.replace("embedding_", "patho_"))
     path_df = pd.merge(path_df, inst_df[[id_col]], on=id_col, how="inner")
@@ -843,13 +843,13 @@ def _load_mimm_pathology_df(patho_path, inst_df, id_col):
     return path_df[keep]
 
 
-def _load_mimm_prefixed_df(csv_path, inst_df, prefix, id_col):
+def _load_mmimmuno_prefixed_df(csv_path, inst_df, prefix, id_col):
     df = pd.read_csv(csv_path)
     df = df.rename(columns=lambda x: f"{prefix}_{x}" if x != id_col else x)
     return pd.merge(df, inst_df[[id_col]], on=id_col, how="inner")
 
 
-def _load_mimm_radio_df(radio_path, inst_df, id_col):
+def _load_mmimmuno_radio_df(radio_path, inst_df, id_col):
     rad_df = pd.read_csv(radio_path).rename(columns=lambda x: x.replace("pred_", "radio_"))
     rad_df = rad_df.drop(columns=["image_path", "lesion_tag"], errors="ignore")
     rad_df = pd.merge(rad_df, inst_df[[id_col]], on=id_col, how="inner")
@@ -857,20 +857,20 @@ def _load_mimm_radio_df(radio_path, inst_df, id_col):
     return rad_df[keep]
 
 
-def _load_legacy_mimm_raw_bundle(dataset_dir, endpoint, task_type="binary_classification"):
+def _load_legacy_mmimmuno_raw_bundle(dataset_dir, endpoint, task_type="binary_classification"):
     task_type_l = normalize_task_type(task_type)
     if task_type_l != "binary_classification":
         raise NotImplementedError(
-            "Legacy raw MIMM loading is only supported for binary classification. "
+            "Legacy raw mmImmuno loading is only supported for binary classification. "
             "Use a generic processed bundle for survival runs."
         )
     id_col = "patient"
-    inst_path = _resolve_csv_path(dataset_dir, "patients_mimm.csv", required=True)
-    patho_path = _resolve_csv_path(dataset_dir, "pathology_mimm.csv", required=False)
-    radio_path = _resolve_csv_path(dataset_dir, "radiology_mimm.csv", required=False)
-    clin_path = _resolve_csv_path(dataset_dir, "clinical_mimm.csv", required=False)
-    blood_path = _resolve_csv_path(dataset_dir, "blood_mimm.csv", required=False)
-    radio_report_path = _resolve_csv_path(dataset_dir, "radioreports_mimm.csv", required=False)
+    inst_path = _resolve_csv_path(dataset_dir, "patients_mmImmuno.csv", required=True)
+    patho_path = _resolve_csv_path(dataset_dir, "pathology_mmImmuno.csv", required=False)
+    radio_path = _resolve_csv_path(dataset_dir, "radiology_mmImmuno.csv", required=False)
+    clin_path = _resolve_csv_path(dataset_dir, "clinical_mmImmuno.csv", required=False)
+    blood_path = _resolve_csv_path(dataset_dir, "blood_mmImmuno.csv", required=False)
+    radio_report_path = _resolve_csv_path(dataset_dir, "radioreports_mmImmuno.csv", required=False)
 
     inst_df = pd.read_csv(inst_path)
     if id_col not in inst_df.columns:
@@ -881,18 +881,18 @@ def _load_legacy_mimm_raw_bundle(dataset_dir, endpoint, task_type="binary_classi
 
     dfs = OrderedDict()
     if patho_path:
-        dfs["path"] = _load_mimm_pathology_df(patho_path, inst_df, id_col)
+        dfs["path"] = _load_mmimmuno_pathology_df(patho_path, inst_df, id_col)
     if radio_path:
-        dfs["radio"] = _load_mimm_radio_df(radio_path, inst_df, id_col)
+        dfs["radio"] = _load_mmimmuno_radio_df(radio_path, inst_df, id_col)
     if clin_path:
-        dfs["clin"] = _load_mimm_prefixed_df(clin_path, inst_df, "clin", id_col)
+        dfs["clin"] = _load_mmimmuno_prefixed_df(clin_path, inst_df, "clin", id_col)
     if blood_path:
-        dfs["blood"] = _load_mimm_prefixed_df(blood_path, inst_df, "blood", id_col)
+        dfs["blood"] = _load_mmimmuno_prefixed_df(blood_path, inst_df, "blood", id_col)
     if radio_report_path:
-        dfs["radio_report"] = _load_mimm_prefixed_df(radio_report_path, inst_df, "radio_report", id_col)
+        dfs["radio_report"] = _load_mmimmuno_prefixed_df(radio_report_path, inst_df, "radio_report", id_col)
 
     if not dfs:
-        raise ValueError("No modality CSV found. Provide --dataset_dir with MIMM modality files.")
+        raise ValueError("No modality CSV found. Provide --dataset_dir with mmImmuno modality files.")
 
     dfs = validate_and_prepare_modality_rows(dfs, id_col, radio_aggregation_method="attention")
     for mod in list(dfs.keys()):
@@ -907,7 +907,7 @@ def _load_legacy_mimm_raw_bundle(dataset_dir, endpoint, task_type="binary_classi
 
 
 def load_or_preprocess_dataset(args):
-    """Load a generic processed bundle or a legacy raw MIMM dataset."""
+    """Load a generic processed bundle or a legacy raw mmImmuno dataset."""
     dataset_dir = getattr(args, "dataset_dir", None)
     if not dataset_dir:
         raise ValueError("Dataset loading requires --dataset_dir.")
@@ -925,8 +925,8 @@ def load_or_preprocess_dataset(args):
         return processed_bundle
 
     dataset_name = str(args.dataset).strip().lower()
-    if dataset_name == "mimm":
-        return _load_legacy_mimm_raw_bundle(
+    if dataset_name == "mmimmuno":
+        return _load_legacy_mmimmuno_raw_bundle(
             dataset_dir=dataset_dir,
             endpoint=args.endpoint,
             task_type=task_type,

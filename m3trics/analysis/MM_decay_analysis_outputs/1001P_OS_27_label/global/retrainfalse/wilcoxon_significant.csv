@@ -1,2 +1,0 @@
-train_missing_prop,test_missing_prop,winner_rank,loser_rank,winner_model,loser_model,winner_mean_auc,loser_mean_auc,delta_mean_auc,wilcoxon_statistic,p_value,n_replicates,p_value_fdr,significant_fdr_0p05,n_pairs_tested_in_cell
-0.0,0.0,1,8,HealNet,SMILe,0.5683151515151516,0.5062787878787879,0.06203636363636367,2366.0,0.0006124155308461942,125,0.017147634863693438,True,28

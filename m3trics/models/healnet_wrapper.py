@@ -89,7 +89,7 @@ class HealNetBinaryWrapper(nn.Module):
             snn=bool(snn),
         )
 
-    def forward(self, Xs, present_mask=None):
+    def forward(self, Xs, present_mask=None, return_aux=False, kd=False):
         if len(Xs) != self.n_modalities:
             raise ValueError(f"Expected {self.n_modalities} modalities, got {len(Xs)}")
 
@@ -116,12 +116,30 @@ class HealNetBinaryWrapper(nn.Module):
 
             tensors.append(Xi.unsqueeze(1))
 
+        want_aux = bool(return_aux or kd)
+
         if present_mask is None:
+            if want_aux:
+                latent = self.model(tensors, return_embeddings=True)
+                logits = self.model.to_logits(latent)
+                return logits, {
+                    "latent": latent,
+                    "bottleneck": latent,
+                    "pooled": latent.mean(dim=1),
+                }
             return self.model(tensors)
         if not bool(torch.any(present_mask)):
             return None
 
         masks = [present_mask[:, i].unsqueeze(1) for i in range(self.n_modalities)]
+        if want_aux:
+            latent = self.model(tensors, masks=masks, return_embeddings=True)
+            logits = self.model.to_logits(latent)
+            return logits, {
+                "latent": latent,
+                "bottleneck": latent,
+                "pooled": latent.mean(dim=1),
+            }
         return self.model(tensors, masks=masks)
 
 

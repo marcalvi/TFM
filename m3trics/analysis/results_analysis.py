@@ -39,9 +39,34 @@ except ImportError:
     Rectangle = None
     HAVE_MPL = False
 
+try:
+    from PIL import Image
+    HAVE_PIL = True
+except ImportError:
+    Image = None
+    HAVE_PIL = False
+
+MAX_FIGURE_LONG_SIDE_PX = 2200
+
 DISPLAY_NAME_MAP = {
     'ZERO_MLP': 'ZI_MLP',
     'KNN_MLP': 'KNN_MLP',
+    'ZI_LR': 'ZI_LR',
+    'ZILR': 'ZI_LR',
+    'KNN_LR': 'KNN_LR',
+    'KNNLR': 'KNN_LR',
+    'ZI_RF': 'ZI_RF',
+    'ZIRF': 'ZI_RF',
+    'KNN_RF': 'KNN_RF',
+    'KNNRF': 'KNN_RF',
+    'ZI_COXNET': 'ZI_CoxNet',
+    'ZICOXNET': 'ZI_CoxNet',
+    'KNN_COXNET': 'KNN_CoxNet',
+    'KNNCOXNET': 'KNN_CoxNet',
+    'ZI_RSF': 'ZI_RSF',
+    'ZIRSF': 'ZI_RSF',
+    'KNN_RSF': 'KNN_RSF',
+    'KNNRSF': 'KNN_RSF',
     'VAE_MLP': 'VAE_MLP',
     'PAM': 'pAM',
     'DIMMLP': 'Di-MMLP',
@@ -52,6 +77,7 @@ DISPLAY_NAME_MAP = {
     'SMILE': 'SMILe',
 }
 INNER_MODEL_PROB_RE = re.compile(r'^inner_model_(\d+)_prob$')
+INNER_MODEL_RISK_RE = re.compile(r'^inner_model_(\d+)_risk$')
 
 MANAGUA_HEX = [
     '#ffcf67', '#e3a358', '#c77c4b', '#aa5b41', '#863c39', '#632a3e',
@@ -67,9 +93,59 @@ def _normalize_model_label(name: str) -> str:
     return DISPLAY_NAME_MAP.get(compact, raw)
 
 
+def _distillation_model_set(distillation_model_names=None):
+    return {
+        _normalize_model_label(model_name)
+        for model_name in (distillation_model_names or [])
+    }
+
+
+def _is_distillation_method(model_name, distillation_model_names=None):
+    raw = str(model_name).strip()
+    normalized = _normalize_model_label(raw)
+    configured = _distillation_model_set(distillation_model_names)
+    return (
+        normalized in configured
+        or raw.upper().endswith('_KD')
+        or normalized in {'Di-PAM', 'Di-MMLP'}  # legacy outputs only
+    )
+
+
 def _stable_seed(*parts, base_seed=0):
     text = '|'.join(str(part) for part in parts)
     return (zlib.crc32(text.encode('utf-8')) + int(base_seed)) % (2**32 - 1)
+
+
+def _save_current_figure(figures_dir: Path, file_name: str, dpi: int = 220, max_long_side_px: int = MAX_FIGURE_LONG_SIDE_PX):
+    figures_dir.mkdir(parents=True, exist_ok=True)
+    figure_path = figures_dir / file_name
+
+    fig = plt.gcf()
+    width_in, height_in = fig.get_size_inches()
+    max_inches = max(float(width_in), float(height_in), 1.0)
+    dpi_cap = max(72, int(math.floor(max_long_side_px / max_inches)))
+    export_dpi = min(int(dpi), dpi_cap)
+
+    plt.savefig(figure_path, dpi=export_dpi, bbox_inches='tight')
+
+    if HAVE_PIL and figure_path.suffix.lower() in {'.png', '.jpg', '.jpeg'}:
+        with Image.open(figure_path) as image:
+            width_px, height_px = image.size
+            long_side_px = max(width_px, height_px)
+            if long_side_px > max_long_side_px:
+                scale = max_long_side_px / float(long_side_px)
+                new_size = (
+                    max(1, int(round(width_px * scale))),
+                    max(1, int(round(height_px * scale))),
+                )
+                resized = image.resize(new_size, Image.LANCZOS)
+                save_kwargs = {'optimize': True}
+                if figure_path.suffix.lower() in {'.jpg', '.jpeg'}:
+                    save_kwargs['quality'] = 90
+                resized.save(figure_path, **save_kwargs)
+
+    print(f'Saved figure to: {figure_path}')
+    return figure_path
 
 
 def _parse_retrain_flag_from_run_name(run_name: str):
@@ -160,6 +236,16 @@ def _list_inner_model_prob_cols(df: pd.DataFrame):
     cols = []
     for col in df.columns:
         match = INNER_MODEL_PROB_RE.match(str(col))
+        if match:
+            cols.append((int(match.group(1)), col))
+    cols.sort(key=lambda item: item[0])
+    return cols
+
+
+def _list_inner_model_risk_cols(df: pd.DataFrame):
+    cols = []
+    for col in df.columns:
+        match = INNER_MODEL_RISK_RE.match(str(col))
         if match:
             cols.append((int(match.group(1)), col))
     cols.sort(key=lambda item: item[0])
@@ -273,6 +359,352 @@ def load_all_test_predictions(results_root: Path, dataset_name: str, train_degra
     if not frames:
         return pd.DataFrame(), missing_prediction_files
     return normalize_prediction_df(pd.concat(frames, ignore_index=True), use_ensemble=use_ensemble), missing_prediction_files
+
+
+def add_survival_ensemble_prediction_columns(pred_df: pd.DataFrame):
+    """Return a copy with risk-averaged ensemble prediction columns."""
+    out = pred_df.copy()
+    risk_cols = [col for _, col in _list_inner_model_risk_cols(out)]
+    if not risk_cols:
+        raise ValueError('Cannot compute survival ensemble predictions because no inner_model_*_risk columns were found.')
+
+    risk_df = out[risk_cols].apply(pd.to_numeric, errors='coerce')
+    out['ensemble_risk'] = risk_df.mean(axis=1, skipna=True)
+    out['ensemble_n_models'] = risk_df.notna().sum(axis=1).astype(int)
+    out.loc[out['ensemble_n_models'].eq(0), 'ensemble_risk'] = np.nan
+    return out
+
+
+def normalize_survival_prediction_df(pred_df: pd.DataFrame, use_ensemble: bool = False):
+    out = pred_df.copy()
+    legacy_column_map = {
+        'train_missing_location': 'train_degrading_modality',
+        'test_missing_location': 'test_degrading_modality',
+        'eval_missing_location': 'eval_degrading_modality',
+        'missing_location': 'degrading_modality',
+    }
+    for old_col, new_col in legacy_column_map.items():
+        if new_col not in out.columns and old_col in out.columns:
+            out[new_col] = out[old_col]
+    required_cols = [
+        'model_name',
+        'patient',
+        'train_missing_prop',
+        'test_missing_prop',
+        'event_time',
+        'event_observed',
+    ]
+    missing_cols = [col for col in required_cols if col not in out.columns]
+    if missing_cols:
+        raise ValueError(f'Missing required survival prediction columns: {missing_cols}')
+
+    inner_risk_cols = _list_inner_model_risk_cols(out)
+    if bool(use_ensemble):
+        if 'ensemble_risk' not in out.columns:
+            out = add_survival_ensemble_prediction_columns(out)
+    elif not inner_risk_cols:
+        raise ValueError('No inner_model_*_risk columns found in survival prediction dataframe.')
+
+    if 'outer_eval_target' in out.columns:
+        out = out.loc[out['outer_eval_target'].astype(str) == 'test_outer'].copy()
+
+    out['model_name'] = out['model_name'].astype(str)
+    out['patient'] = out['patient'].astype(str)
+    out['train_missing_prop'] = out['train_missing_prop'].astype(float)
+    out['test_missing_prop'] = out['test_missing_prop'].astype(float)
+    out['event_time'] = pd.to_numeric(out['event_time'], errors='coerce').astype(float)
+    out['event_observed'] = pd.to_numeric(out['event_observed'], errors='coerce').fillna(0).astype(int)
+    if 'censorship' in out.columns:
+        out['censorship'] = pd.to_numeric(out['censorship'], errors='coerce')
+    if 'y_disc' in out.columns:
+        out['y_disc'] = pd.to_numeric(out['y_disc'], errors='coerce')
+    if bool(use_ensemble):
+        out['ensemble_risk'] = pd.to_numeric(out['ensemble_risk'], errors='coerce')
+        if 'ensemble_n_models' in out.columns:
+            out['ensemble_n_models'] = pd.to_numeric(
+                out['ensemble_n_models'],
+                errors='coerce',
+            ).fillna(0).astype(int)
+    if 'seed' not in out.columns:
+        out['seed'] = np.nan
+    if 'outer_fold' not in out.columns:
+        out['outer_fold'] = np.nan
+    return out.reset_index(drop=True)
+
+
+def load_all_survival_test_predictions(results_root: Path, dataset_name: str, train_degrading_modality: str = 'GLOBAL', model_names=None, retrain_outer=None, results_mode: str = 'decay', use_ensemble: bool = False):
+    frames = []
+    missing_prediction_files = []
+    for source in list_model_sources(
+        results_root,
+        dataset_name,
+        train_degrading_modality,
+        model_names=model_names,
+        retrain_outer=retrain_outer,
+        results_mode=results_mode,
+    ):
+        found_any = False
+        for path in sorted(source['run_data_dir'].rglob('test_predictions.csv')):
+            found_any = True
+            if _has_git_conflict_markers(path):
+                missing_prediction_files.append(
+                    f'Skipped corrupted prediction file with unresolved git conflict markers: {path}'
+                )
+                continue
+            df = pd.read_csv(path)
+            if df.empty:
+                continue
+            if 'seed' not in df.columns:
+                df['seed'] = _parse_seed_from_path(path)
+            df['model_name'] = source['model_name']
+            df['source_file'] = str(path)
+            frames.append(df)
+        if not found_any:
+            missing_prediction_files.append(str(source['run_data_dir']))
+
+    if not frames:
+        return pd.DataFrame(), missing_prediction_files
+    return normalize_survival_prediction_df(pd.concat(frames, ignore_index=True), use_ensemble=use_ensemble), missing_prediction_files
+
+
+def expand_inner_model_survival_predictions(pred_df: pd.DataFrame, use_ensemble: bool = False):
+    if pred_df.empty:
+        return pd.DataFrame()
+
+    base_cols = [
+        'model_name', 'patient', 'train_missing_prop', 'test_missing_prop',
+        'event_time', 'event_observed', 'seed', 'outer_fold'
+    ]
+    optional_cols = [col for col in ['censorship', 'y_disc'] if col in pred_df.columns]
+
+    if bool(use_ensemble):
+        if 'ensemble_risk' not in pred_df.columns:
+            pred_df = add_survival_ensemble_prediction_columns(pred_df)
+        long_df = pred_df[base_cols + optional_cols + ['ensemble_risk']].copy()
+        long_df = long_df.rename(columns={'ensemble_risk': 'member_risk'})
+        long_df['inner_model_idx'] = 0
+        long_df['prediction_source'] = 'ensemble'
+        long_df['replicate_id'] = (
+            long_df['seed'].astype(str)
+            + '|outer_' + long_df['outer_fold'].astype(str)
+            + '|ensemble'
+        )
+        long_df['member_risk'] = long_df['member_risk'].astype(float)
+        return long_df.dropna(subset=['member_risk', 'event_time', 'event_observed']).reset_index(drop=True)
+
+    risk_cols = _list_inner_model_risk_cols(pred_df)
+    rows = []
+    for member_idx, risk_col in risk_cols:
+        sub_df = pred_df[base_cols + optional_cols + [risk_col]].copy()
+        sub_df = sub_df.rename(columns={risk_col: 'member_risk'})
+        sub_df['inner_model_idx'] = int(member_idx)
+        sub_df['prediction_source'] = 'inner_model'
+        sub_df['replicate_id'] = (
+            sub_df['seed'].astype(str)
+            + '|outer_' + sub_df['outer_fold'].astype(str)
+            + '|inner_' + sub_df['inner_model_idx'].astype(str)
+        )
+        rows.append(sub_df)
+
+    if not rows:
+        return pd.DataFrame()
+    long_df = pd.concat(rows, ignore_index=True)
+    long_df['member_risk'] = long_df['member_risk'].astype(float)
+    return long_df.dropna(subset=['member_risk', 'event_time', 'event_observed']).reset_index(drop=True)
+
+
+def aggregate_member_patient_survival_predictions(member_pred_df: pd.DataFrame):
+    if member_pred_df.empty:
+        return pd.DataFrame()
+
+    if 'prediction_source' not in member_pred_df.columns:
+        member_pred_df = member_pred_df.copy()
+        member_pred_df['prediction_source'] = 'inner_model'
+
+    group_cols = [
+        'model_name', 'train_missing_prop', 'test_missing_prop', 'seed', 'outer_fold',
+        'prediction_source', 'inner_model_idx', 'replicate_id', 'patient',
+        'event_time', 'event_observed'
+    ]
+    counts_df = (
+        member_pred_df
+        .groupby(group_cols, as_index=False)
+        .size()
+        .rename(columns={'size': 'n_prediction_rows'})
+    )
+    duplicated_df = counts_df.loc[counts_df['n_prediction_rows'] > 1].copy()
+    if not duplicated_df.empty:
+        sample_rows = duplicated_df.head(10).to_dict(orient='records')
+        raise ValueError(
+            'Found duplicated survival predictions for the same seed x outer_fold x replicate x patient x missingness cell. '
+            'This notebook does not collapse them into a single predictor. Sample duplicated groups: '
+            f'{sample_rows}'
+        )
+
+    out_df = (
+        member_pred_df[group_cols + ['member_risk']]
+        .copy()
+        .sort_values([
+            'model_name', 'train_missing_prop', 'test_missing_prop', 'seed', 'outer_fold',
+            'prediction_source', 'inner_model_idx', 'patient'
+        ])
+        .reset_index(drop=True)
+    )
+    out_df['n_prediction_rows'] = 1
+    return out_df
+
+
+def safe_cindex(event_observed, event_time, risk_score):
+    event_observed = np.asarray(event_observed, dtype=bool).reshape(-1)
+    event_time = np.asarray(event_time, dtype=np.float64).reshape(-1)
+    risk_score = np.asarray(risk_score, dtype=np.float64).reshape(-1)
+    finite = np.isfinite(event_time) & np.isfinite(risk_score)
+    event_observed = event_observed[finite]
+    event_time = event_time[finite]
+    risk_score = risk_score[finite]
+    if not (len(event_observed) == len(event_time) == len(risk_score)):
+        raise ValueError('safe_cindex expects equal-length arrays.')
+    if len(event_time) < 2:
+        return np.nan
+
+    concordant = 0.0
+    permissible = 0.0
+    for i in range(len(event_time)):
+        for j in range(i + 1, len(event_time)):
+            comparable = False
+            sign = 0.0
+            if event_observed[i] and event_time[i] < event_time[j]:
+                comparable = True
+                sign = np.sign(risk_score[i] - risk_score[j])
+            elif event_observed[j] and event_time[j] < event_time[i]:
+                comparable = True
+                sign = np.sign(risk_score[j] - risk_score[i])
+            if not comparable:
+                continue
+            permissible += 1.0
+            if sign > 0:
+                concordant += 1.0
+            elif sign == 0:
+                concordant += 0.5
+    if permissible == 0.0:
+        return np.nan
+    return float(concordant / permissible)
+
+
+def build_replicate_cindex_table(member_patient_df: pd.DataFrame):
+    if member_patient_df.empty:
+        return pd.DataFrame()
+    if 'prediction_source' not in member_patient_df.columns:
+        member_patient_df = member_patient_df.copy()
+        member_patient_df['prediction_source'] = 'inner_model'
+    rows = []
+    group_cols = [
+        'model_name', 'train_missing_prop', 'test_missing_prop', 'seed', 'outer_fold',
+        'prediction_source', 'inner_model_idx', 'replicate_id'
+    ]
+    for key, group_df in member_patient_df.groupby(group_cols, sort=True):
+        model_name, train_prop, test_prop, seed, outer_fold, prediction_source, inner_idx, replicate_id = key
+        cindex_val = safe_cindex(
+            group_df['event_observed'].to_numpy(),
+            group_df['event_time'].to_numpy(),
+            group_df['member_risk'].to_numpy(),
+        )
+        rows.append({
+            'model_name': model_name,
+            'train_missing_prop': float(train_prop),
+            'test_missing_prop': float(test_prop),
+            'seed': seed,
+            'outer_fold': outer_fold,
+            'prediction_source': str(prediction_source),
+            'inner_model_idx': int(inner_idx),
+            'replicate_id': str(replicate_id),
+            'n_patients': int(group_df['patient'].nunique()),
+            'cindex': cindex_val,
+        })
+    return pd.DataFrame(rows).sort_values([
+        'model_name', 'train_missing_prop', 'test_missing_prop', 'seed', 'outer_fold',
+        'prediction_source', 'inner_model_idx'
+    ]).reset_index(drop=True)
+
+
+def cindex_replicates_to_auc_compatible(replicate_cindex_df: pd.DataFrame):
+    """Rename C-index replicate values to the internal AUC-compatible column name."""
+    if replicate_cindex_df.empty:
+        return replicate_cindex_df.copy()
+    if 'cindex' not in replicate_cindex_df.columns:
+        raise ValueError("Expected a 'cindex' column.")
+    out = replicate_cindex_df.copy()
+    out['auc'] = out['cindex']
+    return out.drop(columns=['cindex'])
+
+
+_CINDEX_COLUMN_RENAME = {
+    'auc': 'cindex',
+    'mean_auc': 'mean_cindex',
+    'std_auc': 'std_cindex',
+    'auc_ci95': 'cindex_ci95',
+    'auc_ci95_lower': 'cindex_ci95_lower',
+    'auc_ci95_upper': 'cindex_ci95_upper',
+    'baseline_auc': 'baseline_cindex',
+    'train_time_aupmc': 'train_time_cindex_aupmc',
+    'test_time_aupmc': 'test_time_cindex_aupmc',
+    'best_fixed_train_aupmc': 'best_fixed_train_cindex_aupmc',
+    'selected_train_aupmc': 'selected_train_cindex_aupmc',
+    'envelope_mean_auc': 'envelope_mean_cindex',
+    'winner_mean_auc': 'winner_mean_cindex',
+    'loser_mean_auc': 'loser_mean_cindex',
+    'delta_mean_auc': 'delta_mean_cindex',
+}
+
+
+def rename_auc_outputs_for_cindex(df: pd.DataFrame):
+    """Return a copy with AUC-specific column names replaced by C-index names."""
+    out = df.copy()
+    rename_map = {}
+    for col in out.columns:
+        if col in _CINDEX_COLUMN_RENAME:
+            rename_map[col] = _CINDEX_COLUMN_RENAME[col]
+            continue
+        new_col = col
+        for old_fragment, new_fragment in [
+            ('baseline_auc', 'baseline_cindex'),
+            ('train_time_aupmc', 'train_time_cindex_aupmc'),
+            ('test_time_aupmc', 'test_time_cindex_aupmc'),
+            ('best_fixed_train_aupmc', 'best_fixed_train_cindex_aupmc'),
+            ('selected_train_aupmc', 'selected_train_cindex_aupmc'),
+            ('mean_auc', 'mean_cindex'),
+            ('std_auc', 'std_cindex'),
+            ('auc_ci95', 'cindex_ci95'),
+        ]:
+            new_col = new_col.replace(old_fragment, new_fragment)
+        if new_col != col:
+            rename_map[col] = new_col
+    return out.rename(columns=rename_map)
+
+
+def rename_general_results_summary_for_cindex(df: pd.DataFrame):
+    out = df.copy()
+    if out.empty:
+        return out
+    text_replacements = {
+        'baseline_auc': 'baseline_cindex',
+        'train_time_aupmc': 'train_time_cindex_aupmc',
+        'test_time_aupmc': 'test_time_cindex_aupmc',
+        'best_fixed_train_aupmc': 'best_fixed_train_cindex_aupmc',
+        'Baseline AUC': 'Baseline C-index',
+        'Train-time AUPMC': 'Train-time C-index AUPMC',
+        'Test-time AUPMC': 'Test-time C-index AUPMC',
+        'Best fixed-train AUPMC': 'Best fixed-train C-index AUPMC',
+        'AUC': 'C-index',
+    }
+    for col in ['selection_metric', 'rank_basis', 'details']:
+        if col not in out.columns:
+            continue
+        series = out[col].astype(str)
+        for old, new in text_replacements.items():
+            series = series.str.replace(old, new, regex=False)
+        out[col] = series
+    return out
 
 
 def expand_inner_model_predictions(pred_df: pd.DataFrame, use_ensemble: bool = False):
@@ -551,10 +983,7 @@ def plot_fixed_dataset_auc_violins(
     ax.spines['left'].set_color('#A7B0BA')
     ax.spines['bottom'].set_color('#A7B0BA')
 
-    figures_dir.mkdir(parents=True, exist_ok=True)
-    figure_path = figures_dir / file_name
-    plt.savefig(figure_path, dpi=300, bbox_inches='tight')
-    print(f'Saved figure to: {figure_path}')
+    _save_current_figure(figures_dir, file_name, dpi=220)
     plt.show()
 
 
@@ -573,22 +1002,65 @@ def build_cell_model_mean_matrix(level1_df: pd.DataFrame):
 
 
 
-def build_post_adaptation_envelope(level1_df: pd.DataFrame):
+def build_best_fixed_train_curve(level1_df: pd.DataFrame):
+    """Select one train-missingness setting per model and return its test-missingness curve.
+
+    The selected setting is the train_missing_prop with the highest normalized AUPMC
+    over test_missing_prop. This avoids an oracle envelope that changes the training
+    missingness setting independently at each test missingness point.
+    """
     both_df = level1_df.loc[level1_df['scenario'] == 'both'].copy()
     if both_df.empty:
-        return pd.DataFrame(columns=['model_name', 'test_missing_prop', 'envelope_train_missing_prop', 'envelope_mean_auc'])
+        return pd.DataFrame(columns=[
+            'model_name',
+            'test_missing_prop',
+            'envelope_train_missing_prop',
+            'envelope_mean_auc',
+            'selected_train_aupmc',
+        ])
 
-    idx = both_df.groupby(['model_name', 'test_missing_prop'])['mean_auc'].idxmax()
-    envelope_df = (
-        both_df.loc[idx, ['model_name', 'test_missing_prop', 'train_missing_prop', 'mean_auc']]
-        .rename(columns={
-            'train_missing_prop': 'envelope_train_missing_prop',
-            'mean_auc': 'envelope_mean_auc',
-        })
+    selected_rows = []
+    for model_name, model_df in both_df.groupby('model_name', sort=True):
+        train_scores = []
+        for train_prop, train_df in model_df.groupby('train_missing_prop', sort=True):
+            train_scores.append({
+                'model_name': model_name,
+                'envelope_train_missing_prop': float(train_prop),
+                'selected_train_aupmc': _normalized_trapezoid_auc(
+                    train_df,
+                    x_col='test_missing_prop',
+                    y_col='mean_auc',
+                ),
+            })
+        score_df = pd.DataFrame(train_scores).dropna(subset=['selected_train_aupmc'])
+        if score_df.empty:
+            continue
+        best_score = (
+            score_df
+            .sort_values(
+                ['selected_train_aupmc', 'envelope_train_missing_prop'],
+                ascending=[False, True],
+            )
+            .iloc[0]
+        )
+        selected_train_prop = float(best_score['envelope_train_missing_prop'])
+        selected_curve_df = model_df.loc[
+            np.isclose(model_df['train_missing_prop'].astype(float), selected_train_prop)
+        ].copy()
+        for _, row in selected_curve_df.iterrows():
+            selected_rows.append({
+                'model_name': model_name,
+                'test_missing_prop': float(row['test_missing_prop']),
+                'envelope_train_missing_prop': selected_train_prop,
+                'envelope_mean_auc': float(row['mean_auc']),
+                'selected_train_aupmc': float(best_score['selected_train_aupmc']),
+            })
+
+    return (
+        pd.DataFrame(selected_rows)
         .sort_values(['model_name', 'test_missing_prop'])
         .reset_index(drop=True)
     )
-    return envelope_df
 
 
 def _normalized_trapezoid_auc(curve_df: pd.DataFrame, x_col: str, y_col: str):
@@ -627,19 +1099,368 @@ def _safe_ratio(numerator, denominator):
     return float(numerator / denominator)
 
 
+def _positive_degradation_auc(curve_df: pd.DataFrame, x_col: str, y_col: str, baseline_auc):
+    """Normalized area of positive degradation: max(baseline/performance - 1, 0)."""
+    baseline_auc = float(baseline_auc) if np.isfinite(baseline_auc) else np.nan
+    if curve_df.empty or not np.isfinite(baseline_auc):
+        return np.nan
+    sub_df = curve_df[[x_col, y_col]].copy()
+    sub_df[x_col] = sub_df[x_col].astype(float)
+    sub_df[y_col] = sub_df[y_col].astype(float)
+    sub_df = (
+        sub_df
+        .groupby(x_col, as_index=False)[y_col]
+        .mean()
+        .sort_values(x_col)
+    )
+    x = sub_df[x_col].to_numpy(dtype=float)
+    y = sub_df[y_col].to_numpy(dtype=float)
+    finite = np.isfinite(x) & np.isfinite(y) & ~np.isclose(y, 0.0)
+    x = x[finite]
+    y = y[finite]
+    if y.size == 0:
+        return np.nan
+    positive_degradation = np.maximum((baseline_auc / y) - 1.0, 0.0)
+    if positive_degradation.size == 1 or np.isclose(float(np.max(x) - np.min(x)), 0.0):
+        return float(positive_degradation[0])
+    trapezoid = getattr(np, 'trapezoid', np.trapz)
+    return float(trapezoid(positive_degradation, x) / (float(np.max(x) - np.min(x))))
+
+
+def _normalized_trapezoid_auc_arrays(x, y):
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    finite = np.isfinite(x) & np.isfinite(y)
+    x = x[finite]
+    y = y[finite]
+    if y.size == 0:
+        return np.nan
+    unique_x = np.unique(x)
+    if unique_x.size != x.size:
+        grouped_y = []
+        for value in unique_x:
+            grouped_y.append(float(np.nanmean(y[np.isclose(x, value)])))
+        x = unique_x
+        y = np.asarray(grouped_y, dtype=float)
+    order = np.argsort(x)
+    x = x[order]
+    y = y[order]
+    if y.size == 1 or np.isclose(float(np.max(x) - np.min(x)), 0.0):
+        return float(y[0])
+    trapezoid = getattr(np, 'trapezoid', np.trapz)
+    return float(trapezoid(y, x) / (float(np.max(x) - np.min(x))))
+
+
+def _positive_degradation_auc_arrays(x, y, baseline_auc):
+    baseline_auc = float(baseline_auc) if np.isfinite(baseline_auc) else np.nan
+    if not np.isfinite(baseline_auc):
+        return np.nan
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    finite = np.isfinite(x) & np.isfinite(y) & ~np.isclose(y, 0.0)
+    x = x[finite]
+    y = y[finite]
+    if y.size == 0:
+        return np.nan
+    unique_x = np.unique(x)
+    if unique_x.size != x.size:
+        grouped_y = []
+        for value in unique_x:
+            grouped_y.append(float(np.nanmean(y[np.isclose(x, value)])))
+        x = unique_x
+        y = np.asarray(grouped_y, dtype=float)
+    order = np.argsort(x)
+    x = x[order]
+    y = y[order]
+    positive_degradation = np.maximum((baseline_auc / y) - 1.0, 0.0)
+    if positive_degradation.size == 1 or np.isclose(float(np.max(x) - np.min(x)), 0.0):
+        return float(positive_degradation[0])
+    trapezoid = getattr(np, 'trapezoid', np.trapz)
+    return float(trapezoid(positive_degradation, x) / (float(np.max(x) - np.min(x))))
+
+
+def _method_metrics_from_arrays(train_props, test_props, mean_auc, is_distillation_method=False):
+    train_props = np.asarray(train_props, dtype=float)
+    test_props = np.asarray(test_props, dtype=float)
+    mean_auc = np.asarray(mean_auc, dtype=float)
+    finite = np.isfinite(train_props) & np.isfinite(test_props) & np.isfinite(mean_auc)
+    train_props = train_props[finite]
+    test_props = test_props[finite]
+    mean_auc = mean_auc[finite]
+    if mean_auc.size == 0:
+        return {
+            'baseline_auc': np.nan,
+            'train_time_aupmc': np.nan,
+            'test_time_aupmc': np.nan,
+            'best_fixed_train_aupmc': np.nan,
+            'best_fixed_train_missing_prop': np.nan,
+            'train_degradation_coefficient': np.nan,
+            'test_degradation_coefficient': np.nan,
+            'minimum_degradation_coefficient': np.nan,
+        }
+
+    baseline_mask = np.isclose(train_props, 0.0) & np.isclose(test_props, 0.0)
+    baseline_auc = float(np.nanmean(mean_auc[baseline_mask])) if baseline_mask.any() else np.nan
+
+    train_mask = np.isclose(test_props, 0.0)
+    train_time_aupmc = _normalized_trapezoid_auc_arrays(train_props[train_mask], mean_auc[train_mask])
+    train_degradation_coefficient = _positive_degradation_auc_arrays(
+        train_props[train_mask],
+        mean_auc[train_mask],
+        baseline_auc=baseline_auc,
+    )
+    if bool(is_distillation_method):
+        train_time_aupmc = np.nan
+        train_degradation_coefficient = np.nan
+
+    test_mask = np.isclose(train_props, 0.0)
+    test_time_aupmc = _normalized_trapezoid_auc_arrays(test_props[test_mask], mean_auc[test_mask])
+    test_degradation_coefficient = _positive_degradation_auc_arrays(
+        test_props[test_mask],
+        mean_auc[test_mask],
+        baseline_auc=baseline_auc,
+    )
+
+    best_fixed_train_missing_prop = np.nan
+    best_fixed_train_aupmc = np.nan
+    minimum_degradation_coefficient = np.nan
+    train_scores = []
+    for train_prop in np.unique(train_props):
+        mask = np.isclose(train_props, train_prop)
+        score = _normalized_trapezoid_auc_arrays(test_props[mask], mean_auc[mask])
+        if np.isfinite(score):
+            train_scores.append((float(train_prop), float(score)))
+    if train_scores:
+        train_scores = sorted(train_scores, key=lambda item: (-item[1], item[0]))
+        best_fixed_train_missing_prop = float(train_scores[0][0])
+        best_mask = np.isclose(train_props, best_fixed_train_missing_prop)
+        best_baseline_mask = best_mask & np.isclose(test_props, 0.0)
+        best_fixed_train_baseline_auc = (
+            float(np.nanmean(mean_auc[best_baseline_mask]))
+            if best_baseline_mask.any()
+            else baseline_auc
+        )
+        best_fixed_train_aupmc = _normalized_trapezoid_auc_arrays(
+            test_props[best_mask],
+            mean_auc[best_mask],
+        )
+        minimum_degradation_coefficient = _positive_degradation_auc_arrays(
+            test_props[best_mask],
+            mean_auc[best_mask],
+            baseline_auc=best_fixed_train_baseline_auc,
+        )
+
+    return {
+        'baseline_auc': float(baseline_auc),
+        'train_time_aupmc': float(train_time_aupmc),
+        'test_time_aupmc': float(test_time_aupmc),
+        'best_fixed_train_aupmc': float(best_fixed_train_aupmc),
+        'best_fixed_train_missing_prop': best_fixed_train_missing_prop,
+        'train_degradation_coefficient': float(train_degradation_coefficient),
+        'test_degradation_coefficient': float(test_degradation_coefficient),
+        'minimum_degradation_coefficient': float(minimum_degradation_coefficient),
+    }
+
+
+def _weighted_condition_mean_auc(model_replicate_df: pd.DataFrame, replicate_weights=None):
+    """Build condition-level mean AUCs for one model, optionally with bootstrap weights."""
+    required_cols = {'train_missing_prop', 'test_missing_prop', 'replicate_id', 'auc'}
+    missing_cols = required_cols.difference(model_replicate_df.columns)
+    if missing_cols:
+        raise ValueError(f'Missing required columns for condition means: {sorted(missing_cols)}')
+
+    sub_df = model_replicate_df[list(required_cols)].copy()
+    sub_df['auc'] = pd.to_numeric(sub_df['auc'], errors='coerce')
+    sub_df = sub_df.dropna(subset=['auc'])
+    if sub_df.empty:
+        return pd.DataFrame(columns=['train_missing_prop', 'test_missing_prop', 'mean_auc'])
+
+    if replicate_weights is None:
+        out_df = (
+            sub_df
+            .groupby(['train_missing_prop', 'test_missing_prop'], as_index=False)['auc']
+            .mean()
+            .rename(columns={'auc': 'mean_auc'})
+        )
+    else:
+        weights = pd.Series(replicate_weights, name='bootstrap_weight')
+        weights.index = weights.index.astype(str)
+        sub_df['replicate_id'] = sub_df['replicate_id'].astype(str)
+        sub_df = sub_df.merge(
+            weights.reset_index().rename(columns={'index': 'replicate_id'}),
+            on='replicate_id',
+            how='inner',
+        )
+        if sub_df.empty:
+            return pd.DataFrame(columns=['train_missing_prop', 'test_missing_prop', 'mean_auc'])
+        sub_df['weighted_auc'] = sub_df['auc'].astype(float) * sub_df['bootstrap_weight'].astype(float)
+        out_df = (
+            sub_df
+            .groupby(['train_missing_prop', 'test_missing_prop'], as_index=False)
+            .agg(weighted_auc=('weighted_auc', 'sum'), bootstrap_weight=('bootstrap_weight', 'sum'))
+        )
+        out_df['mean_auc'] = out_df['weighted_auc'] / out_df['bootstrap_weight']
+        out_df = out_df[['train_missing_prop', 'test_missing_prop', 'mean_auc']]
+
+    out_df['train_missing_prop'] = out_df['train_missing_prop'].astype(float)
+    out_df['test_missing_prop'] = out_df['test_missing_prop'].astype(float)
+    out_df['mean_auc'] = out_df['mean_auc'].astype(float)
+    return out_df.sort_values(['train_missing_prop', 'test_missing_prop']).reset_index(drop=True)
+
+
+def _method_metrics_from_condition_means(condition_mean_df: pd.DataFrame, is_distillation_method=False):
+    """Compute method-level scalar metrics from condition-level mean AUCs."""
+    if condition_mean_df.empty:
+        return {
+            'baseline_auc': np.nan,
+            'train_time_aupmc': np.nan,
+            'test_time_aupmc': np.nan,
+            'best_fixed_train_aupmc': np.nan,
+            'best_fixed_train_missing_prop': np.nan,
+            'train_degradation_coefficient': np.nan,
+            'test_degradation_coefficient': np.nan,
+            'minimum_degradation_coefficient': np.nan,
+        }
+    return _method_metrics_from_arrays(
+        train_props=condition_mean_df['train_missing_prop'].to_numpy(dtype=float),
+        test_props=condition_mean_df['test_missing_prop'].to_numpy(dtype=float),
+        mean_auc=condition_mean_df['mean_auc'].to_numpy(dtype=float),
+        is_distillation_method=is_distillation_method,
+    )
+
+
+def _summarize_bootstrap_distribution(values, confidence=0.95):
+    values = np.asarray(values, dtype=float)
+    values = values[np.isfinite(values)]
+    if values.size == 0:
+        return {
+            'ci_half_width': np.nan,
+            'ci_lower': np.nan,
+            'ci_upper': np.nan,
+            'n_bootstrap_valid': 0,
+        }
+    if values.size == 1:
+        value = float(values[0])
+        return {
+            'ci_half_width': 0.0,
+            'ci_lower': value,
+            'ci_upper': value,
+            'n_bootstrap_valid': 1,
+        }
+    alpha = 1.0 - float(confidence)
+    ci_lower, ci_upper = np.quantile(values, [alpha / 2.0, 1.0 - (alpha / 2.0)])
+    return {
+        'ci_half_width': float((ci_upper - ci_lower) / 2.0),
+        'ci_lower': float(ci_lower),
+        'ci_upper': float(ci_upper),
+        'n_bootstrap_valid': int(values.size),
+    }
+
+
+def _bootstrap_method_metric_intervals(
+    model_replicate_df: pd.DataFrame,
+    is_distillation_method=False,
+    n_bootstrap=2000,
+    confidence=0.95,
+    random_seed=42,
+):
+    """Bootstrap CIs for method-level AUPMC and degradation metrics.
+
+    Bootstrap samples are drawn over replicate identifiers. Each sampled replicate
+    contributes all available missingness cells, preserving the trajectory structure
+    used by the integrated metrics.
+    """
+    metric_cols = [
+        'train_time_aupmc',
+        'test_time_aupmc',
+        'best_fixed_train_aupmc',
+        'train_degradation_coefficient',
+        'test_degradation_coefficient',
+        'minimum_degradation_coefficient',
+    ]
+    empty = {}
+    for metric_col in metric_cols:
+        empty[f'{metric_col}_ci95'] = np.nan
+        empty[f'{metric_col}_ci95_lower'] = np.nan
+        empty[f'{metric_col}_ci95_upper'] = np.nan
+        empty[f'{metric_col}_n_bootstrap_valid'] = 0
+
+    if model_replicate_df.empty:
+        return empty
+
+    replicate_ids = (
+        model_replicate_df['replicate_id']
+        .astype(str)
+        .dropna()
+        .drop_duplicates()
+        .sort_values()
+        .tolist()
+    )
+    if not replicate_ids:
+        return empty
+
+    wide_df = (
+        model_replicate_df
+        .assign(
+            replicate_id=lambda df: df['replicate_id'].astype(str),
+            train_missing_prop=lambda df: df['train_missing_prop'].astype(float),
+            test_missing_prop=lambda df: df['test_missing_prop'].astype(float),
+            auc=lambda df: pd.to_numeric(df['auc'], errors='coerce'),
+        )
+        .pivot_table(
+            index='replicate_id',
+            columns=['train_missing_prop', 'test_missing_prop'],
+            values='auc',
+            aggfunc='mean',
+        )
+        .reindex(index=replicate_ids)
+        .sort_index(axis=1)
+    )
+    if wide_df.empty:
+        return empty
+    condition_pairs = list(wide_df.columns)
+    train_props = np.asarray([float(pair[0]) for pair in condition_pairs], dtype=float)
+    test_props = np.asarray([float(pair[1]) for pair in condition_pairs], dtype=float)
+    auc_matrix = wide_df.to_numpy(dtype=float)
+
+    rng = np.random.default_rng(int(random_seed))
+    values_by_metric = {metric_col: [] for metric_col in metric_cols}
+    n_replicates = len(replicate_ids)
+    for _ in range(int(n_bootstrap)):
+        sampled_idx = rng.integers(0, n_replicates, size=n_replicates)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', RuntimeWarning)
+            sampled_means = np.nanmean(auc_matrix[sampled_idx, :], axis=0)
+        metrics = _method_metrics_from_arrays(
+            train_props=train_props,
+            test_props=test_props,
+            mean_auc=sampled_means,
+            is_distillation_method=is_distillation_method,
+        )
+        for metric_col in metric_cols:
+            values_by_metric[metric_col].append(metrics.get(metric_col, np.nan))
+
+    out = {}
+    for metric_col in metric_cols:
+        stats = _summarize_bootstrap_distribution(values_by_metric[metric_col], confidence=confidence)
+        out[f'{metric_col}_ci95'] = stats['ci_half_width']
+        out[f'{metric_col}_ci95_lower'] = stats['ci_lower']
+        out[f'{metric_col}_ci95_upper'] = stats['ci_upper']
+        out[f'{metric_col}_n_bootstrap_valid'] = stats['n_bootstrap_valid']
+    return out
+
+
 def build_method_level_metrics(
     replicate_auc_df: pd.DataFrame,
     level1_df: pd.DataFrame,
     distillation_model_names=None,
+    n_bootstrap=2000,
+    confidence=0.95,
+    random_seed=42,
 ):
     both_df = level1_df.loc[level1_df['scenario'] == 'both'].copy()
     if both_df.empty:
         return pd.DataFrame(), pd.DataFrame()
-
-    distillation_model_set = {
-        _normalize_model_label(model_name)
-        for model_name in (distillation_model_names or [])
-    }
 
     baseline_df = both_df.loc[
         np.isclose(both_df['train_missing_prop'], 0.0) & np.isclose(both_df['test_missing_prop'], 0.0),
@@ -647,47 +1468,51 @@ def build_method_level_metrics(
     ].copy()
     baseline_lookup = baseline_df.set_index('model_name')['mean_auc'].to_dict()
 
-    envelope_df = build_post_adaptation_envelope(both_df)
+    envelope_df = build_best_fixed_train_curve(both_df)
 
     rows = []
     model_names = sorted(both_df['model_name'].astype(str).unique().tolist())
     for model_name in model_names:
         model_df = both_df.loc[both_df['model_name'].astype(str) == model_name].copy()
-        train_curve_df = model_df.loc[np.isclose(model_df['test_missing_prop'], 0.0)].copy()
-        test_curve_df = model_df.loc[np.isclose(model_df['train_missing_prop'], 0.0)].copy()
-        envelope_curve_df = envelope_df.loc[envelope_df['model_name'].astype(str) == model_name].copy()
+        is_distillation_method = _is_distillation_method(model_name, distillation_model_names)
 
-        baseline_auc = float(baseline_lookup.get(model_name, np.nan))
-        is_distillation_method = _normalize_model_label(model_name) in distillation_model_set
-        train_time_aupmc = _normalized_trapezoid_auc(
-            train_curve_df,
-            x_col='train_missing_prop',
-            y_col='mean_auc',
+        condition_mean_df = model_df[[
+            'train_missing_prop',
+            'test_missing_prop',
+            'mean_auc',
+        ]].copy()
+        point_metrics = _method_metrics_from_condition_means(
+            condition_mean_df,
+            is_distillation_method=is_distillation_method,
         )
-        if is_distillation_method:
-            train_time_aupmc = np.nan
-        test_time_aupmc = _normalized_trapezoid_auc(
-            test_curve_df,
-            x_col='test_missing_prop',
-            y_col='mean_auc',
-        )
-        best_adapted_aupmc = _normalized_trapezoid_auc(
-            envelope_curve_df,
-            x_col='test_missing_prop',
-            y_col='envelope_mean_auc',
+        # Preserve exact baseline lookup used elsewhere in the notebook.
+        point_metrics['baseline_auc'] = float(baseline_lookup.get(model_name, point_metrics['baseline_auc']))
+
+        model_replicate_df = replicate_auc_df.loc[
+            replicate_auc_df['model_name'].astype(str) == model_name
+        ].copy()
+        interval_metrics = _bootstrap_method_metric_intervals(
+            model_replicate_df,
+            is_distillation_method=is_distillation_method,
+            n_bootstrap=n_bootstrap,
+            confidence=confidence,
+            random_seed=_stable_seed(model_name, 'method_level_metrics', base_seed=random_seed),
         )
 
-        rows.append({
+        row = {
             'model_name': model_name,
             'is_distillation_method': bool(is_distillation_method),
-            'baseline_auc': baseline_auc,
-            'train_time_aupmc': float(train_time_aupmc),
-            'test_time_aupmc': float(test_time_aupmc),
-            'best_adapted_aupmc': float(best_adapted_aupmc),
-            'train_degradation_coefficient': _safe_ratio(baseline_auc, train_time_aupmc),
-            'test_degradation_coefficient': _safe_ratio(baseline_auc, test_time_aupmc),
-            'minimum_degradation_coefficient': _safe_ratio(baseline_auc, best_adapted_aupmc),
-        })
+            'baseline_auc': point_metrics['baseline_auc'],
+            'train_time_aupmc': point_metrics['train_time_aupmc'],
+            'test_time_aupmc': point_metrics['test_time_aupmc'],
+            'best_fixed_train_aupmc': point_metrics['best_fixed_train_aupmc'],
+            'best_fixed_train_missing_prop': point_metrics['best_fixed_train_missing_prop'],
+            'train_degradation_coefficient': point_metrics['train_degradation_coefficient'],
+            'test_degradation_coefficient': point_metrics['test_degradation_coefficient'],
+            'minimum_degradation_coefficient': point_metrics['minimum_degradation_coefficient'],
+        }
+        row.update(interval_metrics)
+        rows.append(row)
 
     metrics_df = pd.DataFrame(rows).sort_values(
         ['baseline_auc', 'model_name'],
@@ -755,18 +1580,50 @@ def build_method_plot_summary(replicate_auc_df: pd.DataFrame, n_bootstrap=2000, 
         return summary_df
 
     both_summary_df = summary_df.loc[summary_df['scenario'] == 'both'].copy()
-    envelope_idx = both_summary_df.groupby(['model_name', 'test_prop'])['mean_auc'].idxmax()
-    envelope_df = both_summary_df.loc[envelope_idx].copy()
-    envelope_df['scenario'] = 'envelope'
-    envelope_df['missing_prop'] = envelope_df['test_prop'].astype(float)
-    summary_df = pd.concat([summary_df, envelope_df], ignore_index=True)
+    envelope_rows = []
+    for model_name, model_df in both_summary_df.groupby('model_name', sort=True):
+        train_scores = []
+        for train_prop, train_df in model_df.groupby('train_prop', sort=True):
+            train_scores.append({
+                'train_prop': float(train_prop),
+                'aupmc': _normalized_trapezoid_auc(
+                    train_df,
+                    x_col='test_prop',
+                    y_col='mean_auc',
+                ),
+            })
+        score_df = pd.DataFrame(train_scores).dropna(subset=['aupmc'])
+        if score_df.empty:
+            continue
+        selected_train_prop = float(
+            score_df
+            .sort_values(['aupmc', 'train_prop'], ascending=[False, True])
+            .iloc[0]['train_prop']
+        )
+        selected_curve_df = model_df.loc[np.isclose(model_df['train_prop'].astype(float), selected_train_prop)].copy()
+        selected_curve_df['scenario'] = 'envelope'
+        selected_curve_df['missing_prop'] = selected_curve_df['test_prop'].astype(float)
+        selected_curve_df['selected_train_aupmc'] = float(score_df.loc[
+            np.isclose(score_df['train_prop'].astype(float), selected_train_prop),
+            'aupmc',
+        ].iloc[0])
+        envelope_rows.append(selected_curve_df)
+    if envelope_rows:
+        envelope_df = pd.concat(envelope_rows, ignore_index=True)
+        summary_df = pd.concat([summary_df, envelope_df], ignore_index=True)
     summary_df = summary_df.sort_values(['scenario', 'model_name', 'train_prop', 'test_prop']).reset_index(drop=True)
 
     return summary_df
 
 
 def build_degradation_curve_summary(method_plot_summary_df: pd.DataFrame, distillation_model_names=None):
-    """Build pointwise train/test/best-adapted degradation curves as baseline AUC / AUC."""
+    """Build raw pointwise degradation-ratio curves.
+
+    Train-time and test-time curves use the complete-data baseline
+    (train=0, test=0). Best fixed-train/envelope curves use their own fixed-train
+    baseline at (train=m_train*, test=0), because the trajectory evaluates
+    degradation as test missingness increases after selecting one train regime.
+    """
     if method_plot_summary_df.empty:
         return pd.DataFrame()
 
@@ -787,10 +1644,26 @@ def build_degradation_curve_summary(method_plot_summary_df: pd.DataFrame, distil
         method_plot_summary_df['scenario'].isin(['train', 'test', 'envelope'])
     ].copy()
     out_df['baseline_auc'] = out_df['model_name'].map(baseline_lookup).astype(float)
-    out_df['degradation_ratio'] = out_df.apply(
+
+    envelope_baseline_df = out_df.loc[
+        (out_df['scenario'] == 'envelope')
+        & np.isclose(out_df['test_prop'].astype(float), 0.0),
+        ['model_name', 'mean_auc']
+    ].copy()
+    envelope_baseline_lookup = envelope_baseline_df.set_index('model_name')['mean_auc'].to_dict()
+    envelope_mask = out_df['scenario'] == 'envelope'
+    out_df.loc[envelope_mask, 'baseline_auc'] = (
+        out_df.loc[envelope_mask, 'model_name']
+        .map(envelope_baseline_lookup)
+        .fillna(out_df.loc[envelope_mask, 'baseline_auc'])
+        .astype(float)
+    )
+
+    out_df['raw_degradation_ratio'] = out_df.apply(
         lambda row: _safe_ratio(row['baseline_auc'], row['mean_auc']),
         axis=1,
     )
+    out_df['degradation_ratio'] = out_df['raw_degradation_ratio']
 
     def _degradation_ci_half_width(row):
         baseline_auc = float(row['baseline_auc']) if np.isfinite(row['baseline_auc']) else np.nan
@@ -812,13 +1685,24 @@ def build_degradation_curve_summary(method_plot_summary_df: pd.DataFrame, distil
     out_df['degradation_ratio_ci95_lower'] = out_df['degradation_ratio'] - out_df['degradation_ratio_ci95']
     out_df['degradation_ratio_ci95_upper'] = out_df['degradation_ratio'] + out_df['degradation_ratio_ci95']
 
-    distillation_model_set = {
-        _normalize_model_label(model_name)
-        for model_name in (distillation_model_names or [])
-    }
+    # At the baseline point of each degradation trajectory the ratio is
+    # baseline / baseline by definition. It is therefore fixed to 1 and should
+    # not inherit the uncertainty of the underlying AUC/C-index estimate.
+    trajectory_baseline_mask = (
+        ((out_df['scenario'].isin(['train', 'test']))
+         & np.isclose(out_df['train_prop'].astype(float), 0.0)
+         & np.isclose(out_df['test_prop'].astype(float), 0.0))
+        | ((out_df['scenario'] == 'envelope')
+           & np.isclose(out_df['test_prop'].astype(float), 0.0))
+    )
+    out_df.loc[trajectory_baseline_mask, 'raw_degradation_ratio'] = 1.0
+    out_df.loc[trajectory_baseline_mask, 'degradation_ratio'] = 1.0
+    out_df.loc[trajectory_baseline_mask, 'degradation_ratio_ci95'] = 0.0
+    out_df.loc[trajectory_baseline_mask, 'degradation_ratio_ci95_lower'] = 1.0
+    out_df.loc[trajectory_baseline_mask, 'degradation_ratio_ci95_upper'] = 1.0
     out_df['excluded_from_train_degradation'] = (
         (out_df['scenario'] == 'train')
-        & out_df['model_name'].astype(str).map(_normalize_model_label).isin(distillation_model_set)
+        & out_df['model_name'].astype(str).map(lambda value: _is_distillation_method(value, distillation_model_names))
     )
     train_excluded_mask = out_df['excluded_from_train_degradation']
     out_df.loc[
@@ -832,17 +1716,13 @@ def build_degradation_curve_summary(method_plot_summary_df: pd.DataFrame, distil
 def build_metric_ordering_table(method_level_metrics_df: pd.DataFrame, distillation_model_names=None):
     if method_level_metrics_df.empty:
         return pd.DataFrame()
-    distillation_model_set = {
-        _normalize_model_label(model_name)
-        for model_name in (distillation_model_names or [])
-    }
     metric_specs = [
         ('baseline_auc', 'Baseline AUC', False),
         ('train_time_aupmc', 'Train-time AUPMC', False),
         ('train_degradation_coefficient', 'Train degradation coefficient', True),
         ('test_time_aupmc', 'Test-time AUPMC', False),
         ('test_degradation_coefficient', 'Test degradation coefficient', True),
-        ('best_adapted_aupmc', 'Best-adapted AUPMC', False),
+        ('best_fixed_train_aupmc', 'Best fixed-train AUPMC', False),
         ('minimum_degradation_coefficient', 'Minimum degradation coefficient', True),
     ]
     max_len = int(method_level_metrics_df['model_name'].nunique())
@@ -851,9 +1731,9 @@ def build_metric_ordering_table(method_level_metrics_df: pd.DataFrame, distillat
         if metric_col not in method_level_metrics_df.columns:
             continue
         metric_df = method_level_metrics_df[['model_name', metric_col]].copy()
-        if metric_col in {'train_time_aupmc', 'train_degradation_coefficient'} and distillation_model_set:
+        if metric_col in {'train_time_aupmc', 'train_degradation_coefficient'}:
             metric_df = metric_df.loc[
-                ~metric_df['model_name'].astype(str).map(_normalize_model_label).isin(distillation_model_set)
+                ~metric_df['model_name'].astype(str).map(lambda value: _is_distillation_method(value, distillation_model_names))
             ].copy()
         ordered = (
             metric_df
@@ -895,7 +1775,7 @@ def plot_method_line_triplet(
     default_panel_titles = {
         'train': 'Missing at Train',
         'test': 'Missing at Test',
-        'envelope': 'Adapted Resilience Envelope',
+        'envelope': 'Best Fixed Train-Missingness',
     }
     if panel_titles:
         default_panel_titles.update(panel_titles)
@@ -953,10 +1833,7 @@ def plot_method_line_triplet(
 
     fig.suptitle(title, fontsize=15, y=0.955)
     fig.subplots_adjust(left=0.06, right=0.90, bottom=0.17, top=0.85, wspace=0.18)
-    figures_dir.mkdir(parents=True, exist_ok=True)
-    figure_path = figures_dir / file_name
-    plt.savefig(figure_path, dpi=300, bbox_inches='tight')
-    print(f'Saved figure to: {figure_path}')
+    _save_current_figure(figures_dir, file_name, dpi=220)
     plt.show()
 
 
@@ -1191,10 +2068,7 @@ def plot_level1_auc_heatmaps(summary_df: pd.DataFrame, friedman_global_df: pd.Da
     fig.text(0.5, -0.02, footnote, ha='center', va='bottom', fontsize=11, bbox=dict(boxstyle='round,pad=1.10,rounding_size=0.40', facecolor='white', edgecolor='#7A8088', linewidth=1.0))
 
     fig.suptitle(str(title), fontsize=15, y=layout['suptitle_y'])
-    figures_dir.mkdir(parents=True, exist_ok=True)
-    figure_path = figures_dir / file_name
-    plt.savefig(figure_path, dpi=300, bbox_inches='tight')
-    print(f'Saved figure to: {figure_path}')
+    _save_current_figure(figures_dir, file_name, dpi=220)
     plt.show()
 
 def fdr_bh_adjust(p_values):
@@ -1381,6 +2255,150 @@ def select_level2_plot_pairs(level2_pairwise_df: pd.DataFrame):
     return pd.DataFrame(rows).sort_values(['train_missing_prop', 'test_missing_prop']).reset_index(drop=True)
 
 
+def _parse_top_equivalent_group_models(row: pd.Series):
+    raw = row.get('winner_group_models', '')
+    if pd.isna(raw) or not str(raw).strip():
+        raw = row.get('winner_group_text', '')
+    if pd.isna(raw) or not str(raw).strip():
+        raw = row.get('winner_model', '')
+
+    text = str(raw).replace('|', ',')
+    models = [part.strip() for part in text.split(',') if part.strip()]
+    return list(dict.fromkeys(models))
+
+
+def build_top_equivalent_group_counts(level2_plot_df: pd.DataFrame):
+    """Count how often each method appears in condition-level top-equivalent groups."""
+    columns = [
+        'model_name',
+        'top_equivalent_group_count',
+        'top_equivalent_group_fraction',
+        'n_condition_cells_with_top_group',
+    ]
+    if level2_plot_df is None or level2_plot_df.empty:
+        return pd.DataFrame(columns=columns)
+
+    counts = {}
+    n_cells = int(len(level2_plot_df))
+    for _, row in level2_plot_df.iterrows():
+        for model_name in _parse_top_equivalent_group_models(row):
+            counts[model_name] = counts.get(model_name, 0) + 1
+
+    rows = []
+    for model_name, count in counts.items():
+        rows.append({
+            'model_name': str(model_name),
+            'top_equivalent_group_count': int(count),
+            'top_equivalent_group_fraction': float(count / n_cells) if n_cells else np.nan,
+            'n_condition_cells_with_top_group': n_cells,
+        })
+    return (
+        pd.DataFrame(rows, columns=columns)
+        .sort_values(['top_equivalent_group_count', 'model_name'], ascending=[False, True])
+        .reset_index(drop=True)
+    )
+
+
+def _select_best_methods_by_metric(method_level_metrics_df: pd.DataFrame, metric_col: str, ascending=False):
+    if method_level_metrics_df is None or method_level_metrics_df.empty or metric_col not in method_level_metrics_df.columns:
+        return [], np.nan
+    metric_df = method_level_metrics_df[['model_name', metric_col]].copy()
+    metric_df[metric_col] = pd.to_numeric(metric_df[metric_col], errors='coerce')
+    metric_df = metric_df.dropna(subset=[metric_col])
+    if metric_df.empty:
+        return [], np.nan
+    best_value = metric_df[metric_col].min() if bool(ascending) else metric_df[metric_col].max()
+    best_models = (
+        metric_df.loc[np.isclose(metric_df[metric_col].astype(float), float(best_value)), 'model_name']
+        .astype(str)
+        .sort_values()
+        .tolist()
+    )
+    return best_models, float(best_value)
+
+
+def build_general_results_summary(method_level_metrics_df: pd.DataFrame, level2_plot_df: pd.DataFrame):
+    """Build a compact final summary of best methods by evaluation scenario."""
+    rows = []
+    specs = [
+        (
+            'Best method complete data',
+            'baseline_auc',
+            'highest Baseline AUC',
+            'Complete train / complete test cell.',
+            False,
+        ),
+        (
+            'Best method train-time missingness',
+            'train_time_aupmc',
+            'highest Train-time AUPMC',
+            'Train missingness increases while test data remain complete.',
+            False,
+        ),
+        (
+            'Best method test-time missingness',
+            'test_time_aupmc',
+            'highest Test-time AUPMC',
+            'Model trained on complete data and evaluated under increasing test missingness.',
+            False,
+        ),
+        (
+            'Best method missing at both',
+            'best_fixed_train_aupmc',
+            'highest Best fixed-train AUPMC',
+            'One train-time missingness setting is selected and evaluated across test-time missingness.',
+            False,
+        ),
+    ]
+    for summary_item, metric_col, rank_basis, details, ascending in specs:
+        models, value = _select_best_methods_by_metric(
+            method_level_metrics_df,
+            metric_col=metric_col,
+            ascending=ascending,
+        )
+        rows.append({
+            'summary_item': summary_item,
+            'selected_method': ', '.join(models),
+            'selection_metric': metric_col,
+            'selection_value': value,
+            'rank_basis': rank_basis,
+            'details': details,
+        })
+
+    flexibility_df = build_top_equivalent_group_counts(level2_plot_df)
+    if flexibility_df.empty:
+        rows.append({
+            'summary_item': 'Most flexible method',
+            'selected_method': '',
+            'selection_metric': 'top_equivalent_group_count',
+            'selection_value': np.nan,
+            'rank_basis': 'highest number of top-equivalent group appearances',
+            'details': 'No condition-level top-equivalent group was available after FDR correction.',
+        })
+    else:
+        best_count = int(flexibility_df['top_equivalent_group_count'].max())
+        best_models = (
+            flexibility_df.loc[
+                flexibility_df['top_equivalent_group_count'].astype(int) == best_count,
+                'model_name',
+            ]
+            .astype(str)
+            .sort_values()
+            .tolist()
+        )
+        n_cells = int(flexibility_df['n_condition_cells_with_top_group'].max())
+        rows.append({
+            'summary_item': 'Most flexible method',
+            'selected_method': ', '.join(best_models),
+            'selection_metric': 'top_equivalent_group_count',
+            'selection_value': float(best_count),
+            'rank_basis': 'highest number of top-equivalent group appearances',
+            'details': f'Appears in the top-equivalent group in {best_count}/{n_cells} condition-level cells.',
+        })
+
+    return pd.DataFrame(rows)
+
+
 def _format_winner_group_text(models_text: str, max_names_per_line=2):
     names = [part.strip() for part in str(models_text).split(',') if part.strip()]
     if not names:
@@ -1410,6 +2428,32 @@ def _contrast_text_color(rgba):
     r, g, b = [float(value) for value in rgba[:3]]
     luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
     return 'black' if luminance > 0.58 else 'white'
+
+
+def _split_long_title(title: str, max_chars: int = 82):
+    title = str(title)
+    if '\n' in title or len(title) <= max_chars:
+        return title
+
+    parts = [part.strip() for part in title.split('|')]
+    if len(parts) > 1:
+        lines = []
+        current = parts[0]
+        for part in parts[1:]:
+            candidate = f'{current} | {part}'
+            if len(candidate) <= max_chars:
+                current = candidate
+            else:
+                lines.append(current)
+                current = part
+        lines.append(current)
+        return '\n'.join(lines[:2]) if len(lines) == 2 else '\n'.join([' | '.join(lines[:-1]), lines[-1]])
+
+    midpoint = len(title) // 2
+    split_idx = title.rfind(' ', 0, midpoint)
+    if split_idx < 0:
+        split_idx = midpoint
+    return f'{title[:split_idx].rstrip()}\n{title[split_idx:].lstrip()}'
 
 
 def plot_level2_significant_pairs_heatmap(level2_plot_df: pd.DataFrame, title: str, figures_dir: Path, file_name: str):
@@ -1454,7 +2498,7 @@ def plot_level2_significant_pairs_heatmap(level2_plot_df: pd.DataFrame, title: s
     ax.set_xlim(0, len(test_props))
     ax.set_ylim(len(train_props), 0)
     ax.set_aspect('equal')
-    ax.set_title(title, fontsize=13, pad=22, loc='center')
+    ax.set_title(_split_long_title(title), fontsize=13, pad=22, loc='center')
     ax.set_xlabel('Test missing prop', fontsize=12, labelpad=14)
     ax.set_ylabel('Train missing prop', fontsize=12, labelpad=14)
     ax.set_xticks(np.arange(len(test_props), dtype=float) + 0.5)
@@ -1484,10 +2528,7 @@ def plot_level2_significant_pairs_heatmap(level2_plot_df: pd.DataFrame, title: s
             linespacing=1.12,
         )
 
-    figures_dir.mkdir(parents=True, exist_ok=True)
-    figure_path = figures_dir / file_name
-    plt.savefig(figure_path, dpi=2000, bbox_inches='tight')
-    print(f'Saved figure to: {figure_path}')
+    _save_current_figure(figures_dir, file_name, dpi=300)
     plt.show()
 
 
@@ -1631,10 +2672,5 @@ def plot_level3_pairwise_condition_matrices(level2_pairwise_df: pd.DataFrame, ti
     else:
         fig.subplots_adjust(left=0.10, right=0.90, bottom=0.14, top=0.94, wspace=0.50, hspace=0.34)
         fig.suptitle(title, fontsize=19, y=0.985)
-    figures_dir.mkdir(parents=True, exist_ok=True)
-    figure_path = figures_dir / file_name
-    target_long_side_px = 3840
-    export_dpi = max(300, int(round(target_long_side_px / max(fig_width, fig_height))))
-    plt.savefig(figure_path, dpi=export_dpi, bbox_inches='tight')
-    print(f'Saved figure to: {figure_path}')
+    _save_current_figure(figures_dir, file_name, dpi=300)
     plt.show()

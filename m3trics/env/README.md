@@ -89,6 +89,13 @@ conda env update -n m3trics_4090 -f env/m3trics_4090.yml --prune
 conda env update -n m3trics_5090 -f env/m3trics_5090.yml --prune
 ```
 
+`scikit-survival` is required only for the survival-specific classical baselines: `ZI_CoxNet`, `KNN_CoxNet`, `ZI_RSF`, and `KNN_RSF`.
+If the Conda solver does not install it through the environment YAML, install the extra requirements manually:
+
+```bash
+pip install -r env/requirements.txt
+```
+
 ## 6. Remove An Environment
 
 ```bash

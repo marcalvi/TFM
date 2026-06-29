@@ -1,0 +1,9 @@
+Baseline AUC,Train-time AUPMC,Train degradation coefficient,Test-time AUPMC,Test degradation coefficient,Best fixed-train AUPMC,Minimum degradation coefficient
+HealNet,ZI_MLP,VAE_MLP,Di-MMLP,Di-PAM,Di-MMLP,Di-PAM
+Di-MMLP,KNN_MLP,pAM,ZI_MLP,pAM,Di-PAM,Di-MMLP
+KNN_MLP,VAE_MLP,ZI_MLP,VAE_MLP,Di-MMLP,ZI_MLP,ZI_MLP
+ZI_MLP,HealNet,SMILe,Di-PAM,VAE_MLP,VAE_MLP,VAE_MLP
+VAE_MLP,SMILe,KNN_MLP,HealNet,ZI_MLP,KNN_MLP,SMILe
+Di-PAM,pAM,HealNet,KNN_MLP,SMILe,HealNet,pAM
+SMILe,,,SMILe,KNN_MLP,pAM,KNN_MLP
+pAM,,,pAM,HealNet,SMILe,HealNet

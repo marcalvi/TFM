@@ -28,11 +28,11 @@ def get_model_init_kwargs(model_name, model_kwargs=None):
     """Keep only constructor kwargs needed to instantiate the model itself."""
     model_kwargs = dict(model_kwargs or {})
     model_name_l = normalize_model_name(model_name)
-    if model_name_l in {"dipam", "di_mmlp"}:
-        return {
+    if bool(model_kwargs.get("knowledge_distillation", False)):
+        model_kwargs = {
             key: value
             for key, value in model_kwargs.items()
-            if key not in {"distill_alpha", "distill_beta"}
+            if key not in {"knowledge_distillation", "distill_alpha", "distill_beta"}
         }
     if model_name_l in {"smil_e"}:
         return {
@@ -104,7 +104,13 @@ def _move_batch_to_device(batch, device):
 
 
 def _build_full_batch_from_patient_ids(base_dataset, pid_batch, device):
-    """Build a complete-modality batch (teacher input) from patient IDs."""
+    """Build teacher input from patient IDs before synthetic missingness.
+
+    Natural modality availability from the base dataset is preserved through the
+    returned present mask. In progressive missingness studies this gives the
+    teacher the pre-simulation input; in static-cohort mode it is the observed
+    cohort as-is.
+    """
     xs_rows = []
     ys = []
     for pid in pid_batch:
@@ -210,19 +216,79 @@ def _compute_distill_student_loss(
     return total, loss_survival, loss_repr, loss_feature
 
 
+def _flatten_distill_repr(repr_vec):
+    if repr_vec.ndim <= 1:
+        return repr_vec.reshape(repr_vec.shape[0], -1)
+    return repr_vec.reshape(repr_vec.shape[0], -1)
+
+
+def _extract_aux_representation(aux):
+    if isinstance(aux, dict):
+        for key in (
+            "fusion_feature",
+            "hadamard_feature",
+            "bottleneck",
+            "latent",
+            "pooled",
+            "hidden_feature",
+            "representation",
+            "repr",
+            "features",
+            "embedding",
+        ):
+            if key in aux and aux[key] is not None:
+                return aux[key]
+    if torch.is_tensor(aux):
+        return aux
+    return None
+
+
 def _extract_distill_outputs(model_name, model_out):
     model_name_l = normalize_model_name(model_name)
-    if model_name_l in {"dipam"}:
+    if torch.is_tensor(model_out):
+        logits = _prepare_logits_for_task(model_out)
+        return logits, _flatten_distill_repr(logits)
+
+    if isinstance(model_out, dict):
+        logits_raw = model_out.get("logits")
+        if logits_raw is None:
+            logits_raw = model_out.get("out")
+        if logits_raw is None:
+            logits_raw = model_out.get("prediction")
+        if logits_raw is None:
+            raise ValueError(f"Distillation output dictionary for '{model_name_l}' does not contain logits.")
+        logits = _prepare_logits_for_task(logits_raw)
+        repr_vec = _extract_aux_representation(model_out)
+        if repr_vec is None:
+            repr_vec = logits
+        return logits, _flatten_distill_repr(repr_vec)
+
+    if isinstance(model_out, (tuple, list)):
         logits = _prepare_logits_for_task(model_out[0])
-        attn_weights = model_out[1]
-        risk_tensor = model_out[3]
-        repr_vec = (attn_weights.unsqueeze(-1) * risk_tensor).reshape(risk_tensor.shape[0], -1)
-        return logits, repr_vec
-    if model_name_l in {"mlp", "di_mmlp"}:
-        logits = _prepare_logits_for_task(model_out[0])
-        repr_vec = model_out[1]
-        return logits, repr_vec
-    raise ValueError(f"Unsupported distillation model '{model_name_l}'.")
+        repr_vec = None
+        if model_name_l == "pam" and len(model_out) >= 4 and torch.is_tensor(model_out[1]) and torch.is_tensor(model_out[3]):
+            repr_vec = (model_out[1].unsqueeze(-1) * model_out[3]).reshape(model_out[3].shape[0], -1)
+        if repr_vec is None and len(model_out) > 1:
+            repr_vec = _extract_aux_representation(model_out[1])
+        if repr_vec is None:
+            repr_vec = logits
+        return logits, _flatten_distill_repr(repr_vec)
+
+    raise ValueError(f"Unsupported distillation output type for model '{model_name_l}': {type(model_out).__name__}.")
+
+
+def _forward_model(model, model_name_l, Xs, present_mask=None, return_aux=False):
+    if model_name_l == "smil_e":
+        return model(Xs, present_mask, mode="incomplete", meta_train=False, return_aux=return_aux)
+    if return_aux:
+        try:
+            return model(Xs, present_mask, kd=True)
+        except TypeError:
+            try:
+                return model(Xs, present_mask, return_aux=True)
+            except TypeError:
+                return model(Xs, present_mask)
+    return model(Xs, present_mask)
 
 
 def _normalize_scheduler_type(scheduler_type):
@@ -262,6 +328,100 @@ def _step_scheduler(scheduler, scheduler_type="cosine_annealing", metric=None):
     if metric is None:
         raise ValueError("ReduceLROnPlateau requires a metric value for scheduler.step(metric).")
     scheduler.step(float(metric))
+
+
+def _pretrain_distillation_teacher(
+    teacher_model,
+    train_loader,
+    val_loader,
+    device,
+    epochs,
+    lr,
+    weight_decay,
+    min_lr,
+    scheduler_type,
+    lr_patience,
+    task_config,
+    criterion,
+    model_name_l,
+    min_best_epoch=1,
+):
+    """Pretrain the teacher before student optimization."""
+    optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=float(weight_decay))
+    scheduler = _build_scheduler(
+        optimizer,
+        epochs=epochs,
+        min_lr=min_lr,
+        scheduler_type=scheduler_type,
+        lr_patience=lr_patience,
+    )
+    best_state = None
+    best_score = (-np.inf, -np.inf)
+    metric_key = primary_metric_name(task_config)
+
+    train_base_dataset = train_loader.dataset.base_dataset
+    val_base_dataset = val_loader.dataset.base_dataset if val_loader is not None else None
+
+    for epoch in range(1, int(epochs) + 1):
+        teacher_model.train()
+        train_loss = 0.0
+        train_steps = 0
+        for _, _, _, pids in train_loader:
+            Xs_teacher, teacher_mask, y_teacher = _build_full_batch_from_patient_ids(
+                train_base_dataset,
+                pids,
+                device=device,
+            )
+            optimizer.zero_grad()
+            teacher_out = _forward_model(teacher_model, model_name_l, Xs_teacher, teacher_mask, return_aux=True)
+            teacher_logits, _ = _extract_distill_outputs(model_name_l, teacher_out)
+            teacher_loss = _compute_supervised_task_loss(teacher_logits, y_teacher, task_config, criterion)
+            teacher_loss.backward()
+            optimizer.step()
+            train_loss += float(teacher_loss.item())
+            train_steps += 1
+
+        eval_loss = train_loss / max(train_steps, 1)
+        eval_score = (-eval_loss, -eval_loss)
+        if val_loader is not None:
+            teacher_model.eval()
+            val_loss = 0.0
+            val_store = {
+                "probs": [],
+                "y_true": [],
+                "logits": [],
+                "event_times": [],
+                "event_observed": [],
+                "censorship": [],
+                "y_disc": [],
+            }
+            with torch.no_grad():
+                for _, _, _, pids in val_loader:
+                    Xs_teacher, teacher_mask, y_teacher = _build_full_batch_from_patient_ids(
+                        val_base_dataset,
+                        pids,
+                        device=device,
+                    )
+                    teacher_out = _forward_model(teacher_model, model_name_l, Xs_teacher, teacher_mask, return_aux=True)
+                    teacher_logits, _ = _extract_distill_outputs(model_name_l, teacher_out)
+                    teacher_loss = _compute_supervised_task_loss(teacher_logits, y_teacher, task_config, criterion)
+                    val_loss += float(teacher_loss.item())
+                    _accumulate_eval_batch(task_config, teacher_logits, y_teacher, val_store)
+            eval_loss = val_loss / max(len(val_loader), 1)
+            metrics = _finalize_task_metrics(task_config, val_store)
+            eval_score = (float(metrics.get(metric_key, -np.inf)), -float(eval_loss))
+
+        _step_scheduler(scheduler, scheduler_type=scheduler_type, metric=eval_loss)
+        if epoch >= min_best_epoch and eval_score > best_score:
+            best_score = eval_score
+            best_state = copy.deepcopy(teacher_model.state_dict())
+
+    if best_state is not None:
+        teacher_model.load_state_dict(best_state)
+    teacher_model.eval()
+    for param in teacher_model.parameters():
+        param.requires_grad_(False)
+    return teacher_model
 
 
 def train_smil_e_with_meta_learning(
@@ -681,6 +841,10 @@ def train_model_with_validation(
     min_best_epoch = min(5, int(epochs))
     model_kwargs = model_kwargs or {}
     model_name_l = normalize_model_name(model_name)
+    distill_enabled = bool(model_kwargs.get("knowledge_distillation", False))
+
+    if distill_enabled and model_name_l in {"smil_e"}:
+        raise ValueError("Knowledge distillation is not enabled for SMILe because it uses a dedicated meta-learning training loop.")
 
     if model_name_l in {"smil_e"}:
         return train_smil_e_with_meta_learning(
@@ -707,21 +871,29 @@ def train_model_with_validation(
 
     criterion = nn.BCEWithLogitsLoss()
     best_metric_key = primary_metric_name(task_config)
+    student_kwargs = get_model_init_kwargs(model_name_l, model_kwargs)
 
-    if model_name_l in {"dipam", "di_mmlp"}:
-        student_kwargs = get_model_init_kwargs(model_name_l, model_kwargs)
+    if distill_enabled:
         distill_alpha = float(model_kwargs.get("distill_alpha", 1.0))
         distill_beta = float(model_kwargs.get("distill_beta", 0.3))
-        if model_name_l == "di_mmlp":
-            teacher_model = build_model("mlp", input_dims, student_kwargs).to(device)
-        else:
-            teacher_kwargs = {
-                "dropout_p": float(model_kwargs.get("dropout_p", 0.4)),
-                "temperature": float(model_kwargs.get("temperature", 2.0)),
-            }
-            teacher_model = build_model("pam", input_dims, teacher_kwargs).to(device)
+        teacher_model = build_model(model_name_l, input_dims, student_kwargs).to(device)
+        teacher_model = _pretrain_distillation_teacher(
+            teacher_model=teacher_model,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            device=device,
+            epochs=epochs,
+            lr=lr,
+            weight_decay=weight_decay,
+            min_lr=min_lr,
+            scheduler_type=scheduler_type,
+            lr_patience=lr_patience,
+            task_config=task_config,
+            criterion=criterion,
+            model_name_l=model_name_l,
+            min_best_epoch=min_best_epoch,
+        )
         student_model = build_model(model_name_l, input_dims, student_kwargs).to(device)
-        teacher_optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         student_optimizer = optim.Adam(student_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         scheduler = _build_scheduler(
             student_optimizer,
@@ -734,17 +906,7 @@ def train_model_with_validation(
         feat_criterion = nn.MSELoss()
         teacher_base_dataset = train_loader.dataset.base_dataset
     else:
-        model = build_model(model_name, input_dims, model_kwargs).to(device)
-        if model_name_l in {"smil_e"}:
-            base_dataset = train_loader.dataset.base_dataset
-            priors = learn_smil_priors(
-                base_dataset=train_loader.dataset,
-                encoders=model.encoders,
-                num_modalities=model.num_modalities,
-                num_priors=model.num_priors,
-                device=device,
-            ).to(device)
-            model.set_priors(priors)
+        model = build_model(model_name_l, input_dims, student_kwargs).to(device)
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=float(weight_decay))
         scheduler = _build_scheduler(
             optimizer,
@@ -758,17 +920,16 @@ def train_model_with_validation(
     best_epoch = 1
     best_model_state = None
     best_val_targets = None
-    best_val_probs = None
     early_stop = 0
     patience = int(early_stopping_patience)
     history = []
 
     for epoch in range(1, epochs + 1):
-        if model_name_l in {"dipam", "di_mmlp"}:
-            teacher_model.train()
+        if distill_enabled:
             student_model.train()
         else:
             model.train()
+
         train_loss = 0.0
         train_steps = 0
         train_teacher_loss = 0.0
@@ -784,25 +945,20 @@ def train_model_with_validation(
             else:
                 y = y.to(device)
 
-            if model_name_l in {"dipam", "di_mmlp"}:
+            if distill_enabled:
                 Xs_teacher, teacher_mask, y_teacher = _build_full_batch_from_patient_ids(
                     teacher_base_dataset,
                     pids,
                     device=device,
                 )
-
-                teacher_optimizer.zero_grad()
-                teacher_out = teacher_model(Xs_teacher, teacher_mask, return_aux=True)
-                teacher_logits, teacher_repr = _extract_distill_outputs(
-                    "di_mmlp" if model_name_l == "di_mmlp" else "dipam",
-                    teacher_out,
-                )
-                teacher_loss = _compute_supervised_task_loss(teacher_logits, y_teacher, task_config, criterion)
-                teacher_loss.backward()
-                teacher_optimizer.step()
+                with torch.no_grad():
+                    teacher_out = _forward_model(teacher_model, model_name_l, Xs_teacher, teacher_mask, return_aux=True)
+                    teacher_logits, teacher_repr = _extract_distill_outputs(model_name_l, teacher_out)
+                    teacher_loss = _compute_supervised_task_loss(teacher_logits, y_teacher, task_config, criterion)
 
                 student_optimizer.zero_grad()
-                student_out = student_model(Xs, present_mask, return_aux=True)
+                student_mask = None if bypass_mask else present_mask
+                student_out = _forward_model(student_model, model_name_l, Xs, student_mask, return_aux=True)
                 student_logits, student_repr = _extract_distill_outputs(model_name_l, student_out)
                 student_loss, student_survival, student_repr_loss, student_feature_loss = _compute_distill_student_loss(
                     student_logits=student_logits,
@@ -820,16 +976,16 @@ def train_model_with_validation(
                 student_loss.backward()
                 student_optimizer.step()
 
-                train_loss += student_loss.item()
-                train_teacher_loss += teacher_loss.item()
-                train_student_survival += student_survival.item()
-                train_student_repr += student_repr_loss.item()
-                train_student_feature += student_feature_loss.item()
+                train_loss += float(student_loss.item())
+                train_teacher_loss += float(teacher_loss.item())
+                train_student_survival += float(student_survival.item())
+                train_student_repr += float(student_repr_loss.item())
+                train_student_feature += float(student_feature_loss.item())
                 train_steps += 1
             else:
                 model_mask = None if bypass_mask else present_mask
                 optimizer.zero_grad()
-                logits_out = model(Xs, model_mask)
+                logits_out = _forward_model(model, model_name_l, Xs, model_mask, return_aux=False)
                 if logits_out is None:
                     continue
                 logits = _prepare_logits_for_task(logits_out)
@@ -837,7 +993,7 @@ def train_model_with_validation(
                 loss.backward()
                 optimizer.step()
 
-                train_loss += loss.item()
+                train_loss += float(loss.item())
                 train_steps += 1
 
         avg_train_loss = train_loss / max(train_steps, 1)
@@ -846,7 +1002,7 @@ def train_model_with_validation(
         avg_student_repr = train_student_repr / max(train_steps, 1)
         avg_student_feature = train_student_feature / max(train_steps, 1)
 
-        if model_name_l in {"dipam", "di_mmlp"}:
+        if distill_enabled:
             student_model.eval()
         else:
             model.eval()
@@ -870,15 +1026,15 @@ def train_model_with_validation(
                 else:
                     y = y.to(device)
 
-                if model_name_l in {"dipam", "di_mmlp"}:
-                    logits = _prepare_logits_for_task(student_model(Xs, present_mask))
-                    loss = _compute_supervised_task_loss(logits, y, task_config, criterion)
+                model_mask = None if bypass_mask else present_mask
+                if distill_enabled:
+                    logits_out = _forward_model(student_model, model_name_l, Xs, model_mask, return_aux=False)
                 else:
-                    model_mask = None if bypass_mask else present_mask
-                    logits = _prepare_logits_for_task(model(Xs, model_mask))
-                    loss = _compute_supervised_task_loss(logits, y, task_config, criterion)
+                    logits_out = _forward_model(model, model_name_l, Xs, model_mask, return_aux=False)
+                logits = _prepare_logits_for_task(logits_out)
+                loss = _compute_supervised_task_loss(logits, y, task_config, criterion)
 
-                val_loss += loss.item()
+                val_loss += float(loss.item())
                 _accumulate_eval_batch(task_config, logits, y, val_store)
 
         avg_val_loss = val_loss / max(len(val_loader), 1)
@@ -910,10 +1066,7 @@ def train_model_with_validation(
         if epoch >= min_best_epoch and epoch_score > best_epoch_score:
             best_epoch_score = epoch_score
             best_epoch = epoch
-            if model_name_l in {"dipam", "di_mmlp"}:
-                best_model_state = copy.deepcopy(student_model.state_dict())
-            else:
-                best_model_state = copy.deepcopy(model.state_dict())
+            best_model_state = copy.deepcopy((student_model if distill_enabled else model).state_dict())
             best_val_targets = copy.deepcopy(val_store)
             early_stop = 0
         else:
@@ -926,7 +1079,7 @@ def train_model_with_validation(
             f"No best epoch was selected. Check epochs={epochs} and min_best_epoch={min_best_epoch}."
         )
 
-    if model_name_l in {"dipam", "di_mmlp"}:
+    if distill_enabled:
         student_model.load_state_dict(best_model_state)
     else:
         model.load_state_dict(best_model_state)
@@ -934,7 +1087,7 @@ def train_model_with_validation(
     best_metrics = _finalize_task_metrics(task_config, best_val_targets)
     best_metrics["best_epoch"] = int(best_epoch)
 
-    if model_name_l in {"dipam", "di_mmlp"}:
+    if distill_enabled:
         return student_model, history, best_metrics
     return model, history, best_metrics
 
@@ -958,7 +1111,11 @@ def train_model_on_full_dataset(
     """Train a final model on the full outer-train split for a fixed number of epochs."""
     model_kwargs = model_kwargs or {}
     model_name_l = normalize_model_name(model_name)
+    distill_enabled = bool(model_kwargs.get("knowledge_distillation", False))
     set_global_seed(train_seed, deterministic=True)
+
+    if distill_enabled and model_name_l in {"smil_e"}:
+        raise ValueError("Knowledge distillation is not enabled for SMILe because it uses a dedicated meta-learning training loop.")
 
     if model_name_l in {"smil_e"}:
         return train_smil_e_on_full_dataset_with_meta_learning(
@@ -982,21 +1139,29 @@ def train_model_on_full_dataset(
     )
 
     criterion = nn.BCEWithLogitsLoss()
+    student_kwargs = get_model_init_kwargs(model_name_l, model_kwargs)
 
-    if model_name_l in {"dipam", "di_mmlp"}:
-        student_kwargs = get_model_init_kwargs(model_name_l, model_kwargs)
+    if distill_enabled:
         distill_alpha = float(model_kwargs.get("distill_alpha", 1.0))
         distill_beta = float(model_kwargs.get("distill_beta", 0.3))
-        if model_name_l == "di_mmlp":
-            teacher_model = build_model("mlp", input_dims, student_kwargs).to(device)
-        else:
-            teacher_kwargs = {
-                "dropout_p": float(model_kwargs.get("dropout_p", 0.4)),
-                "temperature": float(model_kwargs.get("temperature", 2.0)),
-            }
-            teacher_model = build_model("pam", input_dims, teacher_kwargs).to(device)
+        teacher_model = build_model(model_name_l, input_dims, student_kwargs).to(device)
+        teacher_model = _pretrain_distillation_teacher(
+            teacher_model=teacher_model,
+            train_loader=train_loader,
+            val_loader=None,
+            device=device,
+            epochs=epochs,
+            lr=lr,
+            weight_decay=weight_decay,
+            min_lr=min_lr,
+            scheduler_type=scheduler_type,
+            lr_patience=lr_patience,
+            task_config=task_config,
+            criterion=criterion,
+            model_name_l=model_name_l,
+            min_best_epoch=1,
+        )
         student_model = build_model(model_name_l, input_dims, student_kwargs).to(device)
-        teacher_optimizer = optim.Adam(teacher_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         student_optimizer = optim.Adam(student_model.parameters(), lr=lr, weight_decay=float(weight_decay))
         scheduler = _build_scheduler(
             student_optimizer,
@@ -1009,17 +1174,7 @@ def train_model_on_full_dataset(
         feat_criterion = nn.MSELoss()
         teacher_base_dataset = train_loader.dataset.base_dataset
     else:
-        model = build_model(model_name, input_dims, model_kwargs).to(device)
-        if model_name_l in {"smil_e"}:
-            base_dataset = train_loader.dataset.base_dataset
-            priors = learn_smil_priors(
-                base_dataset=train_loader.dataset,
-                encoders=model.encoders,
-                num_modalities=model.num_modalities,
-                num_priors=model.num_priors,
-                device=device,
-            ).to(device)
-            model.set_priors(priors)
+        model = build_model(model_name_l, input_dims, student_kwargs).to(device)
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=float(weight_decay))
         scheduler = _build_scheduler(
             optimizer,
@@ -1032,8 +1187,7 @@ def train_model_on_full_dataset(
     history = []
 
     for epoch in range(1, int(epochs) + 1):
-        if model_name_l in {"dipam", "di_mmlp"}:
-            teacher_model.train()
+        if distill_enabled:
             student_model.train()
         else:
             model.train()
@@ -1062,25 +1216,20 @@ def train_model_on_full_dataset(
             else:
                 y = y.to(device)
 
-            if model_name_l in {"dipam", "di_mmlp"}:
+            if distill_enabled:
                 Xs_teacher, teacher_mask, y_teacher = _build_full_batch_from_patient_ids(
                     teacher_base_dataset,
                     pids,
                     device=device,
                 )
-
-                teacher_optimizer.zero_grad()
-                teacher_out = teacher_model(Xs_teacher, teacher_mask, return_aux=True)
-                teacher_logits, teacher_repr = _extract_distill_outputs(
-                    "di_mmlp" if model_name_l == "di_mmlp" else "dipam",
-                    teacher_out,
-                )
-                teacher_loss = _compute_supervised_task_loss(teacher_logits, y_teacher, task_config, criterion)
-                teacher_loss.backward()
-                teacher_optimizer.step()
+                with torch.no_grad():
+                    teacher_out = _forward_model(teacher_model, model_name_l, Xs_teacher, teacher_mask, return_aux=True)
+                    teacher_logits, teacher_repr = _extract_distill_outputs(model_name_l, teacher_out)
+                    teacher_loss = _compute_supervised_task_loss(teacher_logits, y_teacher, task_config, criterion)
 
                 student_optimizer.zero_grad()
-                student_out = student_model(Xs, present_mask, return_aux=True)
+                student_mask = None if bypass_mask else present_mask
+                student_out = _forward_model(student_model, model_name_l, Xs, student_mask, return_aux=True)
                 student_logits, student_repr = _extract_distill_outputs(model_name_l, student_out)
                 student_loss, student_survival, student_repr_loss, student_feature_loss = _compute_distill_student_loss(
                     student_logits=student_logits,
@@ -1099,16 +1248,16 @@ def train_model_on_full_dataset(
                 student_optimizer.step()
 
                 _accumulate_eval_batch(task_config, student_logits, y, train_store)
-                train_loss += student_loss.item()
-                train_teacher_loss += teacher_loss.item()
-                train_student_survival += student_survival.item()
-                train_student_repr += student_repr_loss.item()
-                train_student_feature += student_feature_loss.item()
+                train_loss += float(student_loss.item())
+                train_teacher_loss += float(teacher_loss.item())
+                train_student_survival += float(student_survival.item())
+                train_student_repr += float(student_repr_loss.item())
+                train_student_feature += float(student_feature_loss.item())
                 train_steps += 1
             else:
                 model_mask = None if bypass_mask else present_mask
                 optimizer.zero_grad()
-                logits_out = model(Xs, model_mask)
+                logits_out = _forward_model(model, model_name_l, Xs, model_mask, return_aux=False)
                 if logits_out is None:
                     continue
                 logits = _prepare_logits_for_task(logits_out)
@@ -1117,7 +1266,7 @@ def train_model_on_full_dataset(
                 optimizer.step()
 
                 _accumulate_eval_batch(task_config, logits, y, train_store)
-                train_loss += loss.item()
+                train_loss += float(loss.item())
                 train_steps += 1
 
         avg_train_loss = train_loss / max(train_steps, 1)
@@ -1139,6 +1288,6 @@ def train_model_on_full_dataset(
             }
         )
 
-    if model_name_l in {"dipam", "di_mmlp"}:
+    if distill_enabled:
         return student_model, history
     return model, history

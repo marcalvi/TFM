@@ -1,0 +1,6 @@
+summary_item,selected_method,selection_metric,selection_value,rank_basis,details
+Best method complete data,ZI_MLP,baseline_auc,0.6423825195664276,highest Baseline AUC,Complete train / complete test cell.
+Best method train-time missingness,ZI_MLP,train_time_aupmc,0.6250808547827226,highest Train-time AUPMC,Train missingness increases while test data remain complete.
+Best method test-time missingness,ZI_MLP,test_time_aupmc,0.613602914087828,highest Test-time AUPMC,Model trained on complete data and evaluated under increasing test missingness.
+Best method missing at both,KNN_MLP,best_fixed_train_aupmc,0.6170041015816877,highest Best fixed-train AUPMC,One train-time missingness setting is selected and evaluated across test-time missingness.
+Most flexible method,KNN_MLP,top_equivalent_group_count,7.0,highest number of top-equivalent group appearances,Appears in the top-equivalent group in 7/9 condition-level cells.

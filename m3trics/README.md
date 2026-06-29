@@ -14,7 +14,8 @@ This README describes the workflow from environment setup to result analysis. Th
 - Aggregate duplicated patient rows with mean pooling or supervised attention pooling.
 - Impute missing values within each modality using configurable numeric/categorical strategies.
 - Compare multiple missing-modality methods under the same nested-CV setup.
-- Run either a synthetic missingness decay/progressive missingness study or a fixed observed dataset experiment.
+- Generate dataset-aware initial hyperparameter grids with the fingerprint utility.
+- Run either a progressive missingness study or a static-cohort experiment.
 - Evaluate binary classification and discrete-time survival tasks.
 - Save inner-CV, outer-test, epoch-history, split, prediction, and processed-data outputs.
 - Analyze trained results with notebooks in `analysis/`.
@@ -23,13 +24,13 @@ This README describes the workflow from environment setup to result analysis. Th
 
 ```text
 m3trics/
-├── run_M3TRICS_MIMM.sh                # MIMM training launcher
-├── run_M3TRICS_mmCRC.sh               # mmCRC training launcher
-├── run_M3TRICS_1001P.sh               # 1001Prostate training launcher
+├── run_M3TRICS_mmImmuno.sh                # mmImmuno training launcher
+├── run_M3TRICS_mmColorectal.sh               # mmColorectal training launcher
+├── run_M3TRICS_mmProstate.sh               # mmProstate training launcher
 ├── env/                               # Conda environment definitions and install guide
 ├── hyperparams/                       # Hyperparameter grids per method
 ├── dataset/                           # Dataset preprocessing, loaders, missingness simulator, pooling, imputation
-├── scripts/                           # CLI entrypoint, nested-CV training logic, training loops, shared utilities
+├── scripts/                           # CLI entrypoint, fingerprint utility, nested-CV training logic, training loops, shared utilities
 ├── models/                            # Model implementations
 ├── analysis/                          # Result analysis notebooks and helper code
 └── results/                           # Generated processed data, model outputs, W&B logs
@@ -43,14 +44,22 @@ Use these names in `RUN_MODELS` inside the `.sh` launchers.
 | --- | --- |
 | `ZI_MLP` | MultimodalMLP with zero imputation for missing modalities. |
 | `KNN_MLP` | MultimodalMLP with KNN imputation for missing modalities. |
+| `ZI_LR` | Logistic regression baseline over concatenated modality features with zero imputation for missing modalities. Classification only. |
+| `KNN_LR` | Logistic regression baseline over concatenated modality features with KNN imputation for missing modalities. Classification only. |
+| `ZI_RF` | Random forest classifier baseline over concatenated modality features with zero imputation. Classification only. |
+| `KNN_RF` | Random forest classifier baseline over concatenated modality features with KNN imputation. Classification only. |
+| `ZI_CoxNet` | Regularized Cox elastic-net baseline over concatenated modality features with zero imputation. Survival only. |
+| `KNN_CoxNet` | Regularized Cox elastic-net baseline over concatenated modality features with KNN imputation. Survival only. |
+| `ZI_RSF` | Random Survival Forest baseline over concatenated modality features with zero imputation. Survival only. |
+| `KNN_RSF` | Random Survival Forest baseline over concatenated modality features with KNN imputation. Survival only. |
 | `VAE_MLP` | MultimodalMLP with VAE-based imputation for missing modalities. |
 | `pAM` | Attention masking over unimodal predictions model. |
-| `Di-PAM` | Distilled version of pAM; teacher uses complete modalities, student receives the configured missingness mask. |
-| `Di-MMLP` | Distilled multimodal MLP; teacher uses complete modalities, student receives the configured missingness mask. |
 | `HealNet` | HealNet wrapper for modality-level embeddings. |
 | `SMILe` | SMIL generalization for n>=2 modalities with mask-aware latent reconstruction. |
 
-Hyperparameter grids live in `hyperparams/`. Each method config uses one `args` dictionary. Scalar values are kept fixed, while comma-separated values are expanded automatically into the hyperparameter grid. Use `paired_args` only when two comma-separated arguments must vary together instead of as a Cartesian product.
+Knowledge distillation is not a standalone method name. Set `DISTILL_MODELS` to a comma-separated list of supported torch methods and M3TRICS will also launch each selected method as a `<method>_KD` variant. The teacher is pretrained first, then the student is trained under the configured modality-availability conditions with distillation losses controlled by `DISTILL_ALPHA` and `DISTILL_BETA`.
+
+Hyperparameter grids live in `hyperparams/`. Each method config uses one `args` dictionary. Scalar values are kept fixed, while comma-separated values are expanded automatically into the hyperparameter grid. Use `paired_args` only when two comma-separated arguments must vary together instead of as a Cartesian product. See `hyperparams/README.md` for the full config format and the interaction with fingerprint mode.
 
 SMILe learns its modality priors only from modality slots visible in the current training split and missingness condition. It does not recover synthetic hidden modalities from the complete base dataset.
 
@@ -94,9 +103,9 @@ PY
 The recommended workflow is to edit one of the dataset launchers:
 
 ```text
-run_M3TRICS_MIMM.sh
-run_M3TRICS_mmCRC.sh
-run_M3TRICS_1001P.sh
+run_M3TRICS_mmImmuno.sh
+run_M3TRICS_mmColorectal.sh
+run_M3TRICS_mmProstate.sh
 ```
 
 Each script is organized into the same sections.
@@ -129,12 +138,11 @@ DATA_ROOT="/nfs/rnas/projects/M3TRICS/data/inputs"
 Define the dataset label, patient ID column, and endpoint CSV.
 
 ```bash
-DATASET="mmCRC"
+DATASET="mmColorectal"
 PATIENT_ID_COL="sap"
-ENDPOINTS_CSV="mmCRC_endpoints.csv"
+ENDPOINTS_CSV="mmColorectal_endpoints.csv"
 ```
 
-For `1001P`, `DATASET` is the output label and `DATASET_DIR` is the real input folder name.
 
 ### 3. Modalities Configuration
 
@@ -142,7 +150,7 @@ Each modality needs a name and a CSV file. Example:
 
 ```bash
 RADIO_NAME="radio"
-RADIO_CSV="mmCRC_radiology_data.csv"
+RADIO_CSV="mmColorectal_radiology_data.csv"
 ```
 
 Optional per-modality settings:
@@ -168,14 +176,18 @@ Input requirements:
 Select models, CV folds, seeds, scheduler and hyperparameter-selection behavior.
 
 ```bash
-RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, Di-PAM, Di-MMLP, HealNet, SMILe"
+RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, HealNet, SMILe"
+DISTILL_MODELS="pAM,ZI_MLP"      # optional; creates pAM_KD and ZI_MLP_KD in addition to the base methods
+DISTILL_ALPHA="0.25,0.5"        # representation distillation weight grid
+DISTILL_BETA="0.05,0.1"         # logit distillation weight grid
 RETRAIN_OUTER="true"
 SAVE_INNER="true"
-USE_ENSEMBLE="true"
 k=5
 INNER_SPLITS=${k}
 OUTER_SPLITS=${k}
 HP_SELECTION_EPSILON="0.02"
+FINGERPRINT="false"
+FINGERPRINT_MAX_COMBINATIONS="32"
 SCHEDULER_TYPE="cosine_annealing"
 MIN_LR="1e-6"
 SEEDS="22,2002,4,18473,55602"
@@ -194,7 +206,70 @@ Nested-CV behavior:
 - `RETRAIN_OUTER="true"`: select HPs in inner CV, then refit on the full outer-train split and evaluate on outer-test.
 - `RETRAIN_OUTER="false"`: retain selected inner-fold models and evaluate them on outer-test.
 - `SAVE_INNER="true"`: when `RETRAIN_OUTER=true`, also saves retained-inner outputs under the matching `retrainfalse` directory.
-- `USE_ENSEMBLE="true"`: stores probability-averaged ensemble columns in `test_predictions.csv`; analysis notebooks can use `ensemble_prob` as one replicate per seed and outer fold.
+- Ensemble analyses are computed downstream from retained inner-model predictions when `SAVE_INNER="true"`, so no launcher-level ensemble flag is required.
+
+### Fingerprint-Based Hyperparameter Grids
+
+M3TRICS includes a fingerprint utility inspired by the idea of dataset fingerprinting in self-configuring pipelines. It inspects the configured endpoint and modality CSVs before training and proposes a compact initial hyperparameter search space for each selected method.
+
+Enable it from any launcher:
+
+```bash
+FINGERPRINT="true"
+FINGERPRINT_MAX_COMBINATIONS="32"
+```
+
+When `FINGERPRINT="false"`, training uses the method grids defined in `hyperparams/*.py`.
+
+When `FINGERPRINT="true"`, the launcher:
+
+1. Calls `scripts/fingerprint.py` using the same endpoint, modality files, dropped columns, categorical columns, task type, `RUN_MODELS`, and `DISTILL_MODELS` configured in the `.sh`.
+2. Saves the fingerprint output under:
+
+```text
+results/<DATASET>_<ENDPOINT_COL>/fingerprint/
+├── fingerprint.json
+└── fingerprint_hp_suggestions.sh
+```
+
+3. Passes `--fingerprint_hp_json <...>/fingerprint.json` to `scripts/m3trics.py`.
+4. Overrides the selected method configs before training.
+
+This override is strict: the suggested grids from `fingerprint.json` replace the `fixed_args`, `hp_grid_args`, and `args` defined in `hyperparams/*.py` for the selected methods. If a selected method is missing from the fingerprint JSON, M3TRICS raises an error instead of silently falling back to the default grid.
+
+For methods trained with knowledge distillation, the `<method>_KD` variant uses the same fingerprint grid as the base method. For example, `ZI_MLP_KD` uses the suggested grid for `ZI_MLP`; distillation-specific grids still come from `DISTILL_ALPHA` and `DISTILL_BETA`.
+
+The fingerprint uses simple dataset descriptors such as:
+
+- number of target patients,
+- number of modalities,
+- total feature dimensionality,
+- feature-dimension-to-sample-size ratio,
+- modality coverage,
+- feature-level missingness,
+- endpoint imbalance or survival event rate.
+
+The objective is not to find the optimal hyperparameter grid automatically. It is to provide a safe, compact, dataset-aware first search space, capped by `FINGERPRINT_MAX_COMBINATIONS` per method. This is useful for new datasets where the default grids may be too large or too aggressive for the available sample size.
+
+You can also run the utility directly:
+
+```bash
+python scripts/fingerprint.py \
+  --dataset_dir /path/to/dataset \
+  --endpoint_csv /path/to/endpoints.csv \
+  --patient_id_col patient_id \
+  --endpoint_col 48_month_OS \
+  --task_type binary_classification \
+  --run_models "ZI_LR,KNN_LR,ZI_MLP,pAM,HealNet" \
+  --modality_csv clinical=/path/to/clinical.csv \
+  --modality_csv histology=/path/to/histology.csv \
+  --modality_csv pathology_report=/path/to/pathology_report.csv \
+  --categorical_cols clinical=cancer_type \
+  --drop_cols histology=tcga_project_source \
+  --max_combinations 32 \
+  --output_json fingerprint.json \
+  --output_shell fingerprint_hp_suggestions.sh
+```
 
 ### 5. Task Configuration
 
@@ -226,7 +301,7 @@ For survival, models output `SURVIVAL_N_BINS` logits and the analysis uses task-
 
 ### 6. Progressive Missingness Study
 
-Decay/missingness-study mode simulates missing modalities at train and test time.
+Progressive missingness-study mode simulates missing modalities at train and test time.
 
 ```bash
 MISSINGNESS_STUDY="true"
@@ -237,7 +312,7 @@ TEST_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
 
 Use this when you want to study robustness as missingness increases. The process requires a subset with all selected modalities available before synthetic missingness is applied.
 
-Fixed dataset mode disables synthetic missingness and trains on the observed dataset as-is for standard methods. For distillation methods (`Di-PAM`, `Di-MMLP`), M3TRICS first estimates the observed patient-modality missingness proportion in the original cohort, then trains on the complete-case subset and applies an equivalent synthetic missingness mask to the student branch only.
+Static-cohort mode disables synthetic missingness and trains on the observed dataset as-is, preserving its natural modality-availability pattern. For `<method>_KD` variants, the teacher is pretrained first and the student is then trained on the full observed cohort without complete-case subsampling or extra synthetic missingness.
 
 ```bash
 MISSINGNESS_STUDY="false"
@@ -249,14 +324,14 @@ MISSINGNESS_STUDY="false"
 From the project root:
 
 ```bash
-bash run_M3TRICS_MIMM.sh
+bash run_M3TRICS_mmImmuno.sh
 ```
 
 or:
 
 ```bash
-bash run_M3TRICS_mmCRC.sh
-bash run_M3TRICS_1001P.sh
+bash run_M3TRICS_mmColorectal.sh
+bash run_M3TRICS_mmProstate.sh
 ```
 
 The scripts call `scripts/m3trics.py` with all configured arguments.
@@ -285,7 +360,7 @@ Missingness-study mode output:
 results/<DATASET>_<ENDPOINT_COL>/training_runs/<MODEL>_retrain<true|false>_k<K>/TRAIN_MISSING/<LOCATION>/<TRAIN_MISSING_PERCENT>/seed_<SEED>/
 ```
 
-Fixed dataset output:
+Static-cohort output:
 
 ```text
 results/<DATASET>_<ENDPOINT_COL>/training_runs/<MODEL>_retrain<true|false>_k<K>/FIXED/seed_<SEED>/
@@ -299,7 +374,7 @@ Typical CSVs inside each seed folder:
 | `inner_epoch_history.csv` | Per-epoch learning curves. |
 | `outer_test_metrics.csv` | Outer-test metrics. |
 | `outer_test_summary.csv` | Aggregated outer-test summary. |
-| `test_predictions.csv` | Patient-level predictions and model outputs. When `USE_ENSEMBLE=true`, also includes `ensemble_prob`, `ensemble_logit`, `ensemble_pred_label`, and `ensemble_n_models`. |
+| `test_predictions.csv` | Patient-level predictions and model outputs, including retained inner-model prediction columns when `SAVE_INNER=true`. Downstream analysis can derive ensemble predictions from these columns. |
 | `splits_manifest.csv` | Outer/inner split membership. |
 
 ## 5. Analyze Results
@@ -310,31 +385,31 @@ Analysis notebooks live in:
 analysis/
 ```
 
-### Missing-Modality Decay Analysis
+### Progressive Missingness Study
 
 Use this for `MISSINGNESS_STUDY=true` runs:
 
 ```text
-analysis/MM_decay_analysis.ipynb
+analysis/progressive_missingness_analysis.ipynb
 ```
 
-It loads missingness-study outputs, computes replicate AUC tables, global Friedman tests, Wilcoxon pairwise comparisons, heatmaps, method-level AUPMC metrics, and train/test/minimum degradation coefficients. Degradation coefficients are computed as baseline AUC divided by the corresponding AUPMC, so lower values indicate less degradation. Distillation methods are excluded from Train-time AUPMC and Train degradation coefficient.
+It loads missingness-study outputs, computes replicate AUC tables, global Friedman tests, Wilcoxon pairwise comparisons, heatmaps, method-level AUPMC metrics, and train/test/minimum degradation coefficients. AUPMC and degradation coefficients are saved with bootstrap 95% confidence intervals, while rankings are based only on mean point estimates. Degradation coefficients are computed as normalized positive degradation areas, so values closer to 0 indicate lower relative degradation. `<method>_KD` distillation variants are excluded from Train-time AUPMC and Train degradation coefficient because train-time missingness is applied only to the student during progressive missingness training.
 
 Outputs are saved to:
 
 ```text
-analysis/MM_decay_analysis_outputs/
+analysis/progressive_missingness_analysis_outputs/
 ```
 
-### Fixed Dataset Analysis
+### Static-Cohort Analysis
 
-Use this for `MISSINGNESS_STUDY=false` runs:
+Use this for static-cohort mode runs with `MISSINGNESS_STUDY=false`:
 
 ```text
 analysis/fixed_dataset_analysis.ipynb
 ```
 
-It compares methods on the fixed observed dataset, ranks them by mean AUC, performs global and pairwise statistical tests, and builds pairwise heatmaps.
+It compares methods on the static-cohort dataset, ranks them by mean AUC, performs global and pairwise statistical tests, and builds pairwise heatmaps.
 
 Outputs are saved to:
 
@@ -355,20 +430,20 @@ Current notebooks include:
 | Notebook | Purpose |
 | --- | --- |
 | `h5_to_csvs.ipynb` | Convert `.h5` files into modality CSVs. |
-| `os_distribution_1001P.ipynb` | Inspect 1001Prostate OS distribution. |
-| `os_distribution_MIMM.ipynb` | Inspect MIMM OS distribution. |
-| `os_distribution_mmCRC.ipynb` | Inspect mmCRC OS distribution. |
+| `os_distribution_mmProstate.ipynb` | Inspect mmProstate OS distribution. |
+| `os_distribution_mmImmuno.ipynb` | Inspect mmImmuno OS distribution. |
+| `os_distribution_mmColorectal.ipynb` | Inspect mmColorectal OS distribution. |
 
 ### Notebook Configuration
 
 At the top of each analysis notebook, set the dataset/run parameters, for example:
 
 ```python
-DATASET_NAME = "mmCRC"
+DATASET_NAME = "mmColorectal"
 LABEL_NAME = "OS_21_label"
 TRAIN_DEGRADING_MODALITY = "GLOBAL"
 RETRAIN_OUTER = True
-USE_ENSEMBLE = True
+USE_ENSEMBLE = True  # analysis-only: compute ensemble from retained inner-model predictions
 ```
 
 For fixed-dataset analysis, make sure the notebook is pointed to `results_mode='fixed_dataset'` or uses the provided fixed-dataset helper cells.
@@ -379,7 +454,7 @@ For fixed-dataset analysis, make sure the notebook is pointed to `results_mode='
 2. Choose the dataset launcher closest to your experiment.
 3. Edit paths, endpoint, modality CSVs, dropped columns, and imputation settings.
 4. Choose `RUN_MODELS`, CV folds, seeds, task type, and scheduler.
-5. Set `MISSINGNESS_STUDY=true` for decay analysis or `false` for fixed-dataset training.
+5. Set `MISSINGNESS_STUDY=true` for progressive missingness analysis or `false` for fixed-dataset training.
 6. Run the `.sh` launcher.
 7. Check `results/<DATASET>_<ENDPOINT_COL>/processed_data/` to verify preprocessing.
 8. Check `training_runs/` to verify every model/seed/missingness configuration completed.
@@ -408,10 +483,10 @@ The current result-analysis notebooks are implemented for classification outputs
 
 | Task | Mode | Launcher settings | Analysis notebook | Output folder |
 | --- | --- | --- | --- | --- |
-| Classification | Progressive missingness study | `TASK_TYPE="binary_classification"` + `MISSINGNESS_STUDY="true"` | `analysis/MM_decay_analysis.ipynb` | `analysis/MM_decay_analysis_outputs/` |
-| Classification | Fixed observed dataset | `TASK_TYPE="binary_classification"` + `MISSINGNESS_STUDY="false"` | `analysis/fixed_dataset_analysis.ipynb` | `analysis/fixed_dataset_analysis_outputs/` |
+| Classification | Progressive missingness study | `TASK_TYPE="binary_classification"` + `MISSINGNESS_STUDY="true"` | `analysis/progressive_missingness_analysis.ipynb` | `analysis/progressive_missingness_analysis_outputs/` |
+| Classification | Static-cohort observed dataset | `TASK_TYPE="binary_classification"` + `MISSINGNESS_STUDY="false"` | `analysis/fixed_dataset_analysis.ipynb` | `analysis/fixed_dataset_analysis_outputs/` |
 
 Not currently implemented:
 
 - Survival task analysis notebooks.
-- Modality-specific decay analysis notebooks.
+- Modality-specific progressive missingness analysis notebooks.
