@@ -1,0 +1,12 @@
+{"time":"2026-05-24T13:17:59.400553283+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-24T13:17:59.670197826+02:00","level":"INFO","msg":"stream: created new stream","id":"gdkvewer"}
+{"time":"2026-05-24T13:17:59.670243425+02:00","level":"INFO","msg":"handler: started","stream_id":"gdkvewer"}
+{"time":"2026-05-24T13:17:59.673799946+02:00","level":"INFO","msg":"stream: started","id":"gdkvewer"}
+{"time":"2026-05-24T13:17:59.673804906+02:00","level":"INFO","msg":"writer: started","stream_id":"gdkvewer"}
+{"time":"2026-05-24T13:17:59.673811186+02:00","level":"INFO","msg":"sender: started","stream_id":"gdkvewer"}
+{"time":"2026-05-24T13:18:00.757791038+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-24T13:18:00.99657755+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-24T13:18:00.998573555+02:00","level":"INFO","msg":"stream: closing","id":"gdkvewer"}
+{"time":"2026-05-24T13:18:00.998578525+02:00","level":"INFO","msg":"handler: closed","stream_id":"gdkvewer"}
+{"time":"2026-05-24T13:18:00.999009614+02:00","level":"INFO","msg":"sender: closed","stream_id":"gdkvewer"}
+{"time":"2026-05-24T13:18:00.999013004+02:00","level":"INFO","msg":"stream: closed","id":"gdkvewer"}

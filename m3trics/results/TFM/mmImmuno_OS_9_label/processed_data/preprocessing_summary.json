@@ -1,0 +1,196 @@
+{
+  "dataset": "MIMM",
+  "results_root": "C:\\MARC\\TFM\\m3trics_repo\\m3trics_repo/results/MIMM_OS_9_label",
+  "endpoint_csv": "C:\\MARC\\TFM\\data/MIMM/patients_mimm.csv",
+  "endpoint_col": "OS_9_label",
+  "task_type": "binary_classification",
+  "survival_loss": null,
+  "survival_time_col": null,
+  "survival_event_col": null,
+  "survival_n_bins": null,
+  "patient_id_col": "patient",
+  "modality_imputation_config": {
+    "path": {
+      "numeric_imputation": null,
+      "categorical_imputation": null,
+      "knn_neighbors": null
+    },
+    "radio": {
+      "numeric_imputation": null,
+      "categorical_imputation": null,
+      "knn_neighbors": null
+    },
+    "clin": {
+      "numeric_imputation": null,
+      "categorical_imputation": null,
+      "knn_neighbors": null
+    },
+    "blood": {
+      "numeric_imputation": null,
+      "categorical_imputation": null,
+      "knn_neighbors": null
+    },
+    "radio_report": {
+      "numeric_imputation": null,
+      "categorical_imputation": null,
+      "knn_neighbors": null
+    }
+  },
+  "modality_aggregation_config": {
+    "path": null,
+    "radio": "mean",
+    "clin": null,
+    "blood": null,
+    "radio_report": null
+  },
+  "missing_summary": [
+    {
+      "modality": "path",
+      "feature_columns": 768,
+      "categorical_columns": 0,
+      "numeric_columns": 768,
+      "total_missing_cells": 0,
+      "columns_with_missing": 0,
+      "missing_by_column": {}
+    },
+    {
+      "modality": "radio",
+      "feature_columns": 4096,
+      "categorical_columns": 0,
+      "numeric_columns": 4096,
+      "total_missing_cells": 0,
+      "columns_with_missing": 0,
+      "missing_by_column": {}
+    },
+    {
+      "modality": "clin",
+      "feature_columns": 20,
+      "categorical_columns": 0,
+      "numeric_columns": 20,
+      "total_missing_cells": 0,
+      "columns_with_missing": 0,
+      "missing_by_column": {}
+    },
+    {
+      "modality": "blood",
+      "feature_columns": 6,
+      "categorical_columns": 0,
+      "numeric_columns": 6,
+      "total_missing_cells": 0,
+      "columns_with_missing": 0,
+      "missing_by_column": {}
+    },
+    {
+      "modality": "radio_report",
+      "feature_columns": 4096,
+      "categorical_columns": 0,
+      "numeric_columns": 4096,
+      "total_missing_cells": 0,
+      "columns_with_missing": 0,
+      "missing_by_column": {}
+    }
+  ],
+  "duplicate_summary": [
+    {
+      "modality": "path",
+      "aggregation_method": null,
+      "duplicated_patient_count": 0,
+      "max_rows_per_patient": 1,
+      "example_patient_ids": []
+    },
+    {
+      "modality": "radio",
+      "aggregation_method": "mean",
+      "duplicated_patient_count": 211,
+      "max_rows_per_patient": 30,
+      "example_patient_ids": [
+        "15970864",
+        "17958182",
+        "19704765",
+        "11761851",
+        "18864853",
+        "13787273",
+        "20047967",
+        "15398979",
+        "13182560",
+        "12587577"
+      ]
+    },
+    {
+      "modality": "clin",
+      "aggregation_method": null,
+      "duplicated_patient_count": 0,
+      "max_rows_per_patient": 1,
+      "example_patient_ids": []
+    },
+    {
+      "modality": "blood",
+      "aggregation_method": null,
+      "duplicated_patient_count": 0,
+      "max_rows_per_patient": 1,
+      "example_patient_ids": []
+    },
+    {
+      "modality": "radio_report",
+      "aggregation_method": null,
+      "duplicated_patient_count": 0,
+      "max_rows_per_patient": 1,
+      "example_patient_ids": []
+    }
+  ],
+  "final_shapes": {
+    "path": {
+      "rows": 281,
+      "columns": 769
+    },
+    "radio": {
+      "rows": 1353,
+      "columns": 4097
+    },
+    "clin": {
+      "rows": 281,
+      "columns": 21
+    },
+    "blood": {
+      "rows": 281,
+      "columns": 7
+    },
+    "radio_report": {
+      "rows": 281,
+      "columns": 4097
+    }
+  },
+  "cohort_alignment_summary": {
+    "alignment_mode": "complete_multimodal_cohort",
+    "endpoint_patients_before": 281,
+    "endpoint_patients_after": 281,
+    "dropped_from_endpoints": 0,
+    "cohort_summary_by_modality": [
+      {
+        "modality": "path",
+        "patients_before": 281,
+        "missing_vs_endpoints": 0
+      },
+      {
+        "modality": "radio",
+        "patients_before": 281,
+        "missing_vs_endpoints": 0
+      },
+      {
+        "modality": "clin",
+        "patients_before": 281,
+        "missing_vs_endpoints": 0
+      },
+      {
+        "modality": "blood",
+        "patients_before": 281,
+        "missing_vs_endpoints": 0
+      },
+      {
+        "modality": "radio_report",
+        "patients_before": 281,
+        "missing_vs_endpoints": 0
+      }
+    ]
+  }
+}

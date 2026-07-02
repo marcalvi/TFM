@@ -1,0 +1,12 @@
+{"time":"2026-05-24T14:35:01.009685109+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-24T14:35:01.279271248+02:00","level":"INFO","msg":"stream: created new stream","id":"crandbam"}
+{"time":"2026-05-24T14:35:01.279316717+02:00","level":"INFO","msg":"handler: started","stream_id":"crandbam"}
+{"time":"2026-05-24T14:35:01.283077108+02:00","level":"INFO","msg":"stream: started","id":"crandbam"}
+{"time":"2026-05-24T14:35:01.283093738+02:00","level":"INFO","msg":"writer: started","stream_id":"crandbam"}
+{"time":"2026-05-24T14:35:01.283108518+02:00","level":"INFO","msg":"sender: started","stream_id":"crandbam"}
+{"time":"2026-05-24T14:35:02.395527914+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-24T14:35:02.631169869+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-24T14:35:02.633319653+02:00","level":"INFO","msg":"stream: closing","id":"crandbam"}
+{"time":"2026-05-24T14:35:02.633334503+02:00","level":"INFO","msg":"handler: closed","stream_id":"crandbam"}
+{"time":"2026-05-24T14:35:02.633872172+02:00","level":"INFO","msg":"sender: closed","stream_id":"crandbam"}
+{"time":"2026-05-24T14:35:02.633876362+02:00","level":"INFO","msg":"stream: closed","id":"crandbam"}
