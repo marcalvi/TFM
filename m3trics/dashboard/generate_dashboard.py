@@ -32,18 +32,27 @@ DATASET_META = {
 }
 METHOD_COLORS = {
     'ZI_MLP':'#00d4ff','KNN_MLP':'#a855f7','VAE_MLP':'#ff2d78',
-    'ZI_LR':'#64748b','KNN_LR':'#94a3b8','ZI_RF':'#2563eb','KNN_RF':'#38bdf8',
-    'ZI_CoxNet':'#7c2d12','KNN_CoxNet':'#f97316','ZI_RSF':'#166534','KNN_RSF':'#84cc16',
-    'pAM':'#00ff9f','Di-PAM':'#4ecdc4',
+    'ZI_MMLP':'#00d4ff','KNN_MMLP':'#a855f7','VAE_MMLP':'#ff2d78',
+    'ZI_pMMLP':'#22d3ee','KNN_pMMLP':'#c084fc','VAE_pMMLP':'#f472b6',
+    'ZI_LR':'#64748b','KNN_LR':'#94a3b8','VAE_LR':'#fb7185',
+    'ZI_RF':'#2563eb','KNN_RF':'#38bdf8','VAE_RF':'#60a5fa',
+    'ZI_CoxNet':'#7c2d12','KNN_CoxNet':'#f97316','VAE_CoxNet':'#fb923c',
+    'ZI_RSF':'#166534','KNN_RSF':'#84cc16','VAE_RSF':'#bef264',
+    'AM':'#34d399','pAM':'#00ff9f','Di-PAM':'#4ecdc4',
     'HealNet':'#ff9900','SMILe':'#ffe66d','Di-MMLP':'#ff6b6b',
 }
 METHOD_DISPLAY = {
     'ZI_MLP':'ZI-MLP','KNN_MLP':'KNN-MLP','VAE_MLP':'VAE-MLP',
-    'ZI_LR':'ZI-LR','KNN_LR':'KNN-LR','ZI_RF':'ZI-RF','KNN_RF':'KNN-RF',
-    'ZI_CoxNet':'ZI-CoxNet','KNN_CoxNet':'KNN-CoxNet','ZI_RSF':'ZI-RSF','KNN_RSF':'KNN-RSF',
-    'pAM':'pAM','Di-PAM':'Di-PAM',
+    'ZI_MMLP':'ZI-MMLP','KNN_MMLP':'KNN-MMLP','VAE_MMLP':'VAE-MMLP',
+    'ZI_pMMLP':'ZI-pMMLP','KNN_pMMLP':'KNN-pMMLP','VAE_pMMLP':'VAE-pMMLP',
+    'ZI_LR':'ZI-LR','KNN_LR':'KNN-LR','VAE_LR':'VAE-LR',
+    'ZI_RF':'ZI-RF','KNN_RF':'KNN-RF','VAE_RF':'VAE-RF',
+    'ZI_CoxNet':'ZI-CoxNet','KNN_CoxNet':'KNN-CoxNet','VAE_CoxNet':'VAE-CoxNet',
+    'ZI_RSF':'ZI-RSF','KNN_RSF':'KNN-RSF','VAE_RSF':'VAE-RSF',
+    'AM':'AM','pAM':'pAM','Di-PAM':'Di-PAM',
     'HealNet':'HealNet','SMILe':'SMILe','Di-MMLP':'Di-MMLP',
 }
+LEGACY_DISTILLATION_MODELS = {'Di-MMLP', 'Di-PAM'}
 
 # ── DATA LOADING ─────────────────────────────────────────────────────────────────
 def _csv(path):
@@ -106,14 +115,24 @@ for _src, _dst in list(CINDEX_TO_AUC_COMPAT.items()):
 
 def _records_with_aliases(records, metric_key: str):
     """Add AUC-compatible aliases to C-index outputs so the JS plot code stays generic."""
-    if metric_key != 'cindex':
-        return records
     out = []
     for row in records or []:
         new_row = dict(row)
-        for src, dst in CINDEX_TO_AUC_COMPAT.items():
-            if src in new_row and dst not in new_row:
-                new_row[dst] = new_row[src]
+        if metric_key == 'cindex':
+            for src, dst in CINDEX_TO_AUC_COMPAT.items():
+                if src in new_row and dst not in new_row:
+                    new_row[dst] = new_row[src]
+        # New metric names; keep legacy degradation-coefficient CSVs readable.
+        aliases = {
+            'train_degradation_coefficient': 'train_mdr',
+            'test_degradation_coefficient': 'test_mdr',
+            'minimum_degradation_coefficient': 'bft_mdr',
+        }
+        for legacy, modern in aliases.items():
+            if legacy in new_row and modern not in new_row:
+                new_row[modern] = new_row[legacy]
+            if modern in new_row and legacy not in new_row:
+                new_row[legacy] = new_row[modern]
         out.append(new_row)
     return out
 
@@ -281,9 +300,12 @@ def _load_ds_from_results(
             'train_time_aupmc':              r.get('train_aupmc'),
             'best_fixed_train_aupmc':        r.get('bft_aupmc'),
             'best_fixed_train_missing_prop': r.get('bft_train_prop'),
-            'train_degradation_coefficient': r.get('train_degradation_coef'),
-            'test_degradation_coefficient':  r.get('test_degradation_coef'),
-            'minimum_degradation_coefficient': r.get('bft_degradation_coef'),
+            'train_mdr':                     r.get('train_mdr', r.get('train_degradation_coef')),
+            'test_mdr':                      r.get('test_mdr', r.get('test_degradation_coef')),
+            'bft_mdr':                       r.get('bft_mdr', r.get('bft_degradation_coef')),
+            'train_degradation_coefficient': r.get('train_mdr', r.get('train_degradation_coef')),
+            'test_degradation_coefficient':  r.get('test_mdr', r.get('test_degradation_coef')),
+            'minimum_degradation_coefficient': r.get('bft_mdr', r.get('bft_degradation_coef')),
         })
 
     # Normalize degradation rows: keep explicit train/test proportions when
@@ -519,7 +541,7 @@ def main():
     ap.add_argument('--output', default='m3trics/dashboard/m3trics_dashboard.html')
     ap.add_argument('--distillation_models', default='',
                     help='Optional comma-separated extra model names treated as distillation methods. '
-                         'Models ending in _KD are detected automatically.')
+                         'Models starting with DI- are detected automatically; legacy _KD outputs are also supported.')
     args = ap.parse_args()
 
     if args.analysis_dir:
@@ -548,7 +570,10 @@ def main():
         print(f'[M3TRICS Dashboard] results dir:  not found — using analysis CSVs only')
         rdir = None
 
-    distillation_models = [m.strip() for m in args.distillation_models.split(',') if m.strip()]
+    distillation_models = sorted(
+        LEGACY_DISTILLATION_MODELS |
+        {m.strip() for m in args.distillation_models.split(',') if m.strip()}
+    )
     data, avail_modes, avail_modalities, cohort_endpoints = load_all(adir, rdir, distillation_models)
     if not data:
         print('  WARNING: no datasets found — dashboard will render in empty state')
@@ -625,10 +650,14 @@ def _method_style_maps(data, static_data):
     for model_name in sorted(_collect_model_names(data, static_data)):
         if model_name in colors and model_name in display:
             continue
-        if model_name.endswith('_KD'):
+        if model_name.upper().startswith('DI-'):
+            base = model_name[3:]
+            colors[model_name] = _mix_hex(colors.get(base, '#888888'), '#ffffff', 0.22)
+            display[model_name] = f"DI-{display.get(base, base)}"
+        elif model_name.endswith('_KD'):
             base = model_name[:-3]
             colors[model_name] = _mix_hex(colors.get(base, '#888888'), '#ffffff', 0.30)
-            display[model_name] = f"{display.get(base, base)}-KD"
+            display[model_name] = f"DI-{display.get(base, base)}"
         else:
             colors.setdefault(model_name, '#888888')
             display.setdefault(model_name, model_name)
@@ -927,8 +956,8 @@ body.widget-dragging{cursor:grabbing!important;user-select:none!important}
 .hp-card .tw.hpw{padding:0}
 .hp-header-filters{display:flex;align-items:center;gap:6px}
 .hp-tp-filter{position:relative;transform:translateZ(0)}
-.hp-tp-filter .dd-btn{min-width:130px;transition:none;justify-content:center}
-.hp-tp-filter .dd-val{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hp-tp-filter .dd-btn{min-width:110px;transition:none;justify-content:center}
+.hp-tp-filter .dd-val{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hp-tp-filter .dd-caret{transform:translateZ(0)}
 .hp-tp-menu{position:fixed;min-width:130px;z-index:5001;
   background:var(--menu-bg);border:1px solid var(--bd2);border-radius:var(--rsm);
@@ -939,8 +968,8 @@ body.widget-dragging{cursor:grabbing!important;user-select:none!important}
 .hp-tp-item:hover{background:var(--hov);color:var(--t1)}
 .hp-tp-item.on{background:linear-gradient(90deg,var(--a3),var(--a1));color:#fff;font-weight:750}
 .hp-method-filter{position:relative;transform:translateZ(0)}
-.hp-method-filter .dd-btn{min-width:190px;transition:none;justify-content:center}
-.hp-method-filter .dd-val{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hp-method-filter .dd-btn{min-width:110px;transition:none;justify-content:center}
+.hp-method-filter .dd-val{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hp-method-filter .dd-caret{transform:translateZ(0)}
 .hp-menu{position:fixed;min-width:210px;z-index:5000;
   background:var(--menu-bg);border:1px solid var(--bd2);border-radius:var(--rsm);
@@ -961,15 +990,15 @@ body.widget-dragging{cursor:grabbing!important;user-select:none!important}
 .hp-table-wrap{display:flex;align-items:flex-start;min-width:0;padding-left:0}
 .hp-scroll{min-width:0;flex:1 1 auto;overflow-x:auto;overflow-y:hidden}
 .hp-head-main{overflow:hidden}
-.hp-fixed{flex:0 0 176px;width:176px;z-index:5;background:var(--card);
+.hp-fixed{flex:0 0 308px;width:308px;z-index:5;background:var(--card);
   border-left:1px solid var(--bd2);box-shadow:-18px 0 22px -18px rgba(0,0,0,.9)}
 .hpw .mt{border-collapse:separate;border-spacing:0;background:var(--card)}
 .hpw .mt td,.hpw .mt th{background:var(--card)}
 .hp-scroll .mt{min-width:900px;margin-left:0}
-.hp-fixed .mt{width:176px;min-width:176px;margin-left:0}
+.hp-fixed .mt{width:308px;min-width:308px;margin-left:0}
 .mt.hp-main,.mt.hp-selected{table-layout:fixed}
-.hp-scroll .mt.hp-main td{overflow:hidden;text-overflow:ellipsis}
-.hp-fixed th,.hp-fixed td{text-align:center;background:var(--card)!important}
+.hp-scroll .mt.hp-main th,.hp-scroll .mt.hp-main td{overflow:hidden;text-overflow:ellipsis}
+.hp-fixed th,.hp-fixed td{text-align:left;background:var(--card)!important}
 .hpw td.hp-combo{font-family:'JetBrains Mono','SFMono-Regular',Menlo,monospace;font-size:12px;color:var(--t3);max-width:360px;overflow:hidden;text-overflow:ellipsis;position:relative;cursor:default}
 .hp-combo-text{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
 .hp-combo-copy{display:none;position:absolute;inset:0;align-items:center;justify-content:center;
@@ -1007,6 +1036,7 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
 .mt tr[data-m]:hover td{background:var(--hov);cursor:pointer}
 .mt tr.hl td{background:rgba(168,85,247,.07)!important}
 .hp-scroll .mt th:first-child,.hp-scroll .mt td:first-child{padding-left:15px}
+.hp-fixed .mt th:first-child,.hp-fixed .mt td:first-child{padding-left:15px}
 .best{font-weight:700;color:var(--a1)!important}
 .si{opacity:.3;font-size:9px;margin-left:2px}
 
@@ -1021,6 +1051,23 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
 .cg-cell:hover{transform:scale(1.05);box-shadow:0 4px 18px rgba(0,0,0,.3)}
 .cg-mn{font-size:13.5px;font-weight:700;line-height:1.2}
 .cg-av{font-size:12px;margin-top:2px;opacity:.65}
+.metric-snap{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:10px}
+.metric-card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);
+  padding:12px 14px;position:relative;overflow:hidden;min-height:86px;box-shadow:var(--sh2)}
+.metric-card::after{content:'';position:absolute;right:-30px;top:-36px;width:92px;height:92px;border-radius:50%;
+  background:radial-gradient(circle,var(--mc-soft),transparent 68%);opacity:.8}
+.metric-k{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:var(--t3);position:relative;z-index:1}
+.metric-m{font-size:18px;font-weight:850;margin-top:8px;line-height:1;color:var(--mc);position:relative;z-index:1}
+.metric-v{font-size:13px;color:var(--t2);margin-top:7px;position:relative;z-index:1}
+.metric-note{font-size:11.5px;color:var(--t3);margin-top:4px;position:relative;z-index:1}
+.cond-rank{display:flex;align-items:center;gap:8px}
+.cond-rank-dot{width:8px;height:8px;border-radius:50%;background:var(--mc);box-shadow:0 0 0 2px var(--mcb)}
+.lead-tag{display:inline-flex;align-items:center;gap:5px;padding:2px 7px;border-radius:999px;
+  background:rgba(0,212,255,.1);color:var(--a1);border:1px solid rgba(0,212,255,.18);
+  font-size:11.5px;font-weight:750}
+.lead-list{font-size:12px;line-height:1.3;color:var(--t2);margin-top:3px}
+.cg-cell.lead-cell{min-height:58px}
+.cg-cell.selected{outline:2px solid rgba(0,212,255,.55);outline-offset:1px}
 
 /* ── MISC ────────────────────────────────── */
 .es{display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -1200,8 +1247,8 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
         <div class="ch">
           <span class="ct2">Hyperparameter Selection Summary</span>
           <div class="hp-header-filters">
-            <div class="hp-tp-filter" id="hp-trainprop-filter"></div>
             <div class="hp-method-filter" id="hp-method-filter"></div>
+            <div class="hp-tp-filter" id="hp-trainprop-filter"></div>
           </div>
         </div>
         <div class="tw hpw" id="hp-sel"></div>
@@ -1211,10 +1258,15 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
 
     <!-- METRICS -->
     <div class="sec" id="s-metrics">
-      <div class="g3">
-        <div class="card"><div class="ch"><span class="ct2">AUPMC Comparison</span></div><div class="cp"><div id="ch-br"></div></div></div>
-        <div class="card"><div class="ch"><span class="ct2">Multi-Metric Radar</span><span class="badge">normalised</span></div><div class="cp"><div id="ch-rd"></div></div></div>
+      <div class="metric-snap" id="metric-snap"></div>
+      <div class="g2">
+        <div class="card"><div class="ch"><span class="ct2">Scenario AUPMC Comparison</span><span class="badge">higher is better</span></div><div class="cp"><div id="ch-br"></div></div></div>
+        <div class="card"><div class="ch"><span class="ct2">Performance vs Degradation</span><span class="badge">upper-left is not ideal</span></div><div class="cp"><div id="ch-rd"></div></div></div>
       </div>
+      <div class="g1"><div class="card">
+        <div class="ch"><span class="ct2">Metric Fingerprint Heatmap</span><span class="badge">method × robustness metrics</span></div>
+        <div class="cp"><div id="ch-mh"></div></div>
+      </div></div>
       <div class="g1"><div class="card">
         <div class="ch"><span class="ct2">Method-Level Metrics Table</span><span class="badge">click header to sort · click row to highlight</span></div>
         <div class="tw" id="tbl"></div>
@@ -1223,17 +1275,32 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
 
     <!-- CONDITIONS -->
     <div class="sec" id="s-conds">
-      <div class="g1"><div class="card">
-        <div class="ch"><span class="ct2">Top Method by Condition</span><span class="badge">click a cell to drill down</span></div>
+      <div class="g2">
+      <div class="card">
+        <div class="ch"><span class="ct2">Top Method by Condition</span><span class="badge">highest mean score</span></div>
         <div class="cgw" id="cgc"></div>
-      </div></div>
-      <div class="g1"><div class="card">
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct2">Leading Group by Condition</span><span class="badge">not significantly beaten</span></div>
+        <div class="cgw" id="cgg"></div>
+      </div>
+      </div>
+      <div class="g2">
+      <div class="card">
+        <div class="ch">
+          <span class="ct2">Selected Condition Detail</span>
+          <span class="badge" id="cdlbl">0% train / 0% test</span>
+        </div>
+        <div class="tw" id="cond-detail"></div>
+      </div>
+      <div class="card">
         <div class="ch">
           <span class="ct2">Pairwise Wilcoxon — Significant wins (FDR p&lt;0.05)</span>
           <span class="badge" id="clbl">0% train / 0% test</span>
         </div>
         <div class="cp"><div id="ch-wl"></div></div>
-      </div></div>
+      </div>
+      </div>
     </div>
 
     <!-- SUMMARY -->
@@ -1386,7 +1453,7 @@ const S = {ds:null, sec:'global', theme:'dark', mode: AVAIL_MODES[0]?.key||'ense
 const curMod = () => ((MODES_DATA[S.mode]||{})[S.modality]||{});
 const D   = () => curMod()[S.ds] || {};
 const SD  = () => STATIC_DS_DATA[S.ds] || {};
-const isDistill = m => DISTILLATION_MODELS.has(m) || /_KD$/i.test(String(m||''));
+const isDistill = m => DISTILLATION_MODELS.has(m) || /^DI-/i.test(String(m||'')) || /_KD$/i.test(String(m||'')) || ['Di-MMLP','Di-PAM'].includes(String(m||''));
 const notDistill = m => !isDistill(m);
 const dk  = () => S.theme === 'dark';
 const f2  = v  => v == null ? '–' : v.toFixed(3);
@@ -1397,6 +1464,11 @@ const metricDeltaLabel = (obj=null) => `Δ${metricLabel(obj)}`;
 const activeMethods = () => [...new Set((D().mean_auc||[]).map(r=>r.model_name))].sort()
   .filter(m=>S.methodVis[m]!==false);
 const allMethods = () => [...new Set((D().mean_auc||[]).map(r=>r.model_name))].sort();
+const activeMethodSet = () => new Set(activeMethods());
+const activeMetricRows = () => {
+  const am = activeMethodSet();
+  return (D().metrics||[]).filter(r=>am.has(r.model_name));
+};
 const anyDropdownOpen = () => !!document.querySelector('.dd-menu.open,.mf-menu.open,.hp-menu.open,.hp-tp-menu.open');
 function clearPlotHovers(){
   ['ch-hm','ch-tr','ch-dg','ch-bars','ch-radar','ch-pw','ch-top','sc-heat','sc-bars'].forEach(id=>{
@@ -1605,6 +1677,7 @@ let TRAJ_RESIZE_RAF = null;
 let TRAJ_RESIZE_TIMER = null;
 const HP_HEIGHT_MIN = 360;
 const HP_HEIGHT_MAX = 720;
+let _hpAutoH = HP_HEIGHT_MAX;
 
 function trajectoryHeight(divId){return clamp(S.trajHeights[divId]||TRAJ_HEIGHT,TRAJ_HEIGHT,TRAJ_HEIGHT*2)}
 function setTrajectoryHeight(divId,h){S.trajHeights[divId]=clamp(h,TRAJ_HEIGHT,TRAJ_HEIGHT*2);return S.trajHeights[divId]}
@@ -1729,9 +1802,9 @@ function initTrajectoryResize(){
   });
 }
 
-function hpHeight(){return clamp(S.hpHeight||HP_HEIGHT_MIN,HP_HEIGHT_MIN,HP_HEIGHT_MAX)}
+function hpHeight(){return clamp(S.hpHeight||HP_HEIGHT_MIN,HP_HEIGHT_MIN,_hpAutoH)}
 function applyHpHeight(h=null){
-  if(h!=null)S.hpHeight=clamp(h,HP_HEIGHT_MIN,HP_HEIGHT_MAX);
+  if(h!=null)S.hpHeight=clamp(h,HP_HEIGHT_MIN,_hpAutoH);
   const el=document.getElementById('hp-sel');
   if(el)el.style.maxHeight=hpHeight()+'px';
 }
@@ -1746,7 +1819,7 @@ function initHpResize(){
       ev.stopPropagation();
       return;
     }
-    applyHpHeight(hpHeight()<HP_HEIGHT_MIN*1.5?HP_HEIGHT_MAX:HP_HEIGHT_MIN);
+    applyHpHeight(hpHeight()<HP_HEIGHT_MIN*1.5?_hpAutoH:HP_HEIGHT_MIN);
     ev.preventDefault();
     ev.stopPropagation();
   });
@@ -2167,6 +2240,7 @@ function toggleCI(chart){
 function renderMethodFilter(){
   const el=document.getElementById('method-filter');
   if(!el)return;
+  const menuWasOpen=document.getElementById('method-menu')?.classList.contains('open');
   const methods=allMethods();
   methods.forEach(m=>{if(S.methodVis[m]===undefined)S.methodVis[m]=true;});
   Object.keys(S.methodVis).forEach(m=>{if(!methods.includes(m))delete S.methodVis[m];});
@@ -2190,6 +2264,10 @@ function renderMethodFilter(){
       <svg class="mf-caret" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 1l4 4 4-4"/></svg>
     </div>
     <div class="mf-menu" id="method-menu">${items}</div>`;
+  if(menuWasOpen){
+    document.getElementById('method-menu')?.classList.add('open');
+    positionMethodMenu();
+  }
 }
 
 function positionMethodMenu(){
@@ -2233,10 +2311,14 @@ function toggleMethod(m,ev=null){
     document.getElementById('method-menu')?.classList.add('open');
     positionMethodMenu();
   }
-  rHeatmaps();
-  rTraj();
-  rDeg();
-  rHpSelection();
+  if(S.sec==='global'){
+    rHeatmaps();
+    rTraj();
+    rDeg();
+    rHpSelection();
+  }else{
+    render();
+  }
 }
 
 function updateDdLabels(){
@@ -2302,6 +2384,11 @@ function friedmanSig(f){
 }
 
 function render(){
+  if(S.study==='progressive') renderMethodFilter();
+  else {
+    const mf=document.getElementById('method-filter');
+    if(mf) mf.innerHTML='';
+  }
   switch(S.sec){
     case'global':      rGlobal();       break;
     case'metrics':     rMetrics();      break;
@@ -2796,7 +2883,7 @@ function renderHpTrainPropSelect(props){
   const valLabel=cur===null?'All':pct(cur);
   const menuWasOpen=document.getElementById('hp-trainprop-menu')?.classList.contains('open');
   el.innerHTML=`<div class="dd-btn" onclick="toggleHpTpMenu(event)">
-    <span class="dd-lbl">Train</span>
+    <span class="dd-lbl">Train missing</span>
     <div class="dd-sep"></div>
     <span class="dd-val">${valLabel}</span>
     <svg class="dd-caret" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 1l4 4 4-4"/></svg>
@@ -2904,16 +2991,25 @@ function rHpSelection(){
     {k:'hp_combination',l:'HP combination name'},
     ...paramCols.map(k=>({k,l:label(k)})),
   ];
-  const colWidth=c=>{
-    if(c.k==='model_name')return 130;
-    if(c.k==='hp_combination')return 360;
-    return 140;
-  };
-  const rawColSum=cols.reduce((s,c)=>s+colWidth(c),0);
-  const mainTableWidth=Math.max(900,rawColSum);
-  const hpComboBonus=mainTableWidth-rawColSum;
-  const mainColgroup=`<colgroup>${cols.map(c=>{const w=colWidth(c)+(c.k==='hp_combination'?hpComboBonus:0);return`<col style="width:${w}px">`;}).join('')}</colgroup>`;
-  const fixedColgroup=`<colgroup><col style="width:104px"><col style="width:72px"></colgroup>`;
+  // Min width per column = enough to show header label in full (9.5px/char bold 12px + 28px padding)
+  const hpColMinW=l=>Math.max(72,Math.ceil((l||'').toUpperCase().length*9.5)+28);
+  const colMinWidths=cols.map(c=>hpColMinW(c.l));
+  const sumMinW=colMinWidths.reduce((s,w)=>s+w,0);
+  // Available scroll width = container minus the 308px fixed-right section
+  const containerW=el.clientWidth||(el.parentElement&&el.parentElement.clientWidth)||760;
+  const availW=Math.max(200,containerW-308);
+  // If table fits: grow all columns equally; otherwise: use min widths and let scrollbar appear
+  let colWidths;
+  if(sumMinW<availW){
+    const extra=(availW-sumMinW)/cols.length;
+    colWidths=colMinWidths.map(w=>Math.floor(w+extra));
+    colWidths[0]+=availW-colWidths.reduce((s,w)=>s+w,0);
+  } else {
+    colWidths=[...colMinWidths];
+  }
+  const mainTableWidth=Math.max(sumMinW,availW);
+  const mainColgroup=`<colgroup>${cols.map((c,i)=>`<col style="width:${colWidths[i]}px">`).join('')}</colgroup>`;
+  const fixedColgroup=`<colgroup><col style="width:182px"><col style="width:126px"></colgroup>`;
   const ths=cols.map(c=>`<th>${escHtml(c.l)}</th>`).join('');
   const fixedTh='<th>Selected</th><th>%</th>';
   const trs=rows.map((r,i)=>{
@@ -2945,6 +3041,10 @@ function rHpSelection(){
   </div>`;
   syncHpRowHover(el);
   syncHpHeaderScroll(el);
+  // Compute max height (all rows visible) for resize handle, but don't auto-expand
+  requestAnimationFrame(()=>{
+    _hpAutoH=Math.max(el.scrollHeight,HP_HEIGHT_MAX);
+  });
 }
 
 function syncHpRowHover(el){
@@ -3109,7 +3209,7 @@ function toggleHpTpMenu(ev){
 }
 
 // ── METRICS ───────────────────────────────────────────────────────────────
-function rMetrics(){rBars();rRadar();rTable();}
+function rMetrics(){rMetricSnapshot();rBars();rMetricScatter();rMetricHeatmap();rTable();}
 
 function metricCols(){
   const ml=metricLabel();
@@ -3119,14 +3219,14 @@ function metricCols(){
   {k:'train_time_aupmc',l:'Train AUPMC',fmt:f2,hb:true},
   {k:'test_time_aupmc',l:'Test AUPMC',fmt:f2,hb:true},
   {k:'best_fixed_train_aupmc',l:'BFT AUPMC',fmt:f2,hb:true},
-  {k:'train_degradation_coefficient',l:'Train DC',fmt:f2,hb:false},
-  {k:'test_degradation_coefficient',l:'Test DC',fmt:f2,hb:false},
-  {k:'minimum_degradation_coefficient',l:'Best DC',fmt:f2,hb:false},
+  {k:'train_mdr',l:'Train MDR',fmt:f2,hb:false},
+  {k:'test_mdr',l:'Test MDR',fmt:f2,hb:false},
+  {k:'bft_mdr',l:'BFT MDR',fmt:f2,hb:false},
   ];
 }
 
 function sortedMet(){
-  const r=[...(D().metrics||[])];
+  const r=[...activeMetricRows()];
   return r.sort((a,b)=>{
     const av=a[S.sk],bv=b[S.sk];
     if(av==null&&bv==null)return 0; if(av==null)return S.sa?-1:1; if(bv==null)return S.sa?1:-1;
@@ -3134,9 +3234,50 @@ function sortedMet(){
   });
 }
 
+function bestRow(rows,key,higher=true){
+  const vals=rows.filter(r=>r[key]!=null&&Number.isFinite(Number(r[key])));
+  if(!vals.length)return null;
+  return vals.sort((a,b)=>higher?(b[key]-a[key]):(a[key]-b[key]))[0];
+}
+
+function rMetricSnapshot(){
+  const el=document.getElementById('metric-snap');
+  if(!el)return;
+  const r=activeMetricRows();
+  const ml=metricLabel();
+  if(!r.length){
+    el.innerHTML='<div class="metric-card" style="grid-column:1/-1"><div class="metric-k">No methods selected</div><div class="metric-v">Select at least one method to visualise method-level metrics.</div></div>';
+    return;
+  }
+  const cards=[
+    {k:'Complete data',row:bestRow(r,'baseline_auc',true),metric:`Baseline ${ml}`,field:'baseline_auc',higher:true},
+    {k:'Train-time missingness',row:bestRow(r,'train_time_aupmc',true),metric:'Train AUPMC',field:'train_time_aupmc',higher:true},
+    {k:'Test-time missingness',row:bestRow(r,'test_time_aupmc',true),metric:'Test AUPMC',field:'test_time_aupmc',higher:true},
+    {k:'Missing at both stages',row:bestRow(r,'best_fixed_train_aupmc',true),metric:'BFT AUPMC',field:'best_fixed_train_aupmc',higher:true},
+    {k:'Lowest mean degradation',row:bestRow(r,'bft_mdr',false),metric:'BFT MDR',field:'bft_mdr',higher:false},
+  ];
+  el.innerHTML=cards.map(c=>{
+    const row=c.row;
+    if(!row)return `<div class="metric-card" style="--mc:#8b8fb5;--mc-soft:rgba(139,143,181,.16)"><div class="metric-k">${c.k}</div><div class="metric-m">–</div><div class="metric-v">No compatible data</div></div>`;
+    const color=MC[row.model_name]||'#888888';
+    const prop=row.best_fixed_train_missing_prop!=null&&c.field==='best_fixed_train_aupmc'
+      ? `<div class="metric-note">selected train m = ${pct(row.best_fixed_train_missing_prop)}</div>` : '';
+    return `<div class="metric-card" style="--mc:${color};--mc-soft:${rgba(color,.18)}">
+      <div class="metric-k">${c.k}</div>
+      <div class="metric-m">${MD[row.model_name]||row.model_name}</div>
+      <div class="metric-v">${c.metric}: <b>${f2(row[c.field])}</b></div>
+      ${prop}
+    </div>`;
+  }).join('');
+}
+
 function rTable(){
   const r=sortedMet();
-  if(!r.length){document.getElementById('tbl').innerHTML='<div class="es"><div class="es-i">📊</div><div>No metrics data</div></div>';return;}
+  if(!r.length){
+    const msg=activeMethods().length?'No metrics data':'Select at least one method to visualise it.';
+    document.getElementById('tbl').innerHTML=`<div class="es"><div class="es-i">📊</div><div>${msg}</div></div>`;
+    return;
+  }
   const cols=metricCols();
   const best={};
   cols.slice(1).forEach(c=>{
@@ -3160,48 +3301,89 @@ function rTable(){
 function srt(k){if(S.sk===k)S.sa=!S.sa;else{S.sk=k;S.sa=k==='model_name';}rTable();}
 function hlM(m){S.hl=S.hl===m?null:m;rTable();}
 
-function rRadar(){
-  const r=D().metrics||[]; if(!r.length)return;
+function rMetricScatter(){
+  const r=activeMetricRows().filter(x=>x.best_fixed_train_aupmc!=null&&x.bft_mdr!=null);
+  if(!r.length){emptyPlot('ch-rd','Select at least one method with BFT metrics to visualise it.',300);return;}
   const th=ptBase(),d=dk();
   const ml=metricLabel();
-  const axes=[
-    {k:'baseline_auc',l:`Baseline ${ml}`,hb:true},{k:'train_time_aupmc',l:'Train AUPMC',hb:true},
-    {k:'test_time_aupmc',l:'Test AUPMC',hb:true},{k:'best_fixed_train_aupmc',l:'BFT AUPMC',hb:true},
-    {k:'test_degradation_coefficient',l:'Test Robust.',hb:false},{k:'minimum_degradation_coefficient',l:'Min Robust.',hb:false},
-  ];
-  const rng={};
-  axes.forEach(a=>{const v=r.map(x=>x[a.k]).filter(v=>v!=null);rng[a.k]={mn:Math.min(...v),mx:Math.max(...v)};});
-  const norm=(v,k,hb)=>{const{mn,mx}=rng[k];if(mx===mn)return.5;const n=(v-mn)/(mx-mn);return hb?n:1-n;};
-  const traces=r.map(x=>{
-    const[ri,gi,bi]=hexRgb(MC[x.model_name]||'#888');
-    const vals=axes.map(a=>x[a.k]!=null?norm(x[a.k],a.k,a.hb):0);
-    return{type:'scatterpolar',name:MD[x.model_name]||x.model_name,
-      r:[...vals,vals[0]],theta:[...axes.map(a=>a.l),axes[0].l],
-      fill:'toself',fillcolor:`rgba(${ri},${gi},${bi},.06)`,
-      line:{color:MC[x.model_name]||'#888',width:1.8},
-      hovertemplate:`<b>${MD[x.model_name]||x.model_name}</b><br>%{theta}: %{r:.2f}<extra></extra>`,
-    };
-  });
-  const gc=d?'rgba(255,255,255,.08)':'rgba(0,0,0,.08)';
-  const layout={...th,
-    polar:{bgcolor:d?'rgba(255,255,255,.015)':'rgba(0,0,0,.015)',
-      radialaxis:{visible:true,range:[0,1],gridcolor:gc,tickfont:{size:10.5},tickvals:[.25,.5,.75,1]},
-      angularaxis:{gridcolor:gc,tickfont:{size:12}}},
-    height:300,margin:{t:14,b:10,l:14,r:14},showlegend:true,
-    legend:{font:{size:12},x:1.06,y:.5,orientation:'v',bgcolor:'rgba(0,0,0,0)'},
+  const xs=r.map(x=>x.best_fixed_train_aupmc);
+  const ys=r.map(x=>x.bft_mdr);
+  const traces=[{
+    type:'scatter',mode:'markers+text',
+    x:xs,y:ys,text:r.map(x=>MD[x.model_name]||x.model_name),
+    textposition:'top center',
+    textfont:{size:11,color:d?'rgba(224,228,255,.72)':'rgba(11,11,46,.72)'},
+    marker:{size:13,color:r.map(x=>MC[x.model_name]||'#888'),line:{width:1.2,color:d?'rgba(255,255,255,.22)':'rgba(0,0,0,.16)'}},
+    customdata:r.map(x=>[MD[x.model_name]||x.model_name,f2(x.baseline_auc),f2(x.best_fixed_train_aupmc),f2(x.bft_mdr)]),
+    hovertemplate:'<b>%{customdata[0]}</b><br>Baseline '+ml+': %{customdata[1]}<br>BFT AUPMC: %{customdata[2]}<br>BFT MDR: %{customdata[3]}<extra></extra>',
+  }];
+  const xmin=Math.max(Math.min(...xs)-.015,.25),xmax=Math.min(Math.max(...xs)+.015,.95);
+  const ymin=Math.max(Math.min(...ys)-.01,0),ymax=Math.max(...ys)+.015;
+  const layout={...th,height:300,margin:{t:18,b:54,l:58,r:18},showlegend:false,
+    xaxis:{...th.xaxis,title:{text:'Best fixed-train AUPMC',font:{size:12.5},standoff:14},range:[xmin,xmax],tickfont:{size:12}},
+    yaxis:{...th.yaxis,title:{text:'Best fixed-train MDR',font:{size:12.5},standoff:8},range:[ymin,ymax],tickfont:{size:12}},
+    annotations:[{x:1,y:0,xref:'paper',yref:'paper',xanchor:'right',yanchor:'bottom',showarrow:false,
+      text:'higher performance · lower degradation',font:{size:11.5,color:d?'rgba(224,228,255,.45)':'rgba(11,11,46,.42)'}}],
   };
-  Plotly.react('ch-rd',traces,layout,CFGs);
+  Plotly.react('ch-rd',traces,layout,CFG);
+}
+
+function rMetricHeatmap(){
+  const r=activeMetricRows();
+  const gd='ch-mh';
+  if(!r.length){emptyPlot(gd,'Select at least one method to visualise it.',320);return;}
+  const th=ptBase(),d=dk(),ml=metricLabel();
+  const cols=[
+    {k:'baseline_auc',l:`Baseline ${ml}`,hb:true},
+    {k:'train_time_aupmc',l:'Train AUPMC',hb:true},
+    {k:'test_time_aupmc',l:'Test AUPMC',hb:true},
+    {k:'best_fixed_train_aupmc',l:'BFT AUPMC',hb:true},
+    {k:'train_mdr',l:'Train MDR',hb:false},
+    {k:'test_mdr',l:'Test MDR',hb:false},
+    {k:'bft_mdr',l:'BFT MDR',hb:false},
+  ];
+  const methods=[...r].sort((a,b)=>(b.best_fixed_train_aupmc||0)-(a.best_fixed_train_aupmc||0));
+  const norm={};
+  cols.forEach(c=>{
+    const vals=methods.map(x=>x[c.k]).filter(v=>v!=null&&Number.isFinite(Number(v)));
+    const mn=vals.length?Math.min(...vals):0, mx=vals.length?Math.max(...vals):1;
+    norm[c.k]={mn,mx};
+  });
+  const score=(v,c)=>{
+    if(v==null||!Number.isFinite(Number(v)))return null;
+    const {mn,mx}=norm[c.k];
+    if(mx===mn)return .5;
+    const n=(v-mn)/(mx-mn);
+    return c.hb?n:1-n;
+  };
+  const z=methods.map(m=>cols.map(c=>score(m[c.k],c)));
+  const txt=methods.map(m=>cols.map(c=>m[c.k]==null?'–':f2(m[c.k])));
+  const y=methods.map(m=>MD[m.model_name]||m.model_name);
+  const trace={type:'heatmap',z,x:cols.map(c=>c.l),y,text:txt,texttemplate:'%{text}',hoverinfo:'skip',
+    colorscale:dk()?[[0,'#2a123f'],[.5,'#7c3aed'],[1,'#00d4ff']]:[[0,'#f3e8ff'],[.55,'#a855f7'],[1,'#0088aa']],
+    zmin:0,zmax:1,showscale:true,colorbar:{title:{text:'Relative score',font:{size:12}},thickness:10,tickfont:{size:11.5}},
+    textfont:{size:12.5,color:d?'rgba(255,255,255,.92)':'rgba(0,0,0,.86)'}};
+  Plotly.react(gd,[trace],{...th,height:Math.max(300,82+methods.length*28),margin:{t:18,b:72,l:132,r:28},
+    xaxis:{...th.xaxis,tickangle:-25,tickfont:{size:12}},
+    yaxis:{...th.yaxis,tickfont:{size:12},autorange:'reversed'},
+  },CFG_HM);
 }
 
 function rBars(){
-  const r=D().metrics||[]; if(!r.length)return;
+  const r=activeMetricRows();
+  if(!r.length){emptyPlot('ch-br','Select at least one method to visualise it.',265);return;}
   const th=ptBase(); const sorted=[...r].sort((a,b)=>(b.best_fixed_train_aupmc||0)-(a.best_fixed_train_aupmc||0));
   const ml=metricLabel();
   const xl=sorted.map(x=>MD[x.model_name]||x.model_name);
-  const ms=[{k:'baseline_auc',l:`Baseline ${ml}`,c:'#00d4ff'},{k:'test_time_aupmc',l:'Test AUPMC',c:'#a855f7'},{k:'best_fixed_train_aupmc',l:'BFT AUPMC',c:'#ff2d78'}];
+  const ms=[
+    {k:'baseline_auc',l:`Baseline ${ml}`,c:'#00d4ff'},
+    {k:'train_time_aupmc',l:'Train AUPMC',c:'#00ff9f'},
+    {k:'test_time_aupmc',l:'Test AUPMC',c:'#a855f7'},
+    {k:'best_fixed_train_aupmc',l:'BFT AUPMC',c:'#ff2d78'},
+  ];
   const traces=ms.map(m=>({type:'bar',name:m.l,x:xl,y:sorted.map(x=>x[m.k]!=null?x[m.k]:0),
     marker:{color:m.c,opacity:.9},hovertemplate:`<b>%{x}</b><br>${m.l}: %{y:.3f}<extra></extra>`}));
-  const aucs=r.flatMap(x=>[x.baseline_auc,x.test_time_aupmc,x.best_fixed_train_aupmc]).filter(v=>v!=null);
+  const aucs=r.flatMap(x=>[x.baseline_auc,x.train_time_aupmc,x.test_time_aupmc,x.best_fixed_train_aupmc]).filter(v=>v!=null);
   const ymin=Math.max(Math.min(...aucs)-.03,.3),ymax=Math.min(Math.max(...aucs)+.02,.9);
   const layout={...th,barmode:'group',height:265,margin:{t:14,b:72,l:58,r:12},
     xaxis:{...th.xaxis,tickangle:-30,tickfont:{size:12.5}},
@@ -3211,60 +3393,165 @@ function rBars(){
 }
 
 // ── CONDITIONS ─────────────────────────────────────────────────────────────
-function rConds(){buildGrid();rWilcoxon(S.cond.tr,S.cond.te);}
+function rConds(){
+  buildGrid();
+  buildGroupGrid();
+  rConditionDetail(S.cond.tr,S.cond.te);
+  rWilcoxon(S.cond.tr,S.cond.te);
+}
+
+function conditionRows(tp,mp){
+  const am=activeMethodSet();
+  return (D().mean_auc||[])
+    .filter(r=>Math.abs(r.train_missing_prop-tp)<.001&&Math.abs(r.test_missing_prop-mp)<.001)
+    .filter(r=>am.has(r.model_name))
+    .sort((a,b)=>(b.mean_auc||-Infinity)-(a.mean_auc||-Infinity));
+}
+
+function conditionWilcoxon(tp,mp){
+  const am=activeMethodSet();
+  return (D().wilcoxon||[])
+    .filter(r=>Math.abs(r.train_missing_prop-tp)<.001&&Math.abs(r.test_missing_prop-mp)<.001)
+    .filter(r=>am.has(r.winner_model)&&am.has(r.loser_model));
+}
+
+function leadingGroup(tp,mp){
+  const rows=conditionRows(tp,mp);
+  if(!rows.length)return [];
+  const beaten=new Set(conditionWilcoxon(tp,mp)
+    .filter(r=>r.significant_fdr_0p05)
+    .map(r=>r.loser_model));
+  const leaders=rows.filter(r=>!beaten.has(r.model_name));
+  return leaders.length?leaders:rows.slice(0,1);
+}
 
 function topMethod(tp,mp){
+  const rows=conditionRows(tp,mp);
+  return rows.length?rows[0]:null;
+}
+
+function conditionAxes(){
   const ma=D().mean_auc||[];
-  const c=ma.filter(r=>Math.abs(r.train_missing_prop-tp)<.001&&Math.abs(r.test_missing_prop-mp)<.001)
-    .sort((a,b)=>b.mean_auc-a.mean_auc);
-  return c.length?c[0]:null;
+  return {
+    tps:[...new Set(ma.map(r=>r.train_missing_prop))].sort((a,b)=>a-b),
+    mps:[...new Set(ma.map(r=>r.test_missing_prop))].sort((a,b)=>a-b),
+  };
+}
+
+function conditionEmptyHTML(msg){
+  return `<div class="es"><div class="es-i">🔍</div><div>${msg}</div></div>`;
+}
+
+function conditionGridShell(rowsBuilder){
+  const ma=D().mean_auc||[];
+  if(!ma.length)return conditionEmptyHTML('No condition-level data found.');
+  if(!activeMethods().length)return conditionEmptyHTML('Select at least one method to visualise it.');
+  const {tps,mps}=conditionAxes();
+  let html=`<div class="cg" style="grid-template-columns:66px ${'1fr '.repeat(mps.length).trim()}">`;
+  html+=`<div class="cg-rh" style="text-align:center;padding:4px 0;font-size:9px;color:var(--t3)">Train↓ Test→</div>`;
+  mps.forEach(mp=>html+=`<div class="cg-ch" style="padding:4px 2px">${pct(mp)}</div>`);
+  tps.forEach(tp=>{
+    html+=`<div class="cg-rh">${pct(tp)}</div>`;
+    mps.forEach(mp=>{html+=rowsBuilder(tp,mp);});
+  });
+  html+='</div>';
+  return html;
 }
 
 function buildGrid(){
-  const ma=D().mean_auc||[];
-  if(!ma.length){document.getElementById('cgc').innerHTML='<div class="es"><div class="es-i">🔍</div><div>No data</div></div>';return;}
-  const tps=[...new Set(ma.map(r=>r.train_missing_prop))].sort((a,b)=>a-b);
-  const mps=[...new Set(ma.map(r=>r.test_missing_prop))].sort((a,b)=>a-b);
-
-  let html=`<div class="cg" style="grid-template-columns:66px ${'1fr '.repeat(mps.length).trim()}">`;
-  html+=`<div class="cg-rh" style="text-align:center;padding:4px 0;font-size:9px;color:var(--t3)">Train↓ Test→</div>`;
-  mps.forEach(mp=>`<div class="cg-ch" style="padding:4px 2px">${pct(mp)}</div>`).forEach(s=>html+=s);
-  tps.forEach(tp=>{
-    html+=`<div class="cg-rh">${pct(tp)}</div>`;
-    mps.forEach(mp=>{
-      const top=topMethod(tp,mp);
-      const color=top?(MC[top.model_name]||'#888'):'rgba(120,120,120,.3)';
-      const label=top?(MD[top.model_name]||top.model_name):'–';
-      const auc=top?top.mean_auc.toFixed(3):'';
-      const[ri,gi,bi]=top?hexRgb(color):[120,120,120];
-      html+=`<div class="cg-cell"
-        style="background:rgba(${ri},${gi},${bi},.12);border-color:rgba(${ri},${gi},${bi},.3)"
-        onclick="drillCond(${tp},${mp})"
-        onmouseover="this.style.background='rgba(${ri},${gi},${bi},.25)'"
-        onmouseout="this.style.background='rgba(${ri},${gi},${bi},.12)'">
-        <div class="cg-mn" style="color:${color}">${label}</div>
-        <div class="cg-av">${auc}</div>
-      </div>`;
-    });
+  const el=document.getElementById('cgc');
+  if(!el)return;
+  el.innerHTML=conditionGridShell((tp,mp)=>{
+    const top=topMethod(tp,mp);
+    const color=top?(MC[top.model_name]||'#888'):'rgba(120,120,120,.3)';
+    const label=top?(MD[top.model_name]||top.model_name):'–';
+    const auc=top&&top.mean_auc!=null?top.mean_auc.toFixed(3):'';
+    const[ri,gi,bi]=top?hexRgb(color):[120,120,120];
+    const sel=Math.abs(S.cond.tr-tp)<.001&&Math.abs(S.cond.te-mp)<.001?' selected':'';
+    return `<div class="cg-cell${sel}"
+      style="background:rgba(${ri},${gi},${bi},.12);border-color:rgba(${ri},${gi},${bi},.3)"
+      onclick="drillCond(${tp},${mp})"
+      onmouseover="this.style.background='rgba(${ri},${gi},${bi},.25)'"
+      onmouseout="this.style.background='rgba(${ri},${gi},${bi},.12)'">
+      <div class="cg-mn" style="color:${color}">${label}</div>
+      <div class="cg-av">${auc}</div>
+    </div>`;
   });
-  html+='</div>';
-  document.getElementById('cgc').innerHTML=html;
+}
+
+function buildGroupGrid(){
+  const el=document.getElementById('cgg');
+  if(!el)return;
+  el.innerHTML=conditionGridShell((tp,mp)=>{
+    const leaders=leadingGroup(tp,mp);
+    const first=leaders[0];
+    const color=first?(MC[first.model_name]||'#888'):'rgba(120,120,120,.3)';
+    const[ri,gi,bi]=first?hexRgb(color):[120,120,120];
+    const sel=Math.abs(S.cond.tr-tp)<.001&&Math.abs(S.cond.te-mp)<.001?' selected':'';
+    const names=leaders.map(r=>MD[r.model_name]||r.model_name);
+    const main=names.length?names.slice(0,2).join(' · '):'–';
+    const extra=names.length>2?` +${names.length-2}`:'';
+    const list=names.length?`<div class="lead-list">${names.join(', ')}</div>`:'';
+    return `<div class="cg-cell lead-cell${sel}"
+      style="background:rgba(${ri},${gi},${bi},.10);border-color:rgba(${ri},${gi},${bi},.28)"
+      onclick="drillCond(${tp},${mp})"
+      onmouseover="this.style.background='rgba(${ri},${gi},${bi},.22)'"
+      onmouseout="this.style.background='rgba(${ri},${gi},${bi},.10)'">
+      <div class="lead-tag" style="--mc:${color};--mcb:rgba(${ri},${gi},${bi},.18)">${leaders.length || 0} method${leaders.length===1?'':'s'}</div>
+      <div class="cg-mn" style="color:${color};margin-top:4px">${main}${extra}</div>
+      ${list}
+    </div>`;
+  });
 }
 
 function drillCond(tp,mp){
   S.cond={tr:tp,te:mp};
-  document.getElementById('clbl').textContent=`Train ${pct(tp)} · Test ${pct(mp)}`;
+  const label=`Train ${pct(tp)} · Test ${pct(mp)}`;
+  const cl=document.getElementById('clbl'); if(cl)cl.textContent=label;
+  const cd=document.getElementById('cdlbl'); if(cd)cd.textContent=label;
+  buildGrid();
+  buildGroupGrid();
+  rConditionDetail(tp,mp);
   rWilcoxon(tp,mp);
 }
 
+function rConditionDetail(tp,mp){
+  const el=document.getElementById('cond-detail');
+  if(!el)return;
+  const rows=conditionRows(tp,mp);
+  if(!activeMethods().length){el.innerHTML=conditionEmptyHTML('Select at least one method to visualise it.');return;}
+  if(!rows.length){el.innerHTML=conditionEmptyHTML('No data for this condition.');return;}
+  const leaders=new Set(leadingGroup(tp,mp).map(r=>r.model_name));
+  const w=conditionWilcoxon(tp,mp).filter(r=>r.significant_fdr_0p05);
+  const winCount=m=>w.filter(r=>r.winner_model===m).length;
+  const lossCount=m=>w.filter(r=>r.loser_model===m).length;
+  const ml=metricLabel();
+  const trs=rows.map((r,i)=>{
+    const c=MC[r.model_name]||'#888';
+    const ci=(r.std_auc!=null&&r.n_replicates>1)?1.96*r.std_auc/Math.sqrt(r.n_replicates):null;
+    const ciTxt=ci==null?'':` ± ${ci.toFixed(3)}`;
+    return `<tr>
+      <td>${i+1}</td>
+      <td><div class="cond-rank"><span class="cond-rank-dot" style="--mc:${c};--mcb:${rgba(c,.18)}"></span><b style="color:${c}">${MD[r.model_name]||r.model_name}</b></div></td>
+      <td>${f2(r.mean_auc)}${ciTxt}</td>
+      <td>${leaders.has(r.model_name)?'<span class="lead-tag">leading group</span>':'–'}</td>
+      <td>${winCount(r.model_name)}</td>
+      <td>${lossCount(r.model_name)}</td>
+    </tr>`;
+  }).join('');
+  el.innerHTML=`<table class="mt"><thead><tr>
+    <th>Rank</th><th>Method</th><th>Mean ${ml} ± 95% C.I.</th><th>Group</th><th>Sig. wins</th><th>Sig. losses</th>
+  </tr></thead><tbody>${trs}</tbody></table>`;
+}
+
 function rWilcoxon(tp,mp){
-  const wlx=D().wilcoxon||[]; const ma=D().mean_auc||[];
   const th=ptBase(), d=dk();
   const dl=metricDeltaLabel();
-  const cond=ma.filter(r=>Math.abs(r.train_missing_prop-tp)<.001&&Math.abs(r.test_missing_prop-mp)<.001)
-    .sort((a,b)=>b.mean_auc-a.mean_auc);
-  const condW=wlx.filter(r=>Math.abs(r.train_missing_prop-tp)<.001&&Math.abs(r.test_missing_prop-mp)<.001);
-  if(!cond.length)return;
+  const am=activeMethodSet();
+  if(!am.size){emptyPlot('ch-wl','Select at least one method to visualise it.',360);return;}
+  const cond=conditionRows(tp,mp);
+  const condW=conditionWilcoxon(tp,mp);
+  if(!cond.length){emptyPlot('ch-wl','No condition-level data for the selected methods.',360);return;}
   const meths=cond.map(r=>r.model_name);
   const z=meths.map(()=>meths.map(()=>null));
   const txt=meths.map(()=>meths.map(()=>'ns'));

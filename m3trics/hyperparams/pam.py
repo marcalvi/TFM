@@ -7,6 +7,7 @@ MODEL_CONFIG = {
         "batch_size": "8,16",
         "learning_rate": "1e-4,5e-5,1e-5",
         "weight_decay": "1e-4",
+        "pm_encoders": "true",
         "pam_dropout": "0.2,0.4",
         "pam_temperature": "1.0,2.0",
     },

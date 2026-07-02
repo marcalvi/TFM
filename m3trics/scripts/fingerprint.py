@@ -25,32 +25,63 @@ import numpy as np
 import pandas as pd
 
 
-BC_DEFAULT_MODELS = ["ZI_LR", "KNN_LR", "ZI_RF", "KNN_RF", "ZI_MLP", "KNN_MLP", "pAM"]
-SURV_DEFAULT_MODELS = ["ZI_CoxNet", "KNN_CoxNet", "ZI_RSF", "KNN_RSF", "ZI_MLP", "KNN_MLP", "HealNet"]
+BC_DEFAULT_MODELS = [
+    "ZI_LR", "KNN_LR", "VAE_LR",
+    "ZI_RF", "KNN_RF", "VAE_RF",
+    "ZI_MMLP", "KNN_MMLP", "VAE_MMLP",
+    "ZI_pMMLP", "KNN_pMMLP", "VAE_pMMLP",
+    "AM", "pAM", "HealNet", "SMILe",
+]
+SURV_DEFAULT_MODELS = [
+    "ZI_CoxNet", "KNN_CoxNet", "VAE_CoxNet", "ZI_RSF", "KNN_RSF", "VAE_RSF",
+    "ZI_MMLP", "KNN_MMLP", "ZI_pMMLP", "KNN_pMMLP",
+    "HealNet", "SMILe",
+]
 
 MODEL_ALIASES = {
     "zilr": "ZI_LR",
     "zi_lr": "ZI_LR",
     "knnlr": "KNN_LR",
     "knn_lr": "KNN_LR",
+    "vaelr": "VAE_LR",
+    "vae_lr": "VAE_LR",
     "zirf": "ZI_RF",
     "zi_rf": "ZI_RF",
     "knnrf": "KNN_RF",
     "knn_rf": "KNN_RF",
+    "vaerf": "VAE_RF",
+    "vae_rf": "VAE_RF",
     "zicoxnet": "ZI_CoxNet",
     "zi_coxnet": "ZI_CoxNet",
     "knncoxnet": "KNN_CoxNet",
     "knn_coxnet": "KNN_CoxNet",
+    "vaecoxnet": "VAE_CoxNet",
+    "vae_coxnet": "VAE_CoxNet",
     "zirsf": "ZI_RSF",
     "zi_rsf": "ZI_RSF",
     "knnrsf": "KNN_RSF",
     "knn_rsf": "KNN_RSF",
+    "vaersf": "VAE_RSF",
+    "vae_rsf": "VAE_RSF",
     "zimlp": "ZI_MLP",
     "zi_mlp": "ZI_MLP",
     "knnmlp": "KNN_MLP",
     "knn_mlp": "KNN_MLP",
     "vaemlp": "VAE_MLP",
     "vae_mlp": "VAE_MLP",
+    "zimmlp": "ZI_MMLP",
+    "zi_mmlp": "ZI_MMLP",
+    "knnmmlp": "KNN_MMLP",
+    "knn_mmlp": "KNN_MMLP",
+    "vaemmlp": "VAE_MMLP",
+    "vae_mmlp": "VAE_MMLP",
+    "zipmmlp": "ZI_pMMLP",
+    "zi_pmmlp": "ZI_pMMLP",
+    "knnpmmlp": "KNN_pMMLP",
+    "knn_pmmlp": "KNN_pMMLP",
+    "vaepmmlp": "VAE_pMMLP",
+    "vae_pmmlp": "VAE_pMMLP",
+    "am": "AM",
     "pam": "pAM",
     "p-am": "pAM",
     "healnet": "HealNet",
@@ -80,6 +111,7 @@ class ModalityFingerprint:
     duplicated_patient_rows: int
     coverage_in_target_patients: float
     n_features: int
+    raw_n_features: int
     n_numeric_features: int
     n_categorical_features: int
     feature_missing_fraction: float
@@ -151,9 +183,9 @@ def _method_family(method: str) -> str:
         return "CoxNet"
     if m.endswith("RSF"):
         return "RSF"
-    if m in {"ZI_MLP", "KNN_MLP", "VAE_MLP"}:
+    if m in {"ZI_MLP", "KNN_MLP", "VAE_MLP", "ZI_MMLP", "KNN_MMLP", "VAE_MMLP", "ZI_pMMLP", "KNN_pMMLP", "VAE_pMMLP"}:
         return "MLP"
-    if m == "pAM":
+    if m in {"AM", "pAM"}:
         return "pAM"
     if m == "HealNet":
         return "HealNet"
@@ -167,6 +199,14 @@ def _parse_models(value: Optional[str], task_type: str) -> List[str]:
         models = [_normalise_model_name(x) for x in _split_csv(value)]
     else:
         models = BC_DEFAULT_MODELS if task_type == "binary_classification" else SURV_DEFAULT_MODELS
+    deprecated = [m for m in models if "PCA" in str(m).upper()]
+    if deprecated:
+        raise ValueError(
+            "PCA is now configured as per-modality preprocessing, not as a method name. "
+            f"Replace deprecated methods {deprecated} with their non-PCA variants "
+            "(for example ZI_LR/KNN_LR or ZI_CoxNet/KNN_CoxNet) and set "
+            "*_FEATURE_REDUCTION=\"pca\" in the launcher."
+        )
     return list(dict.fromkeys(models))
 
 
@@ -212,6 +252,8 @@ def _modality_fingerprint(
     target_patients: set,
     drop_cols: Sequence[str],
     categorical_cols: Sequence[str],
+    feature_reduction: Optional[str] = None,
+    pca_num_components: Optional[str] = None,
 ) -> ModalityFingerprint:
     df = _read_csv(path)
     if patient_id_col not in df.columns:
@@ -244,6 +286,24 @@ def _modality_fingerprint(
         high_missing = 0.0
         constant_fraction = 0.0
 
+    # Estimate the model-side feature dimensionality after categorical expansion.
+    # M3TRICS encodes categorical columns downstream, so counting each categorical
+    # column as one feature would underestimate low-dimensional clinical tables.
+    categorical_dim = 0
+    for col in cat_cols:
+        categorical_dim += int(feat[col].dropna().astype(str).nunique())
+    raw_n_features = int(len(num_cols) + categorical_dim)
+    effective_n_features = raw_n_features
+    feature_reduction_l = str(feature_reduction or "").strip().lower()
+    if feature_reduction_l == "pca" and pca_num_components not in (None, ""):
+        pca_value = str(pca_num_components).strip()
+        try:
+            pca_float = float(pca_value)
+            if pca_float >= 1:
+                effective_n_features = min(int(round(pca_float)), raw_n_features)
+        except ValueError:
+            pass
+
     return ModalityFingerprint(
         name=name,
         path=str(path),
@@ -251,7 +311,8 @@ def _modality_fingerprint(
         unique_patients=unique_patients,
         duplicated_patient_rows=duplicated_rows,
         coverage_in_target_patients=float(coverage),
-        n_features=int(len(feature_cols)),
+        n_features=int(effective_n_features),
+        raw_n_features=raw_n_features,
         n_numeric_features=int(len(num_cols)),
         n_categorical_features=int(len(cat_cols)),
         feature_missing_fraction=missing_fraction,
@@ -287,6 +348,8 @@ def build_fingerprint(args: argparse.Namespace) -> Tuple[DatasetFingerprint, Lis
 
     drop_specs = {k: _split_csv(v) for k, v in _parse_name_value(args.drop_cols).items()}
     cat_specs = {k: _split_csv(v) for k, v in _parse_name_value(args.categorical_cols).items()}
+    feature_reduction_specs = _parse_name_value(args.feature_reduction)
+    pca_component_specs = _parse_name_value(args.pca_num_components)
 
     modalities = []
     warnings = []
@@ -299,12 +362,25 @@ def build_fingerprint(args: argparse.Namespace) -> Tuple[DatasetFingerprint, Lis
             target_patients=target_patients,
             drop_cols=drop_specs.get(name, []),
             categorical_cols=cat_specs.get(name, []),
+            feature_reduction=feature_reduction_specs.get(name),
+            pca_num_components=pca_component_specs.get(name),
         )
         modalities.append(fp)
         if fp.coverage_in_target_patients < 0.6:
             warnings.append(f"Modality '{name}' covers only {fp.coverage_in_target_patients:.1%} of target patients.")
         if fp.high_missing_feature_fraction > 0.3:
             warnings.append(f"Modality '{name}' has many high-missingness features ({fp.high_missing_feature_fraction:.1%}).")
+        if feature_reduction_specs.get(name, "").strip().lower() == "pca":
+            pca_value = pca_component_specs.get(name)
+            try:
+                pca_float = float(str(pca_value))
+                if 0.0 < pca_float < 1.0:
+                    warnings.append(
+                        f"Modality '{name}' uses PCA explained-variance target {pca_float:g}; "
+                        "fingerprint cannot know the exact post-PCA dimension without fitting PCA, so raw feature count is used."
+                    )
+            except (TypeError, ValueError):
+                pass
 
     n_patients = int(len(target_patients))
     total_dim = int(sum(m.n_features for m in modalities))
@@ -407,6 +483,15 @@ def _base_context(fp: DatasetFingerprint) -> Dict[str, bool]:
     }
 
 
+def _pca_components_grid(fp: DatasetFingerprint) -> str:
+    """Conservative PCA grid for concatenated high-dimensional sklearn baselines."""
+    if fp.n_target_patients < 80 or fp.feature_dim_to_n_ratio > 10:
+        return "0.8,0.9"
+    if fp.n_target_patients < 160 or fp.feature_dim_to_n_ratio > 3:
+        return "0.9,0.95"
+    return "0.95,0.99"
+
+
 def suggest_grid_for_method(method: str, fp: DatasetFingerprint, max_combinations: int) -> Dict[str, Any]:
     method = _normalise_model_name(method)
     family = _method_family(method)
@@ -448,14 +533,6 @@ def suggest_grid_for_method(method: str, fp: DatasetFingerprint, max_combination
         rationale.append("Imbalanced endpoint/event distribution: include class-balanced sklearn baselines.")
 
     if family == "LR":
-        fixed_args = {
-            "epochs": "1",
-            "early_stopping_patience": "1",
-            "batch_size": "64",
-            "learning_rate": "1.0",
-            "weight_decay": "0.0",
-            "imputation_method": "knn" if method.startswith("KNN") else "zero",
-        }
         args = {
             "lr_C": "0.01,0.1,1.0" if ctx["high_dim"] else "0.1,1.0,10.0",
             "lr_penalty": "l2",
@@ -463,15 +540,8 @@ def suggest_grid_for_method(method: str, fp: DatasetFingerprint, max_combination
             "lr_class_weight": _comma(class_weight_values),
             "lr_max_iter": "1000",
         }
+        rationale.append("LR uses the shared per-modality preprocessing and fits a regularised logistic baseline on concatenated features.")
     elif family == "RF":
-        fixed_args = {
-            "epochs": "1",
-            "early_stopping_patience": "1",
-            "batch_size": "64",
-            "learning_rate": "1.0",
-            "weight_decay": "0.0",
-            "imputation_method": "knn" if method.startswith("KNN") else "zero",
-        }
         args = {
             "rf_n_estimators": "200,500" if not ctx["tiny_n"] else "200",
             "rf_max_depth": "3,5,none" if ctx["small_n"] or ctx["high_dim"] else "5,10,none",
@@ -481,30 +551,16 @@ def suggest_grid_for_method(method: str, fp: DatasetFingerprint, max_combination
             "rf_class_weight": _comma(class_weight_values),
             "rf_n_jobs": "-1",
         }
+        rationale.append("RF uses the shared per-modality preprocessing and searches shallow trees for low-sample cohorts.")
     elif family == "CoxNet":
-        fixed_args = {
-            "epochs": "1",
-            "early_stopping_patience": "1",
-            "batch_size": "64",
-            "learning_rate": "1.0",
-            "weight_decay": "0.0",
-            "imputation_method": "knn" if method.startswith("KNN") else "zero",
-        }
         args = {
             "coxnet_alpha": "0.01,0.1,1.0" if ctx["high_dim"] else "0.001,0.01,0.1",
             "coxnet_l1_ratio": "0.1,0.5" if ctx["high_dim"] else "0.1,0.5,0.9",
             "coxnet_max_iter": "100000",
             "coxnet_tol": "1e-7",
         }
+        rationale.append("CoxNet uses the shared per-modality preprocessing and searches elastic-net regularisation.")
     elif family == "RSF":
-        fixed_args = {
-            "epochs": "1",
-            "early_stopping_patience": "1",
-            "batch_size": "64",
-            "learning_rate": "1.0",
-            "weight_decay": "0.0",
-            "imputation_method": "knn" if method.startswith("KNN") else "zero",
-        }
         args = {
             "rsf_n_estimators": "100,300" if not ctx["tiny_n"] else "100",
             "rsf_max_depth": "3,5" if ctx["small_n"] or ctx["high_dim"] else "5,none",
@@ -513,8 +569,8 @@ def suggest_grid_for_method(method: str, fp: DatasetFingerprint, max_combination
             "rsf_max_features": "sqrt",
             "rsf_n_jobs": "-1",
         }
+        rationale.append("RSF uses the shared per-modality preprocessing and keeps the survival forest compact.")
     elif family == "pAM":
-        fixed_args = {}
         args = {
             "epochs": "80",
             "early_stopping_patience": "20",
@@ -526,7 +582,6 @@ def suggest_grid_for_method(method: str, fp: DatasetFingerprint, max_combination
         }
     elif family == "HealNet":
         latents = [8, 16] if ctx["small_n"] or ctx["high_dim"] else [16, 32]
-        fixed_args = {}
         args = {
             "epochs": "100",
             "early_stopping_patience": "20",
@@ -548,7 +603,6 @@ def suggest_grid_for_method(method: str, fp: DatasetFingerprint, max_combination
         }
     elif family == "SMILe":
         latent = [8, 16] if ctx["small_n"] or ctx["high_dim"] else [16, 32]
-        fixed_args = {}
         args = {
             "epochs": "80",
             "early_stopping_patience": "20",
@@ -567,7 +621,6 @@ def suggest_grid_for_method(method: str, fp: DatasetFingerprint, max_combination
             "paired_hp_groups": "learning_rate:meta_inner_lr",
         }
     else:  # MLP family
-        fixed_args = {}
         args = {
             "epochs": "80",
             "early_stopping_patience": "20",
@@ -579,17 +632,15 @@ def suggest_grid_for_method(method: str, fp: DatasetFingerprint, max_combination
             "fusion_batchnorm": "false,true" if not ctx["tiny_n"] and not ctx["high_dim"] else "false",
             "modality_hidden_layers": "1",
             "dropout": _comma(dropout),
-            "imputation_method": "vae" if method == "VAE_MLP" else ("knn" if method.startswith("KNN") else "zero"),
         }
 
-    fixed = {"epochs", "early_stopping_patience", "imputation_method", "paired_hp_groups"}
+    fixed = {"epochs", "early_stopping_patience", "paired_hp_groups"}
     capped, cap_notes = _cap_grid(args, family, max_combinations, fixed=fixed)
     count = _grid_count(capped, ignore=fixed)
 
     return {
         "family": family,
         "combination_count": count,
-        "fixed_args": fixed_args,
         "args": capped,
         "rationale": rationale + cap_notes,
     }
@@ -656,6 +707,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--modality_csv", action="append", default=[], help="Repeated name=csv_path modality specification.")
     parser.add_argument("--drop_cols", action="append", default=[], help="Repeated modality=col1,col2 drop-column specification.")
     parser.add_argument("--categorical_cols", action="append", default=[], help="Repeated modality=col1,col2 categorical-column specification.")
+    parser.add_argument("--feature_reduction", action="append", default=[], help="Repeated modality=none,pca feature-reduction specification.")
+    parser.add_argument("--pca_num_components", action="append", default=[], help="Repeated modality=value PCA components specification.")
     parser.add_argument("--auto_modalities", action="store_true", help="Use all CSVs in --dataset_dir except endpoint CSV as modalities.")
     parser.add_argument("--run_models", type=str, default=None, help="Comma-separated M3TRICS methods to suggest grids for.")
     parser.add_argument("--max_combinations", type=int, default=32, help="Maximum HP combinations per method.")

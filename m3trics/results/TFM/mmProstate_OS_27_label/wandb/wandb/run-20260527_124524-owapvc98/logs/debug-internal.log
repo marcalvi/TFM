@@ -1,0 +1,12 @@
+{"time":"2026-05-27T12:45:24.063565783+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-05-27T12:45:24.340174385+02:00","level":"INFO","msg":"stream: created new stream","id":"owapvc98"}
+{"time":"2026-05-27T12:45:24.340219155+02:00","level":"INFO","msg":"handler: started","stream_id":"owapvc98"}
+{"time":"2026-05-27T12:45:24.344500832+02:00","level":"INFO","msg":"stream: started","id":"owapvc98"}
+{"time":"2026-05-27T12:45:24.344526782+02:00","level":"INFO","msg":"writer: started","stream_id":"owapvc98"}
+{"time":"2026-05-27T12:45:24.344537262+02:00","level":"INFO","msg":"sender: started","stream_id":"owapvc98"}
+{"time":"2026-05-27T12:45:25.651809609+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-05-27T12:45:26.088184481+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-05-27T12:45:26.090492765+02:00","level":"INFO","msg":"stream: closing","id":"owapvc98"}
+{"time":"2026-05-27T12:45:26.090497885+02:00","level":"INFO","msg":"handler: closed","stream_id":"owapvc98"}
+{"time":"2026-05-27T12:45:26.091399132+02:00","level":"INFO","msg":"sender: closed","stream_id":"owapvc98"}
+{"time":"2026-05-27T12:45:26.091402782+02:00","level":"INFO","msg":"stream: closed","id":"owapvc98"}

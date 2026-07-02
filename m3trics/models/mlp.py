@@ -33,6 +33,7 @@ class MultimodalMLP(nn.Module):
         dropout_p=0.2,
         use_mask=True,
         fusion_batchnorm=False,
+        pm_encoders=True,
         output_dim=1,
     ):
         super().__init__()
@@ -43,6 +44,7 @@ class MultimodalMLP(nn.Module):
         self.input_dims = list(input_dims)
         self.n_modalities = len(self.input_dims)
         self.use_mask = use_mask
+        self.pm_encoders = bool(pm_encoders)
         self.fusion_hidden_layers = int(fusion_hidden_layers)
         self.output_dim = int(output_dim)
         if self.fusion_hidden_layers < 1:
@@ -50,22 +52,25 @@ class MultimodalMLP(nn.Module):
         if self.output_dim < 1:
             raise ValueError("output_dim must be >= 1")
 
-        self.modality_blocks = nn.ModuleList(
-            [
-                nn.Sequential(
-                    *_build_hidden_stack(
-                        input_dim=dim,
-                        hidden_dim=modality_hidden_dim,
-                        n_hidden_layers=modality_hidden_layers,
-                        dropout_p=dropout_p,
-                        use_batchnorm=True,
+        if self.pm_encoders:
+            self.modality_blocks = nn.ModuleList(
+                [
+                    nn.Sequential(
+                        *_build_hidden_stack(
+                            input_dim=dim,
+                            hidden_dim=modality_hidden_dim,
+                            n_hidden_layers=modality_hidden_layers,
+                            dropout_p=dropout_p,
+                            use_batchnorm=True,
+                        )
                     )
-                )
-                for dim in self.input_dims
-            ]
-        )
-
-        fusion_input_dim = self.n_modalities * modality_hidden_dim
+                    for dim in self.input_dims
+                ]
+            )
+            fusion_input_dim = self.n_modalities * modality_hidden_dim
+        else:
+            self.modality_blocks = nn.ModuleList()
+            fusion_input_dim = int(sum(self.input_dims))
         if self.use_mask:
             fusion_input_dim += self.n_modalities
 
@@ -96,8 +101,8 @@ class MultimodalMLP(nn.Module):
             )
 
         encoded = []
-        for i, (block, Xi) in enumerate(zip(self.modality_blocks, Xs)):
-            feat = block(Xi)
+        for i, Xi in enumerate(Xs):
+            feat = self.modality_blocks[i](Xi) if self.pm_encoders else Xi
             feat = feat * present_mask[:, i].unsqueeze(1).float()
             encoded.append(feat)
 

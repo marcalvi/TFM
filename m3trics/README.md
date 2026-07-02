@@ -44,20 +44,18 @@ Use these names in `RUN_MODELS` inside the `.sh` launchers.
 | --- | --- |
 | `ZI_MLP` | MultimodalMLP with zero imputation for missing modalities. |
 | `KNN_MLP` | MultimodalMLP with KNN imputation for missing modalities. |
-| `ZI_LR` | Logistic regression baseline over concatenated modality features with zero imputation for missing modalities. Classification only. |
-| `KNN_LR` | Logistic regression baseline over concatenated modality features with KNN imputation for missing modalities. Classification only. |
-| `ZI_RF` | Random forest classifier baseline over concatenated modality features with zero imputation. Classification only. |
-| `KNN_RF` | Random forest classifier baseline over concatenated modality features with KNN imputation. Classification only. |
-| `ZI_CoxNet` | Regularized Cox elastic-net baseline over concatenated modality features with zero imputation. Survival only. |
-| `KNN_CoxNet` | Regularized Cox elastic-net baseline over concatenated modality features with KNN imputation. Survival only. |
-| `ZI_RSF` | Random Survival Forest baseline over concatenated modality features with zero imputation. Survival only. |
-| `KNN_RSF` | Random Survival Forest baseline over concatenated modality features with KNN imputation. Survival only. |
-| `VAE_MLP` | MultimodalMLP with VAE-based imputation for missing modalities. |
+| `ZI_LR`, `KNN_LR`, `VAE_LR` | Logistic regression baselines over concatenated preprocessed modality features. Classification only. |
+| `ZI_RF`, `KNN_RF`, `VAE_RF` | Random forest classifier baselines over concatenated preprocessed modality features. Classification only. |
+| `ZI_CoxNet`, `KNN_CoxNet`, `VAE_CoxNet` | Regularized Cox elastic-net baselines over concatenated preprocessed modality features. Survival only. |
+| `ZI_RSF`, `KNN_RSF`, `VAE_RSF` | Random Survival Forest baselines over concatenated preprocessed modality features. Survival only. |
+| `ZI_MMLP`, `KNN_MMLP`, `VAE_MMLP` | MultimodalMLP without learned per-modality encoders. |
+| `ZI_pMMLP`, `KNN_pMMLP`, `VAE_pMMLP` | MultimodalMLP with learned per-modality projection encoders. |
+| `AM` | Attention masking over direct modality-wise prediction scores. |
 | `pAM` | Attention masking over unimodal predictions model. |
 | `HealNet` | HealNet wrapper for modality-level embeddings. |
 | `SMILe` | SMIL generalization for n>=2 modalities with mask-aware latent reconstruction. |
 
-Knowledge distillation is not a standalone method name. Set `DISTILL_MODELS` to a comma-separated list of supported torch methods and M3TRICS will also launch each selected method as a `<method>_KD` variant. The teacher is pretrained first, then the student is trained under the configured modality-availability conditions with distillation losses controlled by `DISTILL_ALPHA` and `DISTILL_BETA`.
+Knowledge distillation is not a standalone method name. Set `DISTILL_MODELS` to a comma-separated list of supported torch methods and M3TRICS will also launch each selected method as a `DI-<method>` variant. The teacher is pretrained first, then the student is trained under the configured modality-availability conditions with distillation losses controlled by `DISTILL_ALPHA` and `DISTILL_BETA`.
 
 Hyperparameter grids live in `hyperparams/`. Each method config uses one `args` dictionary. Scalar values are kept fixed, while comma-separated values are expanded automatically into the hyperparameter grid. Use `paired_args` only when two comma-separated arguments must vary together instead of as a Cartesian product. See `hyperparams/README.md` for the full config format and the interaction with fingerprint mode.
 
@@ -176,8 +174,8 @@ Input requirements:
 Select models, CV folds, seeds, scheduler and hyperparameter-selection behavior.
 
 ```bash
-RUN_MODELS="ZI_MLP, KNN_MLP, VAE_MLP, pAM, HealNet, SMILe"
-DISTILL_MODELS="pAM,ZI_MLP"      # optional; creates pAM_KD and ZI_MLP_KD in addition to the base methods
+RUN_MODELS="ZI_LR,KNN_LR,VAE_LR,ZI_RF,KNN_RF,VAE_RF,ZI_MMLP,KNN_MMLP,VAE_MMLP,ZI_pMMLP,KNN_pMMLP,VAE_pMMLP,AM,pAM,HealNet,SMILe"
+DISTILL_MODELS="pAM,ZI_MLP"      # optional; creates DI-pAM and DI-ZI_MLP in addition to the base methods
 DISTILL_ALPHA="0.25,0.5"        # representation distillation weight grid
 DISTILL_BETA="0.05,0.1"         # logit distillation weight grid
 RETRAIN_OUTER="true"
@@ -237,7 +235,7 @@ results/<DATASET>_<ENDPOINT_COL>/fingerprint/
 
 This override is strict: the suggested grids from `fingerprint.json` replace the `fixed_args`, `hp_grid_args`, and `args` defined in `hyperparams/*.py` for the selected methods. If a selected method is missing from the fingerprint JSON, M3TRICS raises an error instead of silently falling back to the default grid.
 
-For methods trained with knowledge distillation, the `<method>_KD` variant uses the same fingerprint grid as the base method. For example, `ZI_MLP_KD` uses the suggested grid for `ZI_MLP`; distillation-specific grids still come from `DISTILL_ALPHA` and `DISTILL_BETA`.
+For methods trained with knowledge distillation, the `DI-<method>` variant uses the same fingerprint grid as the base method. For example, `DI-ZI_MLP` uses the suggested grid for `ZI_MLP`; distillation-specific grids still come from `DISTILL_ALPHA` and `DISTILL_BETA`.
 
 The fingerprint uses simple dataset descriptors such as:
 
@@ -260,7 +258,7 @@ python scripts/fingerprint.py \
   --patient_id_col patient_id \
   --endpoint_col 48_month_OS \
   --task_type binary_classification \
-  --run_models "ZI_LR,KNN_LR,ZI_MLP,pAM,HealNet" \
+  --run_models "ZI_LR,KNN_LR,VAE_LR,ZI_RF,KNN_RF,VAE_RF,ZI_MMLP,KNN_MMLP,VAE_MMLP,AM,pAM,HealNet" \
   --modality_csv clinical=/path/to/clinical.csv \
   --modality_csv histology=/path/to/histology.csv \
   --modality_csv pathology_report=/path/to/pathology_report.csv \
@@ -312,7 +310,7 @@ TEST_MISSING_PROP="0.0,0.2,0.4,0.6,0.8"
 
 Use this when you want to study robustness as missingness increases. The process requires a subset with all selected modalities available before synthetic missingness is applied.
 
-Static-cohort mode disables synthetic missingness and trains on the observed dataset as-is, preserving its natural modality-availability pattern. For `<method>_KD` variants, the teacher is pretrained first and the student is then trained on the full observed cohort without complete-case subsampling or extra synthetic missingness.
+Static-cohort mode disables synthetic missingness and trains on the observed dataset as-is, preserving its natural modality-availability pattern. For `DI-<method>` variants, the teacher is pretrained first and the student is then trained on the full observed cohort without complete-case subsampling or extra synthetic missingness.
 
 ```bash
 MISSINGNESS_STUDY="false"
@@ -393,7 +391,7 @@ Use this for `MISSINGNESS_STUDY=true` runs:
 analysis/progressive_missingness_analysis.ipynb
 ```
 
-It loads missingness-study outputs, computes replicate AUC tables, global Friedman tests, Wilcoxon pairwise comparisons, heatmaps, method-level AUPMC metrics, and train/test/minimum degradation coefficients. AUPMC and degradation coefficients are saved with bootstrap 95% confidence intervals, while rankings are based only on mean point estimates. Degradation coefficients are computed as normalized positive degradation areas, so values closer to 0 indicate lower relative degradation. `<method>_KD` distillation variants are excluded from Train-time AUPMC and Train degradation coefficient because train-time missingness is applied only to the student during progressive missingness training.
+It loads missingness-study outputs, computes replicate AUC tables, global Friedman tests, Wilcoxon pairwise comparisons, heatmaps, method-level AUPMC metrics, and train/test/BFT Mean Degradation Ratios (MDR). AUPMC and MDR values are saved with bootstrap 95% confidence intervals, while rankings are based only on mean point estimates. MDR is computed as the mean of `baseline / performance` across the trajectory points, including the baseline point. Values closer to 1 indicate lower relative degradation. `DI-<method>` distillation variants are excluded from Train-time AUPMC and Train MDR because train-time missingness is applied only to the student during progressive missingness training.
 
 Outputs are saved to:
 

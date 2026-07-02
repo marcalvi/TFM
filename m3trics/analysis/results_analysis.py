@@ -106,6 +106,7 @@ def _is_distillation_method(model_name, distillation_model_names=None):
     configured = _distillation_model_set(distillation_model_names)
     return (
         normalized in configured
+        or raw.upper().startswith('DI-')
         or raw.upper().endswith('_KD')
         or normalized in {'Di-PAM', 'Di-MMLP'}  # legacy outputs only
     )
@@ -1099,8 +1100,8 @@ def _safe_ratio(numerator, denominator):
     return float(numerator / denominator)
 
 
-def _positive_degradation_auc(curve_df: pd.DataFrame, x_col: str, y_col: str, baseline_auc):
-    """Normalized area of positive degradation: max(baseline/performance - 1, 0)."""
+def _mean_degradation_ratio_df(curve_df: pd.DataFrame, x_col: str, y_col: str, baseline_auc):
+    """Mean degradation ratio: mean(baseline/performance) over valid trajectory points."""
     baseline_auc = float(baseline_auc) if np.isfinite(baseline_auc) else np.nan
     if curve_df.empty or not np.isfinite(baseline_auc):
         return np.nan
@@ -1120,11 +1121,7 @@ def _positive_degradation_auc(curve_df: pd.DataFrame, x_col: str, y_col: str, ba
     y = y[finite]
     if y.size == 0:
         return np.nan
-    positive_degradation = np.maximum((baseline_auc / y) - 1.0, 0.0)
-    if positive_degradation.size == 1 or np.isclose(float(np.max(x) - np.min(x)), 0.0):
-        return float(positive_degradation[0])
-    trapezoid = getattr(np, 'trapezoid', np.trapz)
-    return float(trapezoid(positive_degradation, x) / (float(np.max(x) - np.min(x))))
+    return float(np.nanmean(baseline_auc / y))
 
 
 def _normalized_trapezoid_auc_arrays(x, y):
@@ -1151,7 +1148,8 @@ def _normalized_trapezoid_auc_arrays(x, y):
     return float(trapezoid(y, x) / (float(np.max(x) - np.min(x))))
 
 
-def _positive_degradation_auc_arrays(x, y, baseline_auc):
+def _mean_degradation_ratio_arrays(x, y, baseline_auc):
+    """Mean degradation ratio: mean(baseline/performance) over valid trajectory points."""
     baseline_auc = float(baseline_auc) if np.isfinite(baseline_auc) else np.nan
     if not np.isfinite(baseline_auc):
         return np.nan
@@ -1172,11 +1170,7 @@ def _positive_degradation_auc_arrays(x, y, baseline_auc):
     order = np.argsort(x)
     x = x[order]
     y = y[order]
-    positive_degradation = np.maximum((baseline_auc / y) - 1.0, 0.0)
-    if positive_degradation.size == 1 or np.isclose(float(np.max(x) - np.min(x)), 0.0):
-        return float(positive_degradation[0])
-    trapezoid = getattr(np, 'trapezoid', np.trapz)
-    return float(trapezoid(positive_degradation, x) / (float(np.max(x) - np.min(x))))
+    return float(np.nanmean(baseline_auc / y))
 
 
 def _method_metrics_from_arrays(train_props, test_props, mean_auc, is_distillation_method=False):
@@ -1194,6 +1188,9 @@ def _method_metrics_from_arrays(train_props, test_props, mean_auc, is_distillati
             'test_time_aupmc': np.nan,
             'best_fixed_train_aupmc': np.nan,
             'best_fixed_train_missing_prop': np.nan,
+            'train_mdr': np.nan,
+            'test_mdr': np.nan,
+            'bft_mdr': np.nan,
             'train_degradation_coefficient': np.nan,
             'test_degradation_coefficient': np.nan,
             'minimum_degradation_coefficient': np.nan,
@@ -1204,18 +1201,18 @@ def _method_metrics_from_arrays(train_props, test_props, mean_auc, is_distillati
 
     train_mask = np.isclose(test_props, 0.0)
     train_time_aupmc = _normalized_trapezoid_auc_arrays(train_props[train_mask], mean_auc[train_mask])
-    train_degradation_coefficient = _positive_degradation_auc_arrays(
+    train_mdr = _mean_degradation_ratio_arrays(
         train_props[train_mask],
         mean_auc[train_mask],
         baseline_auc=baseline_auc,
     )
     if bool(is_distillation_method):
         train_time_aupmc = np.nan
-        train_degradation_coefficient = np.nan
+        train_mdr = np.nan
 
     test_mask = np.isclose(train_props, 0.0)
     test_time_aupmc = _normalized_trapezoid_auc_arrays(test_props[test_mask], mean_auc[test_mask])
-    test_degradation_coefficient = _positive_degradation_auc_arrays(
+    test_mdr = _mean_degradation_ratio_arrays(
         test_props[test_mask],
         mean_auc[test_mask],
         baseline_auc=baseline_auc,
@@ -1223,7 +1220,7 @@ def _method_metrics_from_arrays(train_props, test_props, mean_auc, is_distillati
 
     best_fixed_train_missing_prop = np.nan
     best_fixed_train_aupmc = np.nan
-    minimum_degradation_coefficient = np.nan
+    bft_mdr = np.nan
     train_scores = []
     for train_prop in np.unique(train_props):
         mask = np.isclose(train_props, train_prop)
@@ -1244,7 +1241,7 @@ def _method_metrics_from_arrays(train_props, test_props, mean_auc, is_distillati
             test_props[best_mask],
             mean_auc[best_mask],
         )
-        minimum_degradation_coefficient = _positive_degradation_auc_arrays(
+        bft_mdr = _mean_degradation_ratio_arrays(
             test_props[best_mask],
             mean_auc[best_mask],
             baseline_auc=best_fixed_train_baseline_auc,
@@ -1256,9 +1253,13 @@ def _method_metrics_from_arrays(train_props, test_props, mean_auc, is_distillati
         'test_time_aupmc': float(test_time_aupmc),
         'best_fixed_train_aupmc': float(best_fixed_train_aupmc),
         'best_fixed_train_missing_prop': best_fixed_train_missing_prop,
-        'train_degradation_coefficient': float(train_degradation_coefficient),
-        'test_degradation_coefficient': float(test_degradation_coefficient),
-        'minimum_degradation_coefficient': float(minimum_degradation_coefficient),
+        'train_mdr': float(train_mdr),
+        'test_mdr': float(test_mdr),
+        'bft_mdr': float(bft_mdr),
+        # Backward-compatible aliases for older notebooks/dashboard code.
+        'train_degradation_coefficient': float(train_mdr),
+        'test_degradation_coefficient': float(test_mdr),
+        'minimum_degradation_coefficient': float(bft_mdr),
     }
 
 
@@ -1317,6 +1318,9 @@ def _method_metrics_from_condition_means(condition_mean_df: pd.DataFrame, is_dis
             'test_time_aupmc': np.nan,
             'best_fixed_train_aupmc': np.nan,
             'best_fixed_train_missing_prop': np.nan,
+            'train_mdr': np.nan,
+            'test_mdr': np.nan,
+            'bft_mdr': np.nan,
             'train_degradation_coefficient': np.nan,
             'test_degradation_coefficient': np.nan,
             'minimum_degradation_coefficient': np.nan,
@@ -1364,7 +1368,7 @@ def _bootstrap_method_metric_intervals(
     confidence=0.95,
     random_seed=42,
 ):
-    """Bootstrap CIs for method-level AUPMC and degradation metrics.
+    """Bootstrap CIs for method-level AUPMC and MDR metrics.
 
     Bootstrap samples are drawn over replicate identifiers. Each sampled replicate
     contributes all available missingness cells, preserving the trajectory structure
@@ -1374,6 +1378,9 @@ def _bootstrap_method_metric_intervals(
         'train_time_aupmc',
         'test_time_aupmc',
         'best_fixed_train_aupmc',
+        'train_mdr',
+        'test_mdr',
+        'bft_mdr',
         'train_degradation_coefficient',
         'test_degradation_coefficient',
         'minimum_degradation_coefficient',
@@ -1507,6 +1514,9 @@ def build_method_level_metrics(
             'test_time_aupmc': point_metrics['test_time_aupmc'],
             'best_fixed_train_aupmc': point_metrics['best_fixed_train_aupmc'],
             'best_fixed_train_missing_prop': point_metrics['best_fixed_train_missing_prop'],
+            'train_mdr': point_metrics['train_mdr'],
+            'test_mdr': point_metrics['test_mdr'],
+            'bft_mdr': point_metrics['bft_mdr'],
             'train_degradation_coefficient': point_metrics['train_degradation_coefficient'],
             'test_degradation_coefficient': point_metrics['test_degradation_coefficient'],
             'minimum_degradation_coefficient': point_metrics['minimum_degradation_coefficient'],
@@ -1719,11 +1729,11 @@ def build_metric_ordering_table(method_level_metrics_df: pd.DataFrame, distillat
     metric_specs = [
         ('baseline_auc', 'Baseline AUC', False),
         ('train_time_aupmc', 'Train-time AUPMC', False),
-        ('train_degradation_coefficient', 'Train degradation coefficient', True),
+        ('train_mdr', 'Train MDR', True),
         ('test_time_aupmc', 'Test-time AUPMC', False),
-        ('test_degradation_coefficient', 'Test degradation coefficient', True),
+        ('test_mdr', 'Test MDR', True),
         ('best_fixed_train_aupmc', 'Best fixed-train AUPMC', False),
-        ('minimum_degradation_coefficient', 'Minimum degradation coefficient', True),
+        ('bft_mdr', 'BFT MDR', True),
     ]
     max_len = int(method_level_metrics_df['model_name'].nunique())
     out = {}
@@ -1731,7 +1741,7 @@ def build_metric_ordering_table(method_level_metrics_df: pd.DataFrame, distillat
         if metric_col not in method_level_metrics_df.columns:
             continue
         metric_df = method_level_metrics_df[['model_name', metric_col]].copy()
-        if metric_col in {'train_time_aupmc', 'train_degradation_coefficient'}:
+        if metric_col in {'train_time_aupmc', 'train_mdr', 'train_degradation_coefficient'}:
             metric_df = metric_df.loc[
                 ~metric_df['model_name'].astype(str).map(lambda value: _is_distillation_method(value, distillation_model_names))
             ].copy()

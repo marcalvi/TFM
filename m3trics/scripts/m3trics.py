@@ -114,6 +114,84 @@ def _parse_modality_pooling(raw_value):
     return mapping
 
 
+def _parse_feature_reduction_map(raw_value):
+    mapping = OrderedDict()
+    raw_text = str(raw_value).strip()
+    if raw_text == "":
+        return mapping
+
+    for item in raw_text.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        if "=" not in item:
+            raise argparse.ArgumentTypeError(
+                f"Invalid feature reduction item '{item}'. Use NAME=METHOD."
+            )
+        modality_name, method = item.split("=", 1)
+        modality_name = modality_name.strip().lower()
+        method = method.strip().lower()
+        if not modality_name:
+            raise argparse.ArgumentTypeError(
+                f"Invalid feature reduction item '{item}': empty modality name."
+            )
+        if method not in {"none", "pca"}:
+            raise argparse.ArgumentTypeError(
+                f"Invalid feature reduction method '{method}' for modality '{modality_name}'. "
+                "Valid methods: none, pca."
+            )
+        mapping[modality_name] = method
+    return mapping
+
+
+def _parse_pca_num_components_map(raw_value):
+    mapping = OrderedDict()
+    raw_text = str(raw_value).strip()
+    if raw_text == "":
+        return mapping
+
+    for item in raw_text.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        if "=" not in item:
+            raise argparse.ArgumentTypeError(
+                f"Invalid PCA component item '{item}'. Use NAME=VALUE."
+            )
+        modality_name, value = item.split("=", 1)
+        modality_name = modality_name.strip().lower()
+        value = value.strip().lower()
+        if not modality_name:
+            raise argparse.ArgumentTypeError(
+                f"Invalid PCA component item '{item}': empty modality name."
+            )
+        if value in {"", "none", "null", "false", "0"}:
+            mapping[modality_name] = "none"
+            continue
+        parsed = float(value)
+        if parsed <= 0.0:
+            raise argparse.ArgumentTypeError(
+                f"Invalid PCA component value '{value}' for modality '{modality_name}'. "
+                "Use an integer component count or a float in (0,1)."
+            )
+        mapping[modality_name] = value
+    return mapping
+
+
+def _format_feature_reduction_label(feature_reduction, pca_num_components):
+    if not feature_reduction:
+        return "raw_features"
+    parts = []
+    for modality_name in sorted(feature_reduction):
+        method = str(feature_reduction[modality_name]).strip().lower()
+        if method == "none":
+            continue
+        if method == "pca":
+            value = str(pca_num_components.get(modality_name, "0.95")).replace(".", "p")
+            parts.append(f"{modality_name}_pca{value}")
+    return "raw_features" if not parts else "__".join(parts)
+
+
 def _normalize_model_name(model_name):
     from scripts.utils import normalize_model_name
 
@@ -345,6 +423,15 @@ def build_training_arg_parser():
         help="Whether to use BatchNorm in the shared fusion block of the MLP. Supports scalar or comma-separated list.",
     )
     parser.add_argument("--modality_hidden_layers", type=str, default="1")
+    parser.add_argument(
+        "--pm_encoders",
+        type=str,
+        default="true",
+        help=(
+            "Whether MLP and AM/pAM use learned per-modality encoders before fusion. "
+            "true preserves the current projected models; false uses the preprocessed modality features directly."
+        ),
+    )
     parser.add_argument("--dropout", type=str, default="0.2")
     parser.add_argument("--pam_dropout", type=str, default="0.4")
     parser.add_argument("--pam_temperature", type=str, default="2.0")
@@ -433,6 +520,16 @@ def build_training_arg_parser():
     parser.add_argument("--lr_solver", type=str, default="lbfgs")
     parser.add_argument("--lr_class_weight", type=str, default="none")
     parser.add_argument("--lr_max_iter", type=str, default="1000")
+    parser.add_argument(
+        "--pca_n_components",
+        type=str,
+        default="none",
+        help=(
+            "Optional PCA dimensionality for sklearn/sksurv baselines. "
+            "Use 'none', an integer number of components, or a float in (0,1) "
+            "for explained variance, e.g. '0.9,0.95'."
+        ),
+    )
     parser.add_argument("--rf_n_estimators", type=str, default="200")
     parser.add_argument("--rf_max_depth", type=str, default="none")
     parser.add_argument("--rf_min_samples_split", type=str, default="2")
@@ -463,6 +560,26 @@ def build_training_arg_parser():
             "Per-modality patient-level pooling configuration as comma-separated NAME=METHOD pairs. "
             "Supported methods: mean, attention. Example: 'radio=attention'. "
             "If omitted, all modalities use mean pooling."
+        ),
+    )
+    parser.add_argument(
+        "--feature_reduction",
+        type=str,
+        default="",
+        help=(
+            "Per-modality feature-reduction configuration as comma-separated NAME=METHOD pairs. "
+            "Supported methods: none, pca. Example: 'histology=pca,rnaseq=pca'. "
+            "The reducer is fitted inside each CV training split to avoid leakage."
+        ),
+    )
+    parser.add_argument(
+        "--pca_num_components",
+        type=str,
+        default="",
+        help=(
+            "Per-modality PCA target as comma-separated NAME=VALUE pairs. "
+            "VALUE can be an integer component count or a float in (0,1) for explained variance. "
+            "Example: 'histology=0.95,rnaseq=128'."
         ),
     )
     parser.add_argument("--wandb", action="store_true", help="Enable Weights & Biases logging")
@@ -637,19 +754,21 @@ def run_training_from_args(args):
     sklearn_classification_models = {"lr", "rf"}
     survival_sklearn_models = {"coxnet", "rsf"}
     if model_name_norm in sklearn_classification_models and task_type_norm == "survival":
-        raise ValueError("ZI_LR, KNN_LR, ZI_RF and KNN_RF are classification-only baselines and do not support task_type=survival.")
+        raise ValueError("LR and RF baselines are classification-only and do not support task_type=survival.")
     if model_name_norm in survival_sklearn_models and task_type_norm != "survival":
-        raise ValueError("ZI_CoxNet, KNN_CoxNet, ZI_RSF and KNN_RSF are survival-only baselines.")
+        raise ValueError("CoxNet and RSF baselines are survival-only.")
     if knowledge_distillation and model_name_norm in (sklearn_classification_models | survival_sklearn_models):
         raise ValueError("Knowledge distillation is available only for differentiable torch models, not sklearn baselines.")
     if knowledge_distillation and model_name_norm in {"smil_e"}:
         raise ValueError("Knowledge distillation is not enabled for SMILe because it uses a dedicated meta-learning training loop.")
-    if model_name_norm in sklearn_classification_models and imputation_method_l not in {"zero", "knn"}:
-        raise ValueError("LR and RF baselines support imputation_method='zero' or 'knn' only.")
-    if model_name_norm in survival_sklearn_models and imputation_method_l not in {"zero", "knn"}:
-        raise ValueError("CoxNet and RSF baselines support imputation_method='zero' or 'knn' only.")
-    if imputation_method_l == "vae" and model_name_norm != "mlp":
-        raise ValueError("imputation_method='vae' is currently supported only with model='MLP'.")
+    if model_name_norm == "lr" and imputation_method_l not in {"zero", "knn", "vae"}:
+        raise ValueError("LR baselines support imputation_method='zero', 'knn' or 'vae' only.")
+    if model_name_norm == "rf" and imputation_method_l not in {"zero", "knn", "vae"}:
+        raise ValueError("RF baselines support imputation_method='zero', 'knn' or 'vae' only.")
+    if model_name_norm in survival_sklearn_models and imputation_method_l not in {"zero", "knn", "vae"}:
+        raise ValueError("CoxNet and RSF baselines support imputation_method='zero', 'knn' or 'vae' only.")
+    if imputation_method_l == "vae" and model_name_norm not in {"mlp", "lr", "rf", "coxnet", "rsf"}:
+        raise ValueError("imputation_method='vae' is currently supported only with model='MLP', 'LR', 'RF', 'CoxNet' or 'RSF'.")
     if imputation_method_l == "knn" and model_name_norm not in {"mlp", "lr", "rf", "coxnet", "rsf"}:
         raise ValueError(
             "imputation_method='knn' is currently supported only with model='MLP', 'LR', 'RF', 'CoxNet' or 'RSF'."
@@ -664,7 +783,7 @@ def run_training_from_args(args):
     # the full input cohort and its natural modality-availability pattern; no
     # complete-case subsampling or synthetic missingness is introduced here.
 
-    run_model_label = str(args.model_display_name or (str(args.model) + ("_KD" if knowledge_distillation else "")))
+    run_model_label = str(args.model_display_name or (f"DI-{args.model}" if knowledge_distillation else str(args.model)))
     print(f"Dataframes read. Starting {run_model_label} training.")
 
     seeds_list = _parse_seed_list(args.seeds)
@@ -684,6 +803,8 @@ def run_training_from_args(args):
     invalid_test_props = [p for p in test_missing_props if p < 0.0 or p > 1.0]
     invalid_train_props = [p for p in train_missing_props if p < 0.0 or p > 1.0]
     modality_pooling = _parse_modality_pooling(args.modality_pooling)
+    feature_reduction = _parse_feature_reduction_map(args.feature_reduction)
+    pca_num_components = _parse_pca_num_components_map(args.pca_num_components)
     if invalid_degrading_modalities:
         valid = ", ".join(["global"] + sorted(modality_names))
         raise ValueError(
@@ -704,6 +825,16 @@ def run_training_from_args(args):
             f"Invalid --modality_pooling modalities: {', '.join(sorted(invalid_pooling_modalities))}. "
             f"Available modalities: {', '.join(sorted(modality_names))}"
         )
+    invalid_feature_reduction_modalities = [
+        name for name in list(feature_reduction.keys()) + list(pca_num_components.keys())
+        if name not in modality_names
+    ]
+    if invalid_feature_reduction_modalities:
+        raise ValueError(
+            f"Invalid feature-reduction modalities: {', '.join(sorted(set(invalid_feature_reduction_modalities)))}. "
+            f"Available modalities: {', '.join(sorted(modality_names))}"
+        )
+    feature_reduction_label = _format_feature_reduction_label(feature_reduction, pca_num_components)
 
     combo_count = len(seeds_list) * len(degrading_modalities) * len(train_missing_props)
     test_eval_total = len(seeds_list) * sum(
@@ -748,7 +879,7 @@ def run_training_from_args(args):
                     modality_names=modality_names,
                 )
                 odir = _build_output_dir(
-                    base_odir=args.odir,
+                    base_odir=os.path.join(args.odir, feature_reduction_label),
                     model_name=args.model,
                     imputation_method=args.imputation_method,
                     dataset_name=args.dataset,
@@ -773,6 +904,7 @@ def run_training_from_args(args):
                 if knowledge_distillation:
                     print(f"Distillation alpha grid: {args.distill_alpha}")
                     print(f"Distillation beta grid: {args.distill_beta}")
+                print(f"Feature reduction: {feature_reduction_label}")
                 resolved_task_type = normalize_task_type(args.task_type)
                 print(f"Task type: {resolved_task_type}")
                 if resolved_task_type == "survival":
@@ -811,6 +943,9 @@ def run_training_from_args(args):
                     "missing_pattern_seed": int(args.missing_pattern_seed),
                     "imputation_method": args.imputation_method,
                     "modality_pooling": dict(modality_pooling),
+                    "feature_reduction": dict(feature_reduction),
+                    "pca_num_components": dict(pca_num_components),
+                    "feature_reduction_label": feature_reduction_label,
                     "test_eval_combinations": len(test_eval_setups),
                     "test_missing_props_grid": ",".join(
                         str(float(setup["missing_prop"])) for setup in test_eval_setups
@@ -885,6 +1020,8 @@ def run_training_from_args(args):
                         "weight_decay": float(args.attention_pooling_weight_decay),
                     },
                     modality_pooling=modality_pooling,
+                    feature_reduction=feature_reduction,
+                    pca_num_components=pca_num_components,
                     candidate_model_dir=os.path.join(odir, "models"),
                 )
 
@@ -907,7 +1044,7 @@ def run_training_from_args(args):
                             f"Could not derive retrainfalse output root from '{args.odir}'."
                         )
                     auxiliary_odir = _build_output_dir(
-                        base_odir=save_inner_base_odir,
+                        base_odir=os.path.join(save_inner_base_odir, feature_reduction_label),
                         model_name=args.model,
                         imputation_method=args.imputation_method,
                         dataset_name=args.dataset,
@@ -1049,6 +1186,12 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
     resolved_modality_pooling = str(modality_pooling).strip()
     if resolved_modality_pooling:
         arg_list.extend(["--modality_pooling", resolved_modality_pooling])
+    resolved_feature_reduction = str(getattr(shared_args, "feature_reduction", "")).strip()
+    if resolved_feature_reduction:
+        arg_list.extend(["--feature_reduction", resolved_feature_reduction])
+    resolved_pca_num_components = str(getattr(shared_args, "pca_num_components", "")).strip()
+    if resolved_pca_num_components:
+        arg_list.extend(["--pca_num_components", resolved_pca_num_components])
     if bool(shared_args.wandb):
         arg_list.extend(
             [
@@ -1075,13 +1218,15 @@ def _build_training_args_from_model_config(shared_args, model_config, modality_p
 
 def _distilled_model_config(base_config):
     distilled = {key: value for key, value in dict(base_config).items()}
-    distilled["display_name"] = f"{base_config['display_name']}_KD"
+    distilled["display_name"] = f"DI-{base_config['display_name']}"
     distilled["knowledge_distillation"] = True
     return distilled
 
 
 def _fingerprint_model_key(model_name):
     key = str(model_name).strip()
+    if key.upper().startswith("DI-"):
+        key = key[3:]
     if key.endswith("_KD"):
         key = key[:-3]
     return key.lower().replace(" ", "").replace("-", "_")
@@ -1131,12 +1276,29 @@ def _apply_fingerprint_hp_override(model_config, fingerprint_overrides):
             f"Available fingerprint grids: {available}"
         )
 
-    fixed_args = dict(spec.get("fixed_args", {}) or {})
     suggested_args = dict(spec.get("args", {}) or {})
     paired_groups = _parse_fingerprint_paired_groups(suggested_args.pop("paired_hp_groups", ""))
+    runtime_keys = {
+        "epochs",
+        "early_stopping_patience",
+        "batch_size",
+        "learning_rate",
+        "weight_decay",
+        "imputation_method",
+        "pm_encoders",
+    }
+    # Keep only runtime defaults needed by the common runner. These are not
+    # treated as fingerprint HPs unless the fingerprint explicitly proposes them.
+    base_args = _model_config_args(model_config)
+    runtime_args = {
+        k: v
+        for k, v in base_args.items()
+        if k in runtime_keys and k not in suggested_args
+    }
+    runtime_args.update(dict(spec.get("fixed_args", {}) or {}))  # backward compatibility with older JSONs
 
     overridden = {key: value for key, value in dict(model_config).items()}
-    overridden["fixed_args"] = fixed_args
+    overridden["fixed_args"] = runtime_args
     overridden["hp_grid_args"] = {}
     overridden["args"] = suggested_args
     overridden["paired_args"] = paired_groups
@@ -1264,6 +1426,8 @@ def build_preprocessing_arg_parser():
     parser.add_argument("--categorical_cols", action="append", default=[])
     parser.add_argument("--drop_cols", action="append", default=[])
     parser.add_argument("--aggregation_method", action="append", default=[])
+    parser.add_argument("--feature_reduction", action="append", default=[])
+    parser.add_argument("--pca_num_components", action="append", default=[])
     parser.add_argument("--numeric_imputation", action="append", default=[])
     parser.add_argument("--categorical_imputation", action="append", default=[])
     parser.add_argument("--knn_neighbors", action="append", default=[])
@@ -1291,7 +1455,7 @@ def build_preprocessing_arg_parser():
         default="",
         help=(
             "Comma-separated list of base model configs to additionally train with knowledge distillation. "
-            "Each distilled run uses the same base config and is saved with a _KD suffix."
+            "Each distilled run uses the same base config and is saved with a DI- prefix."
         ),
     )
     parser.add_argument("--inner_splits", required=True, type=int)
@@ -1348,6 +1512,36 @@ def main(argv=None):
         numeric_imputation_map=_parse_keyed_str_map(args.numeric_imputation, "--numeric_imputation"),
         categorical_imputation_map=_parse_keyed_str_map(args.categorical_imputation, "--categorical_imputation"),
         knn_neighbors_map=_parse_keyed_str_map(args.knn_neighbors, "--knn_neighbors"),
+    )
+    feature_reduction_map = OrderedDict(
+        (str(k).lower(), str(v).lower())
+        for k, v in _parse_keyed_str_map(args.feature_reduction, "--feature_reduction").items()
+    )
+    pca_num_components_map = OrderedDict(
+        (str(k).lower(), str(v).lower())
+        for k, v in _parse_keyed_str_map(args.pca_num_components, "--pca_num_components").items()
+    )
+    invalid_feature_reduction_modalities = [
+        name for name in list(feature_reduction_map.keys()) + list(pca_num_components_map.keys())
+        if name not in modality_frames
+    ]
+    if invalid_feature_reduction_modalities:
+        raise ValueError(
+            "Invalid feature-reduction modalities: "
+            + ", ".join(sorted(set(invalid_feature_reduction_modalities)))
+            + f". Available modalities: {', '.join(sorted(modality_frames.keys()))}"
+        )
+    for modality_name, method in feature_reduction_map.items():
+        if method not in {"none", "pca"}:
+            raise ValueError(
+                f"Invalid feature_reduction='{method}' for modality '{modality_name}'. "
+                "Valid values: none, pca."
+            )
+    args.feature_reduction = ",".join(
+        f"{name}={method}" for name, method in feature_reduction_map.items()
+    )
+    args.pca_num_components = ",".join(
+        f"{name}={value}" for name, value in pca_num_components_map.items()
     )
     if bool(args.missingness_study):
         modality_frames, endpoint_df, cohort_alignment_summary = align_complete_multimodal_cohort(
@@ -1417,6 +1611,19 @@ def main(argv=None):
         id_col=args.patient_id_col,
     )
     _print_duplicate_report(duplicate_summary)
+    if feature_reduction_map:
+        print("\n=== Modality Feature Reduction ===")
+        for modality_name, method in feature_reduction_map.items():
+            if method == "pca":
+                print(
+                    f"[{modality_name}] feature_reduction=pca | "
+                    f"pca_num_components={pca_num_components_map.get(modality_name, '0.95')}"
+                )
+            else:
+                print(f"[{modality_name}] feature_reduction=none")
+    else:
+        print("\n=== Modality Feature Reduction ===")
+        print("No per-modality feature reduction configured.")
     duplicated_modalities = [row for row in duplicate_summary if int(row["duplicated_patient_count"]) > 0]
     if duplicated_modalities:
         missing_aggregation_modalities = [

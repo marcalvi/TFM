@@ -6,7 +6,7 @@ import torch.nn.functional as F
 class PAM(nn.Module):
     """Patient-level Attention over Modalities with a configurable output head."""
 
-    def __init__(self, input_dims, bottleneck_dim=16, dropout_p=0.4, temperature=2.0, output_dim=1):
+    def __init__(self, input_dims, bottleneck_dim=16, dropout_p=0.4, temperature=2.0, pm_encoders=True, output_dim=1):
         super().__init__()
 
         if not input_dims:
@@ -15,29 +15,35 @@ class PAM(nn.Module):
         self.input_dims = list(input_dims)
         self.n_modalities = len(self.input_dims)
         self.T = float(temperature)
+        self.pm_encoders = bool(pm_encoders)
         self.output_dim = int(output_dim)
         if self.T <= 0:
             raise ValueError("temperature must be > 0")
         if self.output_dim < 1:
             raise ValueError("output_dim must be > 0")
 
-        self.projections = nn.ModuleList(
-            [
-                nn.Sequential(
-                    nn.Linear(d, bottleneck_dim),
-                    nn.BatchNorm1d(bottleneck_dim),
-                    nn.ReLU(),
-                    nn.Dropout(p=dropout_p),
-                )
-                for d in self.input_dims
-            ]
-        )
+        if self.pm_encoders:
+            self.projections = nn.ModuleList(
+                [
+                    nn.Sequential(
+                        nn.Linear(d, bottleneck_dim),
+                        nn.BatchNorm1d(bottleneck_dim),
+                        nn.ReLU(),
+                        nn.Dropout(p=dropout_p),
+                    )
+                    for d in self.input_dims
+                ]
+            )
+            head_input_dims = [bottleneck_dim for _ in self.input_dims]
+        else:
+            self.projections = nn.ModuleList([nn.Identity() for _ in self.input_dims])
+            head_input_dims = list(self.input_dims)
 
         self.risk_layers = nn.ModuleList(
-            [nn.Linear(bottleneck_dim, self.output_dim, bias=False) for _ in range(self.n_modalities)]
+            [nn.Linear(head_dim, self.output_dim, bias=False) for head_dim in head_input_dims]
         )
         self.attn_layers = nn.ModuleList(
-            [nn.Linear(bottleneck_dim, 1, bias=False) for _ in range(self.n_modalities)]
+            [nn.Linear(head_dim, 1, bias=False) for head_dim in head_input_dims]
         )
 
     def _infer_mask_from_input(self, Xs):
