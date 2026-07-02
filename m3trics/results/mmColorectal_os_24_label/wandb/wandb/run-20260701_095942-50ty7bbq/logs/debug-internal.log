@@ -1,0 +1,12 @@
+{"time":"2026-07-01T09:59:42.854899065+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-07-01T09:59:43.162851549+02:00","level":"INFO","msg":"stream: created new stream","id":"50ty7bbq"}
+{"time":"2026-07-01T09:59:43.1629217+02:00","level":"INFO","msg":"handler: started","stream_id":"50ty7bbq"}
+{"time":"2026-07-01T09:59:43.167471223+02:00","level":"INFO","msg":"stream: started","id":"50ty7bbq"}
+{"time":"2026-07-01T09:59:43.167532113+02:00","level":"INFO","msg":"writer: started","stream_id":"50ty7bbq"}
+{"time":"2026-07-01T09:59:43.167576813+02:00","level":"INFO","msg":"sender: started","stream_id":"50ty7bbq"}
+{"time":"2026-07-01T09:59:49.240527608+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-07-01T09:59:51.384269974+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-07-01T09:59:51.388264886+02:00","level":"INFO","msg":"stream: closing","id":"50ty7bbq"}
+{"time":"2026-07-01T09:59:51.388283866+02:00","level":"INFO","msg":"handler: closed","stream_id":"50ty7bbq"}
+{"time":"2026-07-01T09:59:51.388852158+02:00","level":"INFO","msg":"sender: closed","stream_id":"50ty7bbq"}
+{"time":"2026-07-01T09:59:51.388865658+02:00","level":"INFO","msg":"stream: closed","id":"50ty7bbq"}

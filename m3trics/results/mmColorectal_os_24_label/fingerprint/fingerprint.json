@@ -1,0 +1,321 @@
+{
+  "dataset_fingerprint": {
+    "n_target_rows": 165,
+    "n_target_patients": 165,
+    "task_type": "binary_classification",
+    "n_modalities": 4,
+    "total_feature_dim": 4915,
+    "feature_dim_to_n_ratio": 29.78787878787879,
+    "min_modality_coverage": 1.0,
+    "mean_modality_coverage": 1.0,
+    "mean_feature_missing_fraction": 0.0009539842873176206,
+    "class_positive_rate": 0.496551724137931,
+    "class_minority_rate": 0.496551724137931,
+    "survival_event_rate": null,
+    "survival_time_median": null
+  },
+  "modality_fingerprints": [
+    {
+      "name": "path",
+      "path": "/nfs/rnas/projects/M3TRICS/data/inputs/mmColorectal/mmColorectal_pathology_data.csv",
+      "rows": 165,
+      "unique_patients": 165,
+      "duplicated_patient_rows": 0,
+      "coverage_in_target_patients": 1.0,
+      "n_features": 768,
+      "n_numeric_features": 768,
+      "n_categorical_features": 0,
+      "feature_missing_fraction": 0.0,
+      "median_feature_missing_fraction": 0.0,
+      "high_missing_feature_fraction": 0.0,
+      "constant_feature_fraction": 0.0
+    },
+    {
+      "name": "radio",
+      "path": "/nfs/rnas/projects/M3TRICS/data/inputs/mmColorectal/mmColorectal_radiology_data.csv",
+      "rows": 165,
+      "unique_patients": 165,
+      "duplicated_patient_rows": 0,
+      "coverage_in_target_patients": 1.0,
+      "n_features": 4096,
+      "n_numeric_features": 4096,
+      "n_categorical_features": 0,
+      "feature_missing_fraction": 0.0,
+      "median_feature_missing_fraction": 0.0,
+      "high_missing_feature_fraction": 0.0,
+      "constant_feature_fraction": 0.0
+    },
+    {
+      "name": "clin",
+      "path": "/nfs/rnas/projects/M3TRICS/data/inputs/mmColorectal/mmColorectal_clinical_data.csv",
+      "rows": 165,
+      "unique_patients": 165,
+      "duplicated_patient_rows": 0,
+      "coverage_in_target_patients": 1.0,
+      "n_features": 27,
+      "n_numeric_features": 6,
+      "n_categorical_features": 21,
+      "feature_missing_fraction": 0.0038159371492704824,
+      "median_feature_missing_fraction": 0.0,
+      "high_missing_feature_fraction": 0.0,
+      "constant_feature_fraction": 0.037037037037037035
+    },
+    {
+      "name": "blood",
+      "path": "/nfs/rnas/projects/M3TRICS/data/inputs/mmColorectal/mmColorectal_blood_data.csv",
+      "rows": 165,
+      "unique_patients": 165,
+      "duplicated_patient_rows": 0,
+      "coverage_in_target_patients": 1.0,
+      "n_features": 24,
+      "n_numeric_features": 24,
+      "n_categorical_features": 0,
+      "feature_missing_fraction": 0.0,
+      "median_feature_missing_fraction": 0.0,
+      "high_missing_feature_fraction": 0.0,
+      "constant_feature_fraction": 0.0
+    }
+  ],
+  "warnings": [],
+  "recommendations": [
+    "Feature dimensionality is high relative to N; avoid large hidden dimensions in the first search."
+  ],
+  "max_combinations_per_method": 32,
+  "suggested_grids": {
+    "ZI_LR": {
+      "family": "LR",
+      "combination_count": 3,
+      "fixed_args": {
+        "epochs": "1",
+        "early_stopping_patience": "1",
+        "batch_size": "64",
+        "learning_rate": "1.0",
+        "weight_decay": "0.0",
+        "imputation_method": "zero"
+      },
+      "args": {
+        "lr_C": "0.01,0.1,1.0",
+        "lr_penalty": "l2",
+        "lr_solver": "lbfgs",
+        "lr_class_weight": "none",
+        "lr_max_iter": "1000"
+      },
+      "rationale": [
+        "Medium cohort: moderate width and learning-rate search.",
+        "High feature-dimension-to-sample ratio: favour compact models and stronger dropout."
+      ]
+    },
+    "KNN_LR": {
+      "family": "LR",
+      "combination_count": 3,
+      "fixed_args": {
+        "epochs": "1",
+        "early_stopping_patience": "1",
+        "batch_size": "64",
+        "learning_rate": "1.0",
+        "weight_decay": "0.0",
+        "imputation_method": "knn"
+      },
+      "args": {
+        "lr_C": "0.01,0.1,1.0",
+        "lr_penalty": "l2",
+        "lr_solver": "lbfgs",
+        "lr_class_weight": "none",
+        "lr_max_iter": "1000"
+      },
+      "rationale": [
+        "Medium cohort: moderate width and learning-rate search.",
+        "High feature-dimension-to-sample ratio: favour compact models and stronger dropout."
+      ]
+    },
+    "ZI_RF": {
+      "family": "RF",
+      "combination_count": 12,
+      "fixed_args": {
+        "epochs": "1",
+        "early_stopping_patience": "1",
+        "batch_size": "64",
+        "learning_rate": "1.0",
+        "weight_decay": "0.0",
+        "imputation_method": "zero"
+      },
+      "args": {
+        "rf_n_estimators": "200,500",
+        "rf_max_depth": "3,5,none",
+        "rf_min_samples_split": "2",
+        "rf_min_samples_leaf": "1,3",
+        "rf_max_features": "sqrt",
+        "rf_class_weight": "none",
+        "rf_n_jobs": "-1"
+      },
+      "rationale": [
+        "Medium cohort: moderate width and learning-rate search.",
+        "High feature-dimension-to-sample ratio: favour compact models and stronger dropout."
+      ]
+    },
+    "KNN_RF": {
+      "family": "RF",
+      "combination_count": 12,
+      "fixed_args": {
+        "epochs": "1",
+        "early_stopping_patience": "1",
+        "batch_size": "64",
+        "learning_rate": "1.0",
+        "weight_decay": "0.0",
+        "imputation_method": "knn"
+      },
+      "args": {
+        "rf_n_estimators": "200,500",
+        "rf_max_depth": "3,5,none",
+        "rf_min_samples_split": "2",
+        "rf_min_samples_leaf": "1,3",
+        "rf_max_features": "sqrt",
+        "rf_class_weight": "none",
+        "rf_n_jobs": "-1"
+      },
+      "rationale": [
+        "Medium cohort: moderate width and learning-rate search.",
+        "High feature-dimension-to-sample ratio: favour compact models and stronger dropout."
+      ]
+    },
+    "ZI_MLP": {
+      "family": "MLP",
+      "combination_count": 24,
+      "fixed_args": {},
+      "args": {
+        "epochs": "80",
+        "early_stopping_patience": "20",
+        "batch_size": "16,32",
+        "learning_rate": "1e-4,5e-5,1e-5",
+        "weight_decay": "1e-4",
+        "fusion_hidden_dim": "32,64",
+        "fusion_hidden_layers": "1",
+        "fusion_batchnorm": "false",
+        "modality_hidden_layers": "1",
+        "dropout": "0.2,0.3",
+        "imputation_method": "zero"
+      },
+      "rationale": [
+        "Medium cohort: moderate width and learning-rate search.",
+        "High feature-dimension-to-sample ratio: favour compact models and stronger dropout."
+      ]
+    },
+    "KNN_MLP": {
+      "family": "MLP",
+      "combination_count": 24,
+      "fixed_args": {},
+      "args": {
+        "epochs": "80",
+        "early_stopping_patience": "20",
+        "batch_size": "16,32",
+        "learning_rate": "1e-4,5e-5,1e-5",
+        "weight_decay": "1e-4",
+        "fusion_hidden_dim": "32,64",
+        "fusion_hidden_layers": "1",
+        "fusion_batchnorm": "false",
+        "modality_hidden_layers": "1",
+        "dropout": "0.2,0.3",
+        "imputation_method": "knn"
+      },
+      "rationale": [
+        "Medium cohort: moderate width and learning-rate search.",
+        "High feature-dimension-to-sample ratio: favour compact models and stronger dropout."
+      ]
+    },
+    "VAE_MLP": {
+      "family": "MLP",
+      "combination_count": 24,
+      "fixed_args": {},
+      "args": {
+        "epochs": "80",
+        "early_stopping_patience": "20",
+        "batch_size": "16,32",
+        "learning_rate": "1e-4,5e-5,1e-5",
+        "weight_decay": "1e-4",
+        "fusion_hidden_dim": "32,64",
+        "fusion_hidden_layers": "1",
+        "fusion_batchnorm": "false",
+        "modality_hidden_layers": "1",
+        "dropout": "0.2,0.3",
+        "imputation_method": "vae"
+      },
+      "rationale": [
+        "Medium cohort: moderate width and learning-rate search.",
+        "High feature-dimension-to-sample ratio: favour compact models and stronger dropout."
+      ]
+    },
+    "pAM": {
+      "family": "pAM",
+      "combination_count": 24,
+      "fixed_args": {},
+      "args": {
+        "epochs": "80",
+        "early_stopping_patience": "20",
+        "batch_size": "16,32",
+        "learning_rate": "1e-4,5e-5,1e-5",
+        "weight_decay": "1e-4",
+        "pam_dropout": "0.2,0.3",
+        "pam_temperature": "1.0,2.0"
+      },
+      "rationale": [
+        "Medium cohort: moderate width and learning-rate search.",
+        "High feature-dimension-to-sample ratio: favour compact models and stronger dropout."
+      ]
+    },
+    "HealNet": {
+      "family": "HealNet",
+      "combination_count": 32,
+      "fixed_args": {},
+      "args": {
+        "epochs": "100",
+        "early_stopping_patience": "20",
+        "batch_size": "16,32",
+        "learning_rate": "1e-4,5e-5",
+        "weight_decay": "1e-4",
+        "healnet_depth": "1,2",
+        "healnet_num_freq_bands": "2",
+        "healnet_num_latents": "8,16",
+        "healnet_latent_dim": "8,16",
+        "healnet_cross_heads": "1",
+        "healnet_latent_heads": "2",
+        "healnet_cross_dim_head": "8",
+        "healnet_latent_dim_head": "8",
+        "healnet_attn_dropout": "0.2",
+        "healnet_ff_dropout": "0.2",
+        "healnet_self_per_cross_attn": "0",
+        "paired_hp_groups": "healnet_num_latents:healnet_latent_dim"
+      },
+      "rationale": [
+        "Medium cohort: moderate width and learning-rate search.",
+        "High feature-dimension-to-sample ratio: favour compact models and stronger dropout."
+      ]
+    },
+    "SMILe": {
+      "family": "SMILe",
+      "combination_count": 32,
+      "fixed_args": {},
+      "args": {
+        "epochs": "80",
+        "early_stopping_patience": "20",
+        "batch_size": "16,32",
+        "learning_rate": "1e-5",
+        "weight_decay": "1e-4",
+        "smil_e_latent_dim": "8,16",
+        "smil_e_num_priors": "2",
+        "smil_e_num_heads": "1",
+        "smil_e_dropout": "0.2",
+        "smil_e_alpha": "1e-3,1e-2",
+        "smil_e_beta": "1e-2",
+        "meta_inner_lr": "5e-4,5e-5",
+        "meta_val_fraction": "0.25",
+        "classifier_hidden_dim": "32,64",
+        "paired_hp_groups": "learning_rate:meta_inner_lr"
+      },
+      "rationale": [
+        "Medium cohort: moderate width and learning-rate search.",
+        "High feature-dimension-to-sample ratio: favour compact models and stronger dropout.",
+        "Reduced learning_rate to 1e-5 to keep grid <= 32 combinations."
+      ]
+    }
+  }
+}

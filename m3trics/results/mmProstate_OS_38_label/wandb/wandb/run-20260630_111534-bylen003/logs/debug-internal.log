@@ -1,0 +1,18 @@
+{"time":"2026-06-30T11:15:34.356915743+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T11:16:04.470169457+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2026-06-30T11:16:22.483613162+02:00","level":"INFO","msg":"stream: created new stream","id":"bylen003"}
+{"time":"2026-06-30T11:16:22.483720442+02:00","level":"INFO","msg":"handler: started","stream_id":"bylen003"}
+{"time":"2026-06-30T11:16:22.487377914+02:00","level":"INFO","msg":"stream: started","id":"bylen003"}
+{"time":"2026-06-30T11:16:22.487443564+02:00","level":"INFO","msg":"writer: started","stream_id":"bylen003"}
+{"time":"2026-06-30T11:16:22.487484164+02:00","level":"INFO","msg":"sender: started","stream_id":"bylen003"}
+{"time":"2026-06-30T11:16:33.322960432+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T11:17:35.523669037+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/VAE_MLP_mmProstate/bylen003/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T11:18:32.992615873+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/VAE_MLP_mmProstate/bylen003/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T11:20:03.919739419+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/VAE_MLP_mmProstate/bylen003/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T11:21:01.429491974+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/VAE_MLP_mmProstate/bylen003/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T11:22:01.315503019+02:00","level":"INFO","msg":"api: retrying HTTP error","status":429,"url":"https://api.wandb.ai/files/marc_albesa/VAE_MLP_mmProstate/bylen003/file_stream","body":"{\"error\":\"rate limit exceeded: per_run limit on filestream requests\"}"}
+{"time":"2026-06-30T11:22:44.594210519+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T11:22:44.598588482+02:00","level":"INFO","msg":"stream: closing","id":"bylen003"}
+{"time":"2026-06-30T11:22:44.598615182+02:00","level":"INFO","msg":"handler: closed","stream_id":"bylen003"}
+{"time":"2026-06-30T11:22:44.599261524+02:00","level":"INFO","msg":"sender: closed","stream_id":"bylen003"}
+{"time":"2026-06-30T11:22:44.599290774+02:00","level":"INFO","msg":"stream: closed","id":"bylen003"}

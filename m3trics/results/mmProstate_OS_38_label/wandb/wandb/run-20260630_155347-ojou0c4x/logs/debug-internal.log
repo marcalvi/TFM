@@ -1,0 +1,16 @@
+{"time":"2026-06-30T15:53:47.843852766+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T15:53:48.146217472+02:00","level":"INFO","msg":"stream: created new stream","id":"ojou0c4x"}
+{"time":"2026-06-30T15:53:48.146303583+02:00","level":"INFO","msg":"handler: started","stream_id":"ojou0c4x"}
+{"time":"2026-06-30T15:53:48.149824093+02:00","level":"INFO","msg":"stream: started","id":"ojou0c4x"}
+{"time":"2026-06-30T15:53:48.149887064+02:00","level":"INFO","msg":"writer: started","stream_id":"ojou0c4x"}
+{"time":"2026-06-30T15:53:48.149936504+02:00","level":"INFO","msg":"sender: started","stream_id":"ojou0c4x"}
+{"time":"2026-06-30T15:54:18.151525341+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2026-06-30T15:54:50.478110474+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2026-06-30T15:55:25.082630831+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2026-06-30T15:55:39.52985495+02:00","level":"INFO","msg":"api: retrying HTTP error","status":409,"url":"https://api.wandb.ai/graphql","body":"{\"errors\":[{\"message\":\"Error 1062 (23000): Duplicate entry '44678257-ojou0c4x' for key 'runs.PRIMARY'\",\"path\":[\"upsertBucket\"]}],\"data\":{\"upsertBucket\":null}}"}
+{"time":"2026-06-30T15:56:26.76788905+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2026-06-30T15:56:48.218826106+02:00","level":"INFO","msg":"stream: closing","id":"ojou0c4x"}
+{"time":"2026-06-30T15:57:03.614113653+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T15:57:03.614165584+02:00","level":"INFO","msg":"handler: closed","stream_id":"ojou0c4x"}
+{"time":"2026-06-30T15:57:03.614884936+02:00","level":"INFO","msg":"sender: closed","stream_id":"ojou0c4x"}
+{"time":"2026-06-30T15:57:03.614897216+02:00","level":"INFO","msg":"stream: closed","id":"ojou0c4x"}

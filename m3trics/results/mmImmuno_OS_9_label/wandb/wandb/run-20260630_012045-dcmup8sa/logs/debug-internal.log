@@ -1,0 +1,12 @@
+{"time":"2026-06-30T01:20:45.576119355+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T01:20:45.923638685+02:00","level":"INFO","msg":"stream: created new stream","id":"dcmup8sa"}
+{"time":"2026-06-30T01:20:45.923689935+02:00","level":"INFO","msg":"handler: started","stream_id":"dcmup8sa"}
+{"time":"2026-06-30T01:20:45.927381588+02:00","level":"INFO","msg":"stream: started","id":"dcmup8sa"}
+{"time":"2026-06-30T01:20:45.927393788+02:00","level":"INFO","msg":"writer: started","stream_id":"dcmup8sa"}
+{"time":"2026-06-30T01:20:45.927414068+02:00","level":"INFO","msg":"sender: started","stream_id":"dcmup8sa"}
+{"time":"2026-06-30T01:20:47.072178202+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T01:20:47.384269448+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T01:20:47.385966274+02:00","level":"INFO","msg":"stream: closing","id":"dcmup8sa"}
+{"time":"2026-06-30T01:20:47.385973144+02:00","level":"INFO","msg":"handler: closed","stream_id":"dcmup8sa"}
+{"time":"2026-06-30T01:20:47.386302954+02:00","level":"INFO","msg":"sender: closed","stream_id":"dcmup8sa"}
+{"time":"2026-06-30T01:20:47.386306944+02:00","level":"INFO","msg":"stream: closed","id":"dcmup8sa"}

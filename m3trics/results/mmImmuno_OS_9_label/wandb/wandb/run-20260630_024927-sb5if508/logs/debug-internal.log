@@ -1,0 +1,13 @@
+{"time":"2026-06-30T02:49:27.278319204+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T02:49:27.581499286+02:00","level":"INFO","msg":"stream: created new stream","id":"sb5if508"}
+{"time":"2026-06-30T02:49:27.581568516+02:00","level":"INFO","msg":"handler: started","stream_id":"sb5if508"}
+{"time":"2026-06-30T02:49:27.584852616+02:00","level":"INFO","msg":"stream: started","id":"sb5if508"}
+{"time":"2026-06-30T02:49:27.584879926+02:00","level":"INFO","msg":"writer: started","stream_id":"sb5if508"}
+{"time":"2026-06-30T02:49:27.584899886+02:00","level":"INFO","msg":"sender: started","stream_id":"sb5if508"}
+{"time":"2026-06-30T02:49:30.893873085+02:00","level":"INFO","msg":"api: retrying error","error":"unexpected HTTP status 500 Internal Server Error"}
+{"time":"2026-06-30T02:49:33.198767977+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T02:49:33.395458803+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T02:49:33.396961393+02:00","level":"INFO","msg":"stream: closing","id":"sb5if508"}
+{"time":"2026-06-30T02:49:33.396971193+02:00","level":"INFO","msg":"handler: closed","stream_id":"sb5if508"}
+{"time":"2026-06-30T02:49:33.397312363+02:00","level":"INFO","msg":"sender: closed","stream_id":"sb5if508"}
+{"time":"2026-06-30T02:49:33.397319353+02:00","level":"INFO","msg":"stream: closed","id":"sb5if508"}

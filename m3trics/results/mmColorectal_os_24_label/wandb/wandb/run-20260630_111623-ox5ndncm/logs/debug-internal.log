@@ -1,0 +1,17 @@
+{"time":"2026-06-30T11:16:23.584364256+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T11:16:24.702158682+02:00","level":"INFO","msg":"stream: created new stream","id":"ox5ndncm"}
+{"time":"2026-06-30T11:16:24.702243693+02:00","level":"INFO","msg":"handler: started","stream_id":"ox5ndncm"}
+{"time":"2026-06-30T11:16:24.705785093+02:00","level":"INFO","msg":"stream: started","id":"ox5ndncm"}
+{"time":"2026-06-30T11:16:24.705842233+02:00","level":"INFO","msg":"writer: started","stream_id":"ox5ndncm"}
+{"time":"2026-06-30T11:16:24.705890513+02:00","level":"INFO","msg":"sender: started","stream_id":"ox5ndncm"}
+{"time":"2026-06-30T11:16:35.729388753+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T11:17:25.841009517+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/ZI_MLP_mmColorectal/ox5ndncm/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T11:18:38.233191103+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/ZI_MLP_mmColorectal/ox5ndncm/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T11:21:25.391198511+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/ZI_MLP_mmColorectal/ox5ndncm/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T11:22:22.583758977+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/ZI_MLP_mmColorectal/ox5ndncm/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T11:22:32.267739927+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/ZI_MLP_mmColorectal/ox5ndncm/file_stream","body":"{\"error\":\"An internal error occurred. Please contact support.\"}"}
+{"time":"2026-06-30T11:22:56.546508602+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T11:22:56.550460883+02:00","level":"INFO","msg":"stream: closing","id":"ox5ndncm"}
+{"time":"2026-06-30T11:22:56.550479743+02:00","level":"INFO","msg":"handler: closed","stream_id":"ox5ndncm"}
+{"time":"2026-06-30T11:22:56.551190815+02:00","level":"INFO","msg":"sender: closed","stream_id":"ox5ndncm"}
+{"time":"2026-06-30T11:22:56.551216975+02:00","level":"INFO","msg":"stream: closed","id":"ox5ndncm"}

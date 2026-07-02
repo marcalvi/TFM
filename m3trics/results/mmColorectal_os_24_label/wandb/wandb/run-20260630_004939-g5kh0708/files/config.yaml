@@ -1,0 +1,167 @@
+_wandb:
+    value:
+        cli_version: 0.25.0
+        e:
+            9913k6wze5jjz3b5xx3bp8j5iybdjqkr:
+                args:
+                    - --dataset
+                    - mmColorectal
+                    - --results_root
+                    - /home/osiris-user/Desktop/TFM/m3trics/results/mmColorectal_os_24_label
+                    - --endpoint_csv
+                    - /nfs/rnas/projects/M3TRICS/data/inputs/mmColorectal/mmColorectal_endpoints.csv
+                    - --patient_id_col
+                    - sap
+                    - --endpoint_col
+                    - os_24_label
+                    - --task_type
+                    - binary_classification
+                    - --run_models
+                    - ZI_LR,KNN_LR,ZI_RF,KNN_RF,ZI_MLP,KNN_MLP,VAE_MLP,pAM,HealNet,SMILe
+                    - --distill_models
+                    - ZI_MLP,HealNet
+                    - --distill_alpha
+                    - "0.25"
+                    - --distill_beta
+                    - "0.05"
+                    - --inner_splits
+                    - "5"
+                    - --outer_splits
+                    - "5"
+                    - --retrain_outer
+                    - "false"
+                    - --save_inner
+                    - "true"
+                    - --missingness_study
+                    - "true"
+                    - --hp_selection_epsilon
+                    - "0.02"
+                    - --scheduler_type
+                    - reduce_lr_on_plateau
+                    - --seeds
+                    - 22,2002,4,18473,55602
+                    - --missing_pattern_seed
+                    - "2026"
+                    - --lr_patience
+                    - "6"
+                    - --degrading_modality
+                    - global
+                    - --train_missing_prop
+                    - 0.0,0.25,0.5,0.75
+                    - --test_missing_prop
+                    - 0.0,0.25,0.5,0.75
+                    - --fingerprint_hp_json
+                    - /home/osiris-user/Desktop/TFM/m3trics/results/mmColorectal_os_24_label/fingerprint/fingerprint.json
+                    - --wandb_mode
+                    - online
+                    - --wandb
+                    - --modality_csv
+                    - path=/nfs/rnas/projects/M3TRICS/data/inputs/mmColorectal/mmColorectal_pathology_data.csv
+                    - --modality_csv
+                    - radio=/nfs/rnas/projects/M3TRICS/data/inputs/mmColorectal/mmColorectal_radiology_data.csv
+                    - --modality_csv
+                    - clin=/nfs/rnas/projects/M3TRICS/data/inputs/mmColorectal/mmColorectal_clinical_data.csv
+                    - --drop_cols
+                    - clin=braf_mut_wt
+                    - --categorical_cols
+                    - clin=had_adj_treat_post_primary_surgery, had_adj_treat_post_met_surgery, had_neoadjuvant_treatment, had_surgery_liver, had_surgery_other_mets,had_surgery_primary, met_treatment_mechanism_qmt, met_treatment_mechanism_aag, met_treatment_mechanism_ttantiegfr, met_treatment_mechanism_ttnonantiegfr, met_treatment_mechanism_imm, sex_male, sync_met_yes, msi_status_MSI, ras_mut_wt, met_tumor_site_liver_liver_limited, met_tumor_site_liver_liver_w_other, met_tumor_site_liver_other, primary_tumor_site_simple_Colon (unspecified), primary_tumor_site_simple_Left, primary_tumor_site_simple_Right
+                    - --categorical_imputation
+                    - clin=knn_mode
+                    - --knn_neighbors
+                    - clin=5
+                    - --modality_csv
+                    - blood=/nfs/rnas/projects/M3TRICS/data/inputs/mmColorectal/mmColorectal_blood_data.csv
+                executable: /home/osiris-user/anaconda3/envs/TFM_5090/bin/python
+                host: 955884d7ad04
+                os: Linux-7.0.0-27-generic-x86_64-with-glibc2.39
+                program: /home/osiris-user/Desktop/TFM/m3trics/scripts/m3trics.py
+                python: CPython 3.9.18
+                root: /home/osiris-user/Desktop/TFM/m3trics/results/mmColorectal_os_24_label/wandb
+                startedAt: "2026-06-29T22:49:39.236818Z"
+                writerId: 9913k6wze5jjz3b5xx3bp8j5iybdjqkr
+        m: []
+        python_version: 3.9.18
+        t:
+            "1":
+                - 1
+                - 5
+                - 53
+            "2":
+                - 1
+                - 5
+                - 53
+            "3":
+                - 2
+                - 13
+                - 16
+                - 61
+            "4": 3.9.18
+            "5": 0.25.0
+            "12": 0.25.0
+            "13": linux-x86_64
+best_epoch_warmup:
+    value: 1
+dataset:
+    value: mmColorectal
+degrading_modality:
+    value: global
+endpoint:
+    value: os_24_label
+epochs:
+    value: 1
+eval_degrading_modalities_grid:
+    value: global,global,global,global
+hp_grid_size:
+    value: 3
+hp_selection_epsilon:
+    value: 0.02
+imputation_method:
+    value: knn
+inner_fold:
+    value: 2
+inner_splits:
+    value: 5
+knowledge_distillation:
+    value: false
+missing_pattern_seed:
+    value: 2026
+missingness_study:
+    value: true
+modalities:
+    value:
+        - blood
+        - clin
+        - path
+        - radio
+model:
+    value: KNN_LR
+model_base:
+    value: LR
+model_canonical:
+    value: lr
+model_type:
+    value: inner
+outer_fold:
+    value: 4
+outer_splits:
+    value: 5
+phase:
+    value: selected_inner_model
+retrain_outer:
+    value: false
+save_inner:
+    value: true
+seed:
+    value: 2002
+selected_hp_name:
+    value: C1_penl2_solverlbfgs_cwnone_maxit1000_trmiss0_degmodglobal
+task_type:
+    value: binary_classification
+test_eval_combinations:
+    value: 4
+test_missing_props_grid:
+    value: 0.0,0.25,0.5,0.75
+train_missing_prop:
+    value: 0
+use_ensemble:
+    value: false

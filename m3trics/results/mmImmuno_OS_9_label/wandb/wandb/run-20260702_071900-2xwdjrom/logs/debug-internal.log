@@ -1,0 +1,12 @@
+{"time":"2026-07-02T07:19:00.550485214+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-07-02T07:19:00.822017615+02:00","level":"INFO","msg":"stream: created new stream","id":"2xwdjrom"}
+{"time":"2026-07-02T07:19:00.822088555+02:00","level":"INFO","msg":"handler: started","stream_id":"2xwdjrom"}
+{"time":"2026-07-02T07:19:00.826584476+02:00","level":"INFO","msg":"stream: started","id":"2xwdjrom"}
+{"time":"2026-07-02T07:19:00.826593886+02:00","level":"INFO","msg":"writer: started","stream_id":"2xwdjrom"}
+{"time":"2026-07-02T07:19:00.826606826+02:00","level":"INFO","msg":"sender: started","stream_id":"2xwdjrom"}
+{"time":"2026-07-02T07:19:03.232261529+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-07-02T07:19:03.577829261+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-07-02T07:19:03.579521791+02:00","level":"INFO","msg":"stream: closing","id":"2xwdjrom"}
+{"time":"2026-07-02T07:19:03.579528761+02:00","level":"INFO","msg":"handler: closed","stream_id":"2xwdjrom"}
+{"time":"2026-07-02T07:19:03.57987067+02:00","level":"INFO","msg":"sender: closed","stream_id":"2xwdjrom"}
+{"time":"2026-07-02T07:19:03.57987921+02:00","level":"INFO","msg":"stream: closed","id":"2xwdjrom"}

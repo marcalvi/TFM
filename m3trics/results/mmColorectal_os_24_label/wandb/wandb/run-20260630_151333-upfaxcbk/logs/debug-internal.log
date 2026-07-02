@@ -1,0 +1,12 @@
+{"time":"2026-06-30T15:13:33.942280067+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T15:13:34.229302844+02:00","level":"INFO","msg":"stream: created new stream","id":"upfaxcbk"}
+{"time":"2026-06-30T15:13:34.229381724+02:00","level":"INFO","msg":"handler: started","stream_id":"upfaxcbk"}
+{"time":"2026-06-30T15:13:34.233168384+02:00","level":"INFO","msg":"stream: started","id":"upfaxcbk"}
+{"time":"2026-06-30T15:13:34.233183024+02:00","level":"INFO","msg":"writer: started","stream_id":"upfaxcbk"}
+{"time":"2026-06-30T15:13:34.233209634+02:00","level":"INFO","msg":"sender: started","stream_id":"upfaxcbk"}
+{"time":"2026-06-30T15:13:36.17827147+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T15:13:36.476825108+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T15:13:36.481005399+02:00","level":"INFO","msg":"stream: closing","id":"upfaxcbk"}
+{"time":"2026-06-30T15:13:36.481025849+02:00","level":"INFO","msg":"handler: closed","stream_id":"upfaxcbk"}
+{"time":"2026-06-30T15:13:36.48157763+02:00","level":"INFO","msg":"sender: closed","stream_id":"upfaxcbk"}
+{"time":"2026-06-30T15:13:36.48158976+02:00","level":"INFO","msg":"stream: closed","id":"upfaxcbk"}

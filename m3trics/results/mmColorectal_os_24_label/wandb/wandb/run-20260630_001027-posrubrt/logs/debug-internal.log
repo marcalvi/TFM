@@ -1,0 +1,12 @@
+{"time":"2026-06-30T00:10:27.516729896+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T00:10:27.858233262+02:00","level":"INFO","msg":"stream: created new stream","id":"posrubrt"}
+{"time":"2026-06-30T00:10:27.858329682+02:00","level":"INFO","msg":"handler: started","stream_id":"posrubrt"}
+{"time":"2026-06-30T00:10:27.862662418+02:00","level":"INFO","msg":"stream: started","id":"posrubrt"}
+{"time":"2026-06-30T00:10:27.862739199+02:00","level":"INFO","msg":"writer: started","stream_id":"posrubrt"}
+{"time":"2026-06-30T00:10:27.862776019+02:00","level":"INFO","msg":"sender: started","stream_id":"posrubrt"}
+{"time":"2026-06-30T00:10:29.148607338+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T00:10:29.391254778+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T00:10:29.393775612+02:00","level":"INFO","msg":"stream: closing","id":"posrubrt"}
+{"time":"2026-06-30T00:10:29.393784932+02:00","level":"INFO","msg":"handler: closed","stream_id":"posrubrt"}
+{"time":"2026-06-30T00:10:29.394042212+02:00","level":"INFO","msg":"sender: closed","stream_id":"posrubrt"}
+{"time":"2026-06-30T00:10:29.394048142+02:00","level":"INFO","msg":"stream: closed","id":"posrubrt"}

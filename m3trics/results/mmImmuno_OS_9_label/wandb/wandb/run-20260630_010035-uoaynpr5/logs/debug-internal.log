@@ -1,0 +1,13 @@
+{"time":"2026-06-30T01:00:35.591651913+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T01:00:35.9976077+02:00","level":"INFO","msg":"stream: created new stream","id":"uoaynpr5"}
+{"time":"2026-06-30T01:00:35.99770417+02:00","level":"INFO","msg":"handler: started","stream_id":"uoaynpr5"}
+{"time":"2026-06-30T01:00:36.00196663+02:00","level":"INFO","msg":"stream: started","id":"uoaynpr5"}
+{"time":"2026-06-30T01:00:36.0019961+02:00","level":"INFO","msg":"writer: started","stream_id":"uoaynpr5"}
+{"time":"2026-06-30T01:00:36.00201693+02:00","level":"INFO","msg":"sender: started","stream_id":"uoaynpr5"}
+{"time":"2026-06-30T01:00:36.885082969+02:00","level":"ERROR","msg":"runfiles: called UploadNow() after Finish()","path":"wandb-metadata.json"}
+{"time":"2026-06-30T01:00:37.321860727+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T01:00:37.592022982+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T01:00:37.593562802+02:00","level":"INFO","msg":"stream: closing","id":"uoaynpr5"}
+{"time":"2026-06-30T01:00:37.593569612+02:00","level":"INFO","msg":"handler: closed","stream_id":"uoaynpr5"}
+{"time":"2026-06-30T01:00:37.593888202+02:00","level":"INFO","msg":"sender: closed","stream_id":"uoaynpr5"}
+{"time":"2026-06-30T01:00:37.593893602+02:00","level":"INFO","msg":"stream: closed","id":"uoaynpr5"}

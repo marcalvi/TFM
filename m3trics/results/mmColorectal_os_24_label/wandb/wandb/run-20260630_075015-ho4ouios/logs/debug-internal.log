@@ -1,0 +1,14 @@
+{"time":"2026-06-30T07:50:15.221391331+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T07:50:15.500269607+02:00","level":"INFO","msg":"stream: created new stream","id":"ho4ouios"}
+{"time":"2026-06-30T07:50:15.500369198+02:00","level":"INFO","msg":"handler: started","stream_id":"ho4ouios"}
+{"time":"2026-06-30T07:50:15.504632309+02:00","level":"INFO","msg":"stream: started","id":"ho4ouios"}
+{"time":"2026-06-30T07:50:15.504671229+02:00","level":"INFO","msg":"writer: started","stream_id":"ho4ouios"}
+{"time":"2026-06-30T07:50:15.504692409+02:00","level":"INFO","msg":"sender: started","stream_id":"ho4ouios"}
+{"time":"2026-06-30T07:50:15.982426651+02:00","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":227}
+{"time":"2026-06-30T07:50:15.985242858+02:00","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":24}
+{"time":"2026-06-30T07:50:16.781355098+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T07:50:17.059201043+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T07:50:17.064010016+02:00","level":"INFO","msg":"stream: closing","id":"ho4ouios"}
+{"time":"2026-06-30T07:50:17.064037196+02:00","level":"INFO","msg":"handler: closed","stream_id":"ho4ouios"}
+{"time":"2026-06-30T07:50:17.064697937+02:00","level":"INFO","msg":"sender: closed","stream_id":"ho4ouios"}
+{"time":"2026-06-30T07:50:17.064728747+02:00","level":"INFO","msg":"stream: closed","id":"ho4ouios"}

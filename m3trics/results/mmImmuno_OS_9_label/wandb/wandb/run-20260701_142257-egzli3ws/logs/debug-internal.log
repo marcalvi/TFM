@@ -1,0 +1,12 @@
+{"time":"2026-07-01T14:22:57.334756792+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-07-01T14:22:57.608637223+02:00","level":"INFO","msg":"stream: created new stream","id":"egzli3ws"}
+{"time":"2026-07-01T14:22:57.608885043+02:00","level":"INFO","msg":"handler: started","stream_id":"egzli3ws"}
+{"time":"2026-07-01T14:22:57.611848233+02:00","level":"INFO","msg":"stream: started","id":"egzli3ws"}
+{"time":"2026-07-01T14:22:57.611873583+02:00","level":"INFO","msg":"writer: started","stream_id":"egzli3ws"}
+{"time":"2026-07-01T14:22:57.611881413+02:00","level":"INFO","msg":"sender: started","stream_id":"egzli3ws"}
+{"time":"2026-07-01T14:22:59.731925535+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-07-01T14:23:00.451145056+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-07-01T14:23:00.459920638+02:00","level":"INFO","msg":"stream: closing","id":"egzli3ws"}
+{"time":"2026-07-01T14:23:00.459933208+02:00","level":"INFO","msg":"handler: closed","stream_id":"egzli3ws"}
+{"time":"2026-07-01T14:23:00.460352338+02:00","level":"INFO","msg":"sender: closed","stream_id":"egzli3ws"}
+{"time":"2026-07-01T14:23:00.460361658+02:00","level":"INFO","msg":"stream: closed","id":"egzli3ws"}

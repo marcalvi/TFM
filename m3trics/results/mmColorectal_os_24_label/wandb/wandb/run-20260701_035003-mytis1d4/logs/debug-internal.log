@@ -1,0 +1,12 @@
+{"time":"2026-07-01T03:50:03.997293347+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-07-01T03:50:04.298820442+02:00","level":"INFO","msg":"stream: created new stream","id":"mytis1d4"}
+{"time":"2026-07-01T03:50:04.298898273+02:00","level":"INFO","msg":"handler: started","stream_id":"mytis1d4"}
+{"time":"2026-07-01T03:50:04.302849276+02:00","level":"INFO","msg":"stream: started","id":"mytis1d4"}
+{"time":"2026-07-01T03:50:04.302910326+02:00","level":"INFO","msg":"writer: started","stream_id":"mytis1d4"}
+{"time":"2026-07-01T03:50:04.302921986+02:00","level":"INFO","msg":"sender: started","stream_id":"mytis1d4"}
+{"time":"2026-07-01T03:50:05.955194504+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-07-01T03:50:06.175521659+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-07-01T03:50:06.180061654+02:00","level":"INFO","msg":"stream: closing","id":"mytis1d4"}
+{"time":"2026-07-01T03:50:06.180085034+02:00","level":"INFO","msg":"handler: closed","stream_id":"mytis1d4"}
+{"time":"2026-07-01T03:50:06.180845607+02:00","level":"INFO","msg":"sender: closed","stream_id":"mytis1d4"}
+{"time":"2026-07-01T03:50:06.180860437+02:00","level":"INFO","msg":"stream: closed","id":"mytis1d4"}

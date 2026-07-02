@@ -1,0 +1,12 @@
+{"time":"2026-06-30T02:11:00.01514818+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T02:11:00.36812875+02:00","level":"INFO","msg":"stream: created new stream","id":"ihouegps"}
+{"time":"2026-06-30T02:11:00.36817404+02:00","level":"INFO","msg":"handler: started","stream_id":"ihouegps"}
+{"time":"2026-06-30T02:11:00.371949411+02:00","level":"INFO","msg":"stream: started","id":"ihouegps"}
+{"time":"2026-06-30T02:11:00.372116601+02:00","level":"INFO","msg":"writer: started","stream_id":"ihouegps"}
+{"time":"2026-06-30T02:11:00.372155521+02:00","level":"INFO","msg":"sender: started","stream_id":"ihouegps"}
+{"time":"2026-06-30T02:11:01.581730647+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T02:11:02.026901011+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T02:11:02.028500151+02:00","level":"INFO","msg":"stream: closing","id":"ihouegps"}
+{"time":"2026-06-30T02:11:02.028506841+02:00","level":"INFO","msg":"handler: closed","stream_id":"ihouegps"}
+{"time":"2026-06-30T02:11:02.028983351+02:00","level":"INFO","msg":"sender: closed","stream_id":"ihouegps"}
+{"time":"2026-06-30T02:11:02.028987981+02:00","level":"INFO","msg":"stream: closed","id":"ihouegps"}

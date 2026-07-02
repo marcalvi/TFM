@@ -1,0 +1,12 @@
+{"time":"2026-06-30T01:11:31.874832619+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T01:11:32.282993415+02:00","level":"INFO","msg":"stream: created new stream","id":"bnppiecm"}
+{"time":"2026-06-30T01:11:32.283042455+02:00","level":"INFO","msg":"handler: started","stream_id":"bnppiecm"}
+{"time":"2026-06-30T01:11:32.285737505+02:00","level":"INFO","msg":"stream: started","id":"bnppiecm"}
+{"time":"2026-06-30T01:11:32.285752095+02:00","level":"INFO","msg":"writer: started","stream_id":"bnppiecm"}
+{"time":"2026-06-30T01:11:32.285769965+02:00","level":"INFO","msg":"sender: started","stream_id":"bnppiecm"}
+{"time":"2026-06-30T01:11:33.538467084+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T01:11:33.796162911+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T01:11:33.797758061+02:00","level":"INFO","msg":"stream: closing","id":"bnppiecm"}
+{"time":"2026-06-30T01:11:33.797765431+02:00","level":"INFO","msg":"handler: closed","stream_id":"bnppiecm"}
+{"time":"2026-06-30T01:11:33.798055031+02:00","level":"INFO","msg":"sender: closed","stream_id":"bnppiecm"}
+{"time":"2026-06-30T01:11:33.798061821+02:00","level":"INFO","msg":"stream: closed","id":"bnppiecm"}

@@ -1,0 +1,12 @@
+{"time":"2026-06-29T23:40:00.709322112+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-29T23:40:00.988792886+02:00","level":"INFO","msg":"stream: created new stream","id":"luabwoer"}
+{"time":"2026-06-29T23:40:00.988829196+02:00","level":"INFO","msg":"handler: started","stream_id":"luabwoer"}
+{"time":"2026-06-29T23:40:00.991713978+02:00","level":"INFO","msg":"stream: started","id":"luabwoer"}
+{"time":"2026-06-29T23:40:00.991778028+02:00","level":"INFO","msg":"writer: started","stream_id":"luabwoer"}
+{"time":"2026-06-29T23:40:00.991785718+02:00","level":"INFO","msg":"sender: started","stream_id":"luabwoer"}
+{"time":"2026-06-29T23:40:02.143097699+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-29T23:40:02.431209142+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-29T23:40:02.432754278+02:00","level":"INFO","msg":"stream: closing","id":"luabwoer"}
+{"time":"2026-06-29T23:40:02.432761288+02:00","level":"INFO","msg":"handler: closed","stream_id":"luabwoer"}
+{"time":"2026-06-29T23:40:02.433032327+02:00","level":"INFO","msg":"sender: closed","stream_id":"luabwoer"}
+{"time":"2026-06-29T23:40:02.433036447+02:00","level":"INFO","msg":"stream: closed","id":"luabwoer"}

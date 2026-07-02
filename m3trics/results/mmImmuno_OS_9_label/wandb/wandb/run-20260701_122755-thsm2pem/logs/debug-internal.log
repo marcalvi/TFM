@@ -1,0 +1,12 @@
+{"time":"2026-07-01T12:27:55.538043586+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-07-01T12:27:55.886918208+02:00","level":"INFO","msg":"stream: created new stream","id":"thsm2pem"}
+{"time":"2026-07-01T12:27:55.886967648+02:00","level":"INFO","msg":"handler: started","stream_id":"thsm2pem"}
+{"time":"2026-07-01T12:27:55.891650119+02:00","level":"INFO","msg":"stream: started","id":"thsm2pem"}
+{"time":"2026-07-01T12:27:55.891653449+02:00","level":"INFO","msg":"writer: started","stream_id":"thsm2pem"}
+{"time":"2026-07-01T12:27:55.891669979+02:00","level":"INFO","msg":"sender: started","stream_id":"thsm2pem"}
+{"time":"2026-07-01T12:27:57.8423272+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-07-01T12:27:58.434683757+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-07-01T12:27:58.436243437+02:00","level":"INFO","msg":"stream: closing","id":"thsm2pem"}
+{"time":"2026-07-01T12:27:58.436250797+02:00","level":"INFO","msg":"handler: closed","stream_id":"thsm2pem"}
+{"time":"2026-07-01T12:27:58.436650237+02:00","level":"INFO","msg":"sender: closed","stream_id":"thsm2pem"}
+{"time":"2026-07-01T12:27:58.436655777+02:00","level":"INFO","msg":"stream: closed","id":"thsm2pem"}

@@ -1,0 +1,15 @@
+{"time":"2026-06-30T12:46:23.975236351+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T12:46:25.402993531+02:00","level":"INFO","msg":"stream: created new stream","id":"up4isf6b"}
+{"time":"2026-06-30T12:46:25.403053781+02:00","level":"INFO","msg":"handler: started","stream_id":"up4isf6b"}
+{"time":"2026-06-30T12:46:25.405875873+02:00","level":"INFO","msg":"stream: started","id":"up4isf6b"}
+{"time":"2026-06-30T12:46:25.405902573+02:00","level":"INFO","msg":"writer: started","stream_id":"up4isf6b"}
+{"time":"2026-06-30T12:46:25.405909793+02:00","level":"INFO","msg":"sender: started","stream_id":"up4isf6b"}
+{"time":"2026-06-30T12:46:55.407119362+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2026-06-30T12:47:24.758917197+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T12:48:17.200208064+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/ZI_MLP_mmImmuno/up4isf6b/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T12:50:02.561241365+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/ZI_MLP_mmImmuno/up4isf6b/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T12:50:33.962029092+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T12:50:33.963601833+02:00","level":"INFO","msg":"stream: closing","id":"up4isf6b"}
+{"time":"2026-06-30T12:50:33.963608783+02:00","level":"INFO","msg":"handler: closed","stream_id":"up4isf6b"}
+{"time":"2026-06-30T12:50:33.964227664+02:00","level":"INFO","msg":"sender: closed","stream_id":"up4isf6b"}
+{"time":"2026-06-30T12:50:33.964237134+02:00","level":"INFO","msg":"stream: closed","id":"up4isf6b"}

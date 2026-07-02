@@ -1,0 +1,12 @@
+{"time":"2026-06-30T06:02:03.514853772+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T06:02:03.797904047+02:00","level":"INFO","msg":"stream: created new stream","id":"susatros"}
+{"time":"2026-06-30T06:02:03.798004877+02:00","level":"INFO","msg":"handler: started","stream_id":"susatros"}
+{"time":"2026-06-30T06:02:03.801157525+02:00","level":"INFO","msg":"stream: started","id":"susatros"}
+{"time":"2026-06-30T06:02:03.801217786+02:00","level":"INFO","msg":"writer: started","stream_id":"susatros"}
+{"time":"2026-06-30T06:02:03.801263266+02:00","level":"INFO","msg":"sender: started","stream_id":"susatros"}
+{"time":"2026-06-30T06:02:04.90243849+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T06:02:05.108815839+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T06:02:05.112894869+02:00","level":"INFO","msg":"stream: closing","id":"susatros"}
+{"time":"2026-06-30T06:02:05.112917359+02:00","level":"INFO","msg":"handler: closed","stream_id":"susatros"}
+{"time":"2026-06-30T06:02:05.113512721+02:00","level":"INFO","msg":"sender: closed","stream_id":"susatros"}
+{"time":"2026-06-30T06:02:05.113525121+02:00","level":"INFO","msg":"stream: closed","id":"susatros"}
