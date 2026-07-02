@@ -26,6 +26,7 @@ Rules:
 - comma-separated strings are expanded as hyperparameter candidates,
 - independent comma-separated arguments are combined as a Cartesian product,
 - `paired_args` should be used only when two arguments must vary together.
+- for sklearn/sksurv baselines, `pca_n_components` can be `none`, an integer number of components, or a float in `(0, 1)` interpreted as the target explained variance. PCA is fitted inside each nested-CV training split.
 
 Example:
 
@@ -107,3 +108,13 @@ To add a new method config:
 5. If the method should work with `FINGERPRINT="true"`, also add support in `scripts/fingerprint.py`.
 
 See `models/README.md` for the model-side interface and fingerprint requirements for new methods.
+
+## Per-Modality Feature Reduction
+
+M3TRICS supports launcher-level per-modality feature reduction:
+
+- Configure it in the launcher with `*_FEATURE_REDUCTION="pca"` and `*_PCA_NUM_COMPONENTS`.
+- It is fitted inside each CV training split and applied to every method, including deep-learning methods and sklearn/sksurv baselines.
+- PCA is therefore no longer encoded as a separate method name. Use `ZI_LR`, `KNN_LR`, `ZI_RF`, `KNN_RF`, `ZI_CoxNet`, `KNN_CoxNet`, `ZI_RSF`, and `KNN_RSF` when comparing methods under the same reduced feature representation.
+
+Method-specific hyperparameter configs should not add a second PCA step unless a new method explicitly requires it.

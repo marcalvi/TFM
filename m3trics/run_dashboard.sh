@@ -42,7 +42,7 @@ if [[ "${ANALYSIS_DIR}" != /* ]]; then
     ANALYSIS_DIR="${SCRIPT_DIR}/${ANALYSIS_DIR}"
 fi
 
-# Models ending in _KD are detected automatically.
+# Models starting with DI- are detected automatically; legacy _KD outputs are also supported.
 # Optionally pass custom/legacy distillation model names as a comma-separated list.
 DISTILLATION_MODELS="${DISTILLATION_MODELS:-}"
 

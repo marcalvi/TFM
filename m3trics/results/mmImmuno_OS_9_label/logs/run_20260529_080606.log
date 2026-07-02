@@ -1,0 +1,983 @@
+Logging to: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label/logs/run_20260529_080606.log
+
+=== Cohort Alignment ===
+Alignment mode: complete_multimodal_cohort
+Endpoint patients before alignment: 281 | after alignment: 281 | dropped: 0
+[path] patients_before=281 | missing_vs_endpoints=0
+[radio] patients_before=281 | missing_vs_endpoints=0
+[clin] patients_before=281 | missing_vs_endpoints=0
+[blood] patients_before=281 | missing_vs_endpoints=0
+[radio_report] patients_before=281 | missing_vs_endpoints=0
+
+=== Missing Values Report ===
+[path] total_missing_cells=0 | columns_with_missing=0 | numeric_imputation=none | categorical_imputation=none | knn_neighbors=none
+[radio] total_missing_cells=0 | columns_with_missing=0 | numeric_imputation=none | categorical_imputation=none | knn_neighbors=none
+[clin] total_missing_cells=0 | columns_with_missing=0 | numeric_imputation=none | categorical_imputation=none | knn_neighbors=none
+[blood] total_missing_cells=0 | columns_with_missing=0 | numeric_imputation=none | categorical_imputation=none | knn_neighbors=none
+[radio_report] total_missing_cells=0 | columns_with_missing=0 | numeric_imputation=none | categorical_imputation=none | knn_neighbors=none
+No missing values found in modality dataframes.
+
+=== Duplicate Patient-ID Report ===
+[path] duplicated_patient_count=0 | aggregation_method=none | max_rows_per_patient=1
+[radio] duplicated_patient_count=211 | aggregation_method=mean | max_rows_per_patient=30
+  - example duplicated IDs: 15970864, 17958182, 19704765, 11761851, 18864853, 13787273, 20047967, 15398979, 13182560, 12587577
+[clin] duplicated_patient_count=0 | aggregation_method=none | max_rows_per_patient=1
+[blood] duplicated_patient_count=0 | aggregation_method=none | max_rows_per_patient=1
+[radio_report] duplicated_patient_count=0 | aggregation_method=none | max_rows_per_patient=1
+Duplicated patient ids were found. The configured aggregation methods will be kept for downstream training.
+Duplicate rows were preserved for downstream fold-wise aggregation.
+
+=== Preprocessing Complete ===
+Preprocessing results saved to: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label
+
+=== Training Launch ===
+Selected models: KNN_MLP, VAE_MLP, pAM
+Seeds: 55602
+Missing pattern seed: 2026
+Inner splits: 5
+Outer splits: 5
+Retrain outer: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Train missing prop: 0.0,0.2,0.4,0.6,0.8
+Test missing prop: 0.0,0.2,0.4,0.6,0.8
+Degrading modality: global
+Duplicate-row aggregation for training: radio=mean
+
+Launching KNN_MLP...
+Running
+Dataframes read. Starting MLP training.
+Parsed seeds: [55602]
+Total training runs to execute: 5
+Running seed=55602, degrading_modality=global, train_missing_prop=0.0
+Missing pattern seed: 2026
+Best-epoch warmup: 5
+Retrain outer train: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Output directory: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label\training_runs\KNN_MLP_retrainfalse_k5\TRAIN_MISSING\GLOBAL\0.0\seed_55602
+Hyperparameter combinations to evaluate: 24
+Test missingness combinations to evaluate: 5
+Using device: cuda (NVIDIA GeForce RTX 3070)
+
+Outer fold 1
+  Selected hp across inner folds: lr5e-05_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss0_degmodglobal (mean_AUC=0.6891, std_AUC=0.0379, mean_LOGLOSS=0.6620, epsilon=0.0200, best_mean_AUC=0.7050, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.6364, LOGLOSS=0.6756, best_epoch=20
+    Inner fold 2 retained model: AUC=0.6976, LOGLOSS=0.6744, best_epoch=6
+    Inner fold 3 retained model: AUC=0.6548, LOGLOSS=0.6614, best_epoch=43
+    Inner fold 4 retained model: AUC=0.7341, LOGLOSS=0.6416, best_epoch=30
+    Inner fold 5 retained model: AUC=0.7226, LOGLOSS=0.6569, best_epoch=9
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss0_degmodglobal'.
+
+Outer fold 2
+  Selected hp across inner folds: lr1e-04_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss0_degmodglobal (mean_AUC=0.6873, std_AUC=0.0541, mean_LOGLOSS=0.6707, epsilon=0.0200, best_mean_AUC=0.6937, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.6640, LOGLOSS=0.6738, best_epoch=8
+    Inner fold 2 retained model: AUC=0.7905, LOGLOSS=0.6267, best_epoch=8
+    Inner fold 3 retained model: AUC=0.6766, LOGLOSS=0.6793, best_epoch=5
+    Inner fold 4 retained model: AUC=0.6746, LOGLOSS=0.6910, best_epoch=5
+    Inner fold 5 retained model: AUC=0.6310, LOGLOSS=0.6827, best_epoch=31
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss0_degmodglobal'.
+
+Outer fold 3
+  Selected hp across inner folds: lr5e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss0_degmodglobal (mean_AUC=0.6526, std_AUC=0.0349, mean_LOGLOSS=0.6767, epsilon=0.0200, best_mean_AUC=0.6648, tied_configs=4)
+    Inner fold 1 retained model: AUC=0.6522, LOGLOSS=0.6775, best_epoch=5
+    Inner fold 2 retained model: AUC=0.5909, LOGLOSS=0.6801, best_epoch=22
+    Inner fold 3 retained model: AUC=0.6984, LOGLOSS=0.6750, best_epoch=8
+    Inner fold 4 retained model: AUC=0.6548, LOGLOSS=0.6775, best_epoch=9
+    Inner fold 5 retained model: AUC=0.6667, LOGLOSS=0.6734, best_epoch=21
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss0_degmodglobal'.
+
+Outer fold 4
+  Selected hp across inner folds: lr1e-04_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss0_degmodglobal (mean_AUC=0.7350, std_AUC=0.0344, mean_LOGLOSS=0.6573, epsilon=0.0200, best_mean_AUC=0.7409, tied_configs=5)
+    Inner fold 1 retained model: AUC=0.7609, LOGLOSS=0.6504, best_epoch=13
+    Inner fold 2 retained model: AUC=0.6779, LOGLOSS=0.6781, best_epoch=5
+    Inner fold 3 retained model: AUC=0.7123, LOGLOSS=0.6725, best_epoch=10
+    Inner fold 4 retained model: AUC=0.7659, LOGLOSS=0.6638, best_epoch=16
+    Inner fold 5 retained model: AUC=0.7579, LOGLOSS=0.6215, best_epoch=34
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss0_degmodglobal'.
+
+Outer fold 5
+  Selected hp across inner folds: lr1e-04_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss0_degmodglobal (mean_AUC=0.7415, std_AUC=0.0267, mean_LOGLOSS=0.6639, epsilon=0.0200, best_mean_AUC=0.7415, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.7292, LOGLOSS=0.6736, best_epoch=5
+    Inner fold 2 retained model: AUC=0.7253, LOGLOSS=0.6363, best_epoch=11
+    Inner fold 3 retained model: AUC=0.7925, LOGLOSS=0.6440, best_epoch=5
+    Inner fold 4 retained model: AUC=0.7183, LOGLOSS=0.7101, best_epoch=48
+    Inner fold 5 retained model: AUC=0.7421, LOGLOSS=0.6553, best_epoch=5
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss0_degmodglobal'.
+Run finished in 3251.65 seconds.
+Running seed=55602, degrading_modality=global, train_missing_prop=0.2
+Missing pattern seed: 2026
+Best-epoch warmup: 5
+Retrain outer train: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Output directory: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label\training_runs\KNN_MLP_retrainfalse_k5\TRAIN_MISSING\GLOBAL\20.0\seed_55602
+Hyperparameter combinations to evaluate: 24
+Test missingness combinations to evaluate: 5
+Using device: cuda (NVIDIA GeForce RTX 3070)
+
+Outer fold 1
+  Selected hp across inner folds: lr5e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss20_degmodglobal (mean_AUC=0.7330, std_AUC=0.0504, mean_LOGLOSS=0.6596, epsilon=0.0200, best_mean_AUC=0.7330, tied_configs=1)
+    Inner fold 1 retained model: AUC=0.7688, LOGLOSS=0.6569, best_epoch=5
+    Inner fold 2 retained model: AUC=0.8043, LOGLOSS=0.6507, best_epoch=11
+    Inner fold 3 retained model: AUC=0.7381, LOGLOSS=0.6563, best_epoch=11
+    Inner fold 4 retained model: AUC=0.6766, LOGLOSS=0.6665, best_epoch=12
+    Inner fold 5 retained model: AUC=0.6770, LOGLOSS=0.6674, best_epoch=7
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss20_degmodglobal'.
+
+Outer fold 2
+  Selected hp across inner folds: lr5e-05_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss20_degmodglobal (mean_AUC=0.6806, std_AUC=0.0586, mean_LOGLOSS=0.6558, epsilon=0.0200, best_mean_AUC=0.6993, tied_configs=4)
+    Inner fold 1 retained model: AUC=0.6364, LOGLOSS=0.6810, best_epoch=13
+    Inner fold 2 retained model: AUC=0.7945, LOGLOSS=0.6068, best_epoch=25
+    Inner fold 3 retained model: AUC=0.6369, LOGLOSS=0.6753, best_epoch=9
+    Inner fold 4 retained model: AUC=0.6667, LOGLOSS=0.6670, best_epoch=7
+    Inner fold 5 retained model: AUC=0.6687, LOGLOSS=0.6492, best_epoch=36
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss20_degmodglobal'.
+
+Outer fold 3
+  Selected hp across inner folds: lr5e-05_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss20_degmodglobal (mean_AUC=0.6501, std_AUC=0.0325, mean_LOGLOSS=0.6718, epsilon=0.0200, best_mean_AUC=0.6678, tied_configs=5)
+    Inner fold 1 retained model: AUC=0.6759, LOGLOSS=0.6568, best_epoch=25
+    Inner fold 2 retained model: AUC=0.6621, LOGLOSS=0.6776, best_epoch=7
+    Inner fold 3 retained model: AUC=0.6885, LOGLOSS=0.6748, best_epoch=15
+    Inner fold 4 retained model: AUC=0.6052, LOGLOSS=0.6770, best_epoch=18
+    Inner fold 5 retained model: AUC=0.6190, LOGLOSS=0.6729, best_epoch=64
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss20_degmodglobal'.
+
+Outer fold 4
+  Selected hp across inner folds: lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss20_degmodglobal (mean_AUC=0.7160, std_AUC=0.0534, mean_LOGLOSS=0.6486, epsilon=0.0200, best_mean_AUC=0.7326, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.6700, LOGLOSS=0.6623, best_epoch=13
+    Inner fold 2 retained model: AUC=0.7273, LOGLOSS=0.6639, best_epoch=6
+    Inner fold 3 retained model: AUC=0.7143, LOGLOSS=0.6618, best_epoch=9
+    Inner fold 4 retained model: AUC=0.8095, LOGLOSS=0.5968, best_epoch=21
+    Inner fold 5 retained model: AUC=0.6587, LOGLOSS=0.6584, best_epoch=28
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss20_degmodglobal'.
+
+Outer fold 5
+  Selected hp across inner folds: lr5e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss20_degmodglobal (mean_AUC=0.7435, std_AUC=0.0249, mean_LOGLOSS=0.6545, epsilon=0.0200, best_mean_AUC=0.7435, tied_configs=1)
+    Inner fold 1 retained model: AUC=0.7530, LOGLOSS=0.6659, best_epoch=5
+    Inner fold 2 retained model: AUC=0.7174, LOGLOSS=0.6682, best_epoch=25
+    Inner fold 3 retained model: AUC=0.7411, LOGLOSS=0.6630, best_epoch=28
+    Inner fold 4 retained model: AUC=0.7202, LOGLOSS=0.6502, best_epoch=50
+    Inner fold 5 retained model: AUC=0.7857, LOGLOSS=0.6251, best_epoch=36
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss20_degmodglobal'.
+Run finished in 19363.99 seconds.
+Running seed=55602, degrading_modality=global, train_missing_prop=0.4
+Missing pattern seed: 2026
+Best-epoch warmup: 5
+Retrain outer train: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Output directory: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label\training_runs\KNN_MLP_retrainfalse_k5\TRAIN_MISSING\GLOBAL\40.0\seed_55602
+Hyperparameter combinations to evaluate: 24
+Test missingness combinations to evaluate: 5
+Using device: cuda (NVIDIA GeForce RTX 3070)
+
+Outer fold 1
+  Selected hp across inner folds: lr5e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss40_degmodglobal (mean_AUC=0.6618, std_AUC=0.0122, mean_LOGLOSS=0.6703, epsilon=0.0200, best_mean_AUC=0.6618, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.6680, LOGLOSS=0.6758, best_epoch=5
+    Inner fold 2 retained model: AUC=0.6640, LOGLOSS=0.6728, best_epoch=10
+    Inner fold 3 retained model: AUC=0.6766, LOGLOSS=0.6797, best_epoch=5
+    Inner fold 4 retained model: AUC=0.6607, LOGLOSS=0.6495, best_epoch=24
+    Inner fold 5 retained model: AUC=0.6398, LOGLOSS=0.6735, best_epoch=18
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss40_degmodglobal'.
+
+Outer fold 2
+  Selected hp across inner folds: lr1e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss40_degmodglobal (mean_AUC=0.6339, std_AUC=0.0484, mean_LOGLOSS=0.6829, epsilon=0.0200, best_mean_AUC=0.6402, tied_configs=7)
+    Inner fold 1 retained model: AUC=0.5632, LOGLOSS=0.6869, best_epoch=5
+    Inner fold 2 retained model: AUC=0.6897, LOGLOSS=0.6633, best_epoch=69
+    Inner fold 3 retained model: AUC=0.6548, LOGLOSS=0.6826, best_epoch=77
+    Inner fold 4 retained model: AUC=0.6706, LOGLOSS=0.6881, best_epoch=49
+    Inner fold 5 retained model: AUC=0.5913, LOGLOSS=0.6937, best_epoch=10
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss40_degmodglobal'.
+
+Outer fold 3
+  Selected hp across inner folds: lr5e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss40_degmodglobal (mean_AUC=0.6826, std_AUC=0.0468, mean_LOGLOSS=0.6645, epsilon=0.0200, best_mean_AUC=0.6854, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.7688, LOGLOSS=0.6454, best_epoch=21
+    Inner fold 2 retained model: AUC=0.6957, LOGLOSS=0.6556, best_epoch=24
+    Inner fold 3 retained model: AUC=0.6548, LOGLOSS=0.6767, best_epoch=11
+    Inner fold 4 retained model: AUC=0.6508, LOGLOSS=0.6915, best_epoch=7
+    Inner fold 5 retained model: AUC=0.6429, LOGLOSS=0.6532, best_epoch=52
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss40_degmodglobal'.
+
+Outer fold 4
+  Selected hp across inner folds: lr1e-04_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss40_degmodglobal (mean_AUC=0.6854, std_AUC=0.0465, mean_LOGLOSS=0.6524, epsilon=0.0200, best_mean_AUC=0.6854, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.6937, LOGLOSS=0.6416, best_epoch=21
+    Inner fold 2 retained model: AUC=0.6680, LOGLOSS=0.6634, best_epoch=15
+    Inner fold 3 retained model: AUC=0.7063, LOGLOSS=0.6488, best_epoch=10
+    Inner fold 4 retained model: AUC=0.7500, LOGLOSS=0.6170, best_epoch=23
+    Inner fold 5 retained model: AUC=0.6091, LOGLOSS=0.6909, best_epoch=28
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss40_degmodglobal'.
+
+Outer fold 5
+  Selected hp across inner folds: lr1e-04_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss40_degmodglobal (mean_AUC=0.6662, std_AUC=0.0190, mean_LOGLOSS=0.6579, epsilon=0.0200, best_mean_AUC=0.6796, tied_configs=5)
+    Inner fold 1 retained model: AUC=0.6858, LOGLOSS=0.6740, best_epoch=14
+    Inner fold 2 retained model: AUC=0.6897, LOGLOSS=0.6411, best_epoch=23
+    Inner fold 3 retained model: AUC=0.6581, LOGLOSS=0.6634, best_epoch=25
+    Inner fold 4 retained model: AUC=0.6587, LOGLOSS=0.6547, best_epoch=34
+    Inner fold 5 retained model: AUC=0.6389, LOGLOSS=0.6562, best_epoch=23
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss40_degmodglobal'.
+Run finished in 40223.42 seconds.
+Running seed=55602, degrading_modality=global, train_missing_prop=0.6
+Missing pattern seed: 2026
+Best-epoch warmup: 5
+Retrain outer train: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Output directory: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label\training_runs\KNN_MLP_retrainfalse_k5\TRAIN_MISSING\GLOBAL\60.0\seed_55602
+Hyperparameter combinations to evaluate: 24
+Test missingness combinations to evaluate: 5
+Using device: cuda (NVIDIA GeForce RTX 3070)
+
+Outer fold 1
+  Selected hp across inner folds: lr5e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss60_degmodglobal (mean_AUC=0.6143, std_AUC=0.0799, mean_LOGLOSS=0.6754, epsilon=0.0200, best_mean_AUC=0.6316, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.5791, LOGLOSS=0.6848, best_epoch=9
+    Inner fold 2 retained model: AUC=0.5652, LOGLOSS=0.6872, best_epoch=14
+    Inner fold 3 retained model: AUC=0.5139, LOGLOSS=0.7051, best_epoch=10
+    Inner fold 4 retained model: AUC=0.7302, LOGLOSS=0.6279, best_epoch=80
+    Inner fold 5 retained model: AUC=0.6832, LOGLOSS=0.6719, best_epoch=12
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss60_degmodglobal'.
+
+Outer fold 2
+  Selected hp across inner folds: lr1e-05_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss60_degmodglobal (mean_AUC=0.6197, std_AUC=0.0664, mean_LOGLOSS=0.6817, epsilon=0.0200, best_mean_AUC=0.6197, tied_configs=1)
+    Inner fold 1 retained model: AUC=0.6265, LOGLOSS=0.6760, best_epoch=36
+    Inner fold 2 retained model: AUC=0.5277, LOGLOSS=0.6961, best_epoch=49
+    Inner fold 3 retained model: AUC=0.6012, LOGLOSS=0.6838, best_epoch=12
+    Inner fold 4 retained model: AUC=0.7341, LOGLOSS=0.6714, best_epoch=7
+    Inner fold 5 retained model: AUC=0.6091, LOGLOSS=0.6811, best_epoch=8
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss60_degmodglobal'.
+
+Outer fold 3
+  Selected hp across inner folds: lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss60_degmodglobal (mean_AUC=0.6446, std_AUC=0.0329, mean_LOGLOSS=0.6847, epsilon=0.0200, best_mean_AUC=0.6505, tied_configs=4)
+    Inner fold 1 retained model: AUC=0.6126, LOGLOSS=0.6886, best_epoch=6
+    Inner fold 2 retained model: AUC=0.6917, LOGLOSS=0.6839, best_epoch=7
+    Inner fold 3 retained model: AUC=0.6329, LOGLOSS=0.6712, best_epoch=18
+    Inner fold 4 retained model: AUC=0.6111, LOGLOSS=0.7127, best_epoch=16
+    Inner fold 5 retained model: AUC=0.6746, LOGLOSS=0.6669, best_epoch=16
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss60_degmodglobal'.
+
+Outer fold 4
+  Selected hp across inner folds: lr5e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss60_degmodglobal (mean_AUC=0.6859, std_AUC=0.0907, mean_LOGLOSS=0.6668, epsilon=0.0200, best_mean_AUC=0.6859, tied_configs=1)
+    Inner fold 1 retained model: AUC=0.6166, LOGLOSS=0.6859, best_epoch=27
+    Inner fold 2 retained model: AUC=0.6719, LOGLOSS=0.6708, best_epoch=35
+    Inner fold 3 retained model: AUC=0.7063, LOGLOSS=0.6670, best_epoch=8
+    Inner fold 4 retained model: AUC=0.8472, LOGLOSS=0.6262, best_epoch=52
+    Inner fold 5 retained model: AUC=0.5873, LOGLOSS=0.6841, best_epoch=6
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss60_degmodglobal'.
+
+Outer fold 5
+  Selected hp across inner folds: lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss60_degmodglobal (mean_AUC=0.6982, std_AUC=0.0685, mean_LOGLOSS=0.6657, epsilon=0.0200, best_mean_AUC=0.6982, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.7569, LOGLOSS=0.6711, best_epoch=7
+    Inner fold 2 retained model: AUC=0.7905, LOGLOSS=0.6311, best_epoch=19
+    Inner fold 3 retained model: AUC=0.6680, LOGLOSS=0.6781, best_epoch=38
+    Inner fold 4 retained model: AUC=0.6786, LOGLOSS=0.6724, best_epoch=9
+    Inner fold 5 retained model: AUC=0.5972, LOGLOSS=0.6761, best_epoch=26
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss60_degmodglobal'.
+Run finished in 53965.12 seconds.
+Running seed=55602, degrading_modality=global, train_missing_prop=0.8
+Missing pattern seed: 2026
+Best-epoch warmup: 5
+Retrain outer train: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Output directory: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label\training_runs\KNN_MLP_retrainfalse_k5\TRAIN_MISSING\GLOBAL\80.0\seed_55602
+Hyperparameter combinations to evaluate: 24
+Test missingness combinations to evaluate: 5
+Using device: cuda (NVIDIA GeForce RTX 3070)
+
+Outer fold 1
+  Selected hp across inner folds: lr1e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss80_degmodglobal (mean_AUC=0.5788, std_AUC=0.0113, mean_LOGLOSS=0.6930, epsilon=0.0200, best_mean_AUC=0.5883, tied_configs=4)
+    Inner fold 1 retained model: AUC=0.5909, LOGLOSS=0.6888, best_epoch=17
+    Inner fold 2 retained model: AUC=0.5830, LOGLOSS=0.6883, best_epoch=22
+    Inner fold 3 retained model: AUC=0.5893, LOGLOSS=0.6931, best_epoch=24
+    Inner fold 4 retained model: AUC=0.5635, LOGLOSS=0.6924, best_epoch=8
+    Inner fold 5 retained model: AUC=0.5673, LOGLOSS=0.7025, best_epoch=26
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss80_degmodglobal'.
+
+Outer fold 2
+  Selected hp across inner folds: lr1e-05_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss80_degmodglobal (mean_AUC=0.5907, std_AUC=0.0623, mean_LOGLOSS=0.6886, epsilon=0.0200, best_mean_AUC=0.5945, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.6522, LOGLOSS=0.6943, best_epoch=62
+    Inner fold 2 retained model: AUC=0.5435, LOGLOSS=0.6961, best_epoch=42
+    Inner fold 3 retained model: AUC=0.6766, LOGLOSS=0.6749, best_epoch=7
+    Inner fold 4 retained model: AUC=0.5179, LOGLOSS=0.6900, best_epoch=8
+    Inner fold 5 retained model: AUC=0.5635, LOGLOSS=0.6879, best_epoch=13
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss80_degmodglobal'.
+
+Outer fold 3
+  Selected hp across inner folds: lr1e-04_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal (mean_AUC=0.6078, std_AUC=0.0397, mean_LOGLOSS=0.6824, epsilon=0.0200, best_mean_AUC=0.6260, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.5870, LOGLOSS=0.6895, best_epoch=5
+    Inner fold 2 retained model: AUC=0.6423, LOGLOSS=0.6585, best_epoch=30
+    Inner fold 3 retained model: AUC=0.6071, LOGLOSS=0.6808, best_epoch=6
+    Inner fold 4 retained model: AUC=0.6567, LOGLOSS=0.6824, best_epoch=25
+    Inner fold 5 retained model: AUC=0.5456, LOGLOSS=0.7009, best_epoch=30
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal'.
+
+Outer fold 4
+  Selected hp across inner folds: lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal (mean_AUC=0.5994, std_AUC=0.0901, mean_LOGLOSS=0.6855, epsilon=0.0200, best_mean_AUC=0.5994, tied_configs=1)
+    Inner fold 1 retained model: AUC=0.5514, LOGLOSS=0.7063, best_epoch=52
+    Inner fold 2 retained model: AUC=0.7372, LOGLOSS=0.6660, best_epoch=13
+    Inner fold 3 retained model: AUC=0.6726, LOGLOSS=0.6683, best_epoch=8
+    Inner fold 4 retained model: AUC=0.5357, LOGLOSS=0.6954, best_epoch=42
+    Inner fold 5 retained model: AUC=0.5000, LOGLOSS=0.6916, best_epoch=5
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal'.
+
+Outer fold 5
+  Selected hp across inner folds: lr5e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal (mean_AUC=0.6191, std_AUC=0.0339, mean_LOGLOSS=0.6777, epsilon=0.0200, best_mean_AUC=0.6191, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.6087, LOGLOSS=0.6801, best_epoch=40
+    Inner fold 2 retained model: AUC=0.6344, LOGLOSS=0.6684, best_epoch=57
+    Inner fold 3 retained model: AUC=0.6462, LOGLOSS=0.6718, best_epoch=21
+    Inner fold 4 retained model: AUC=0.5575, LOGLOSS=0.6923, best_epoch=31
+    Inner fold 5 retained model: AUC=0.6488, LOGLOSS=0.6760, best_epoch=14
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal'.
+Run finished in 60743.01 seconds.
+
+Launching VAE_MLP...
+Running
+Dataframes read. Starting MLP training.
+Parsed seeds: [55602]
+Total training runs to execute: 5
+Running seed=55602, degrading_modality=global, train_missing_prop=0.0
+Missing pattern seed: 2026
+Best-epoch warmup: 5
+Retrain outer train: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Output directory: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label\training_runs\VAE_MLP_retrainfalse_k5\TRAIN_MISSING\GLOBAL\0.0\seed_55602
+Hyperparameter combinations to evaluate: 24
+Test missingness combinations to evaluate: 5
+Using device: cuda (NVIDIA GeForce RTX 3070)
+
+Outer fold 1
+  Selected hp across inner folds: lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss0_degmodglobal (mean_AUC=0.6818, std_AUC=0.0447, mean_LOGLOSS=0.6619, epsilon=0.0200, best_mean_AUC=0.6818, tied_configs=7)
+    Inner fold 1 retained model: AUC=0.7490, LOGLOSS=0.6566, best_epoch=15
+    Inner fold 2 retained model: AUC=0.6759, LOGLOSS=0.6528, best_epoch=14
+    Inner fold 3 retained model: AUC=0.6131, LOGLOSS=0.6717, best_epoch=15
+    Inner fold 4 retained model: AUC=0.7044, LOGLOSS=0.6736, best_epoch=6
+    Inner fold 5 retained model: AUC=0.6667, LOGLOSS=0.6548, best_epoch=16
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss0_degmodglobal'.
+
+Outer fold 2
+  Selected hp across inner folds: lr1e-04_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss0_degmodglobal (mean_AUC=0.6977, std_AUC=0.0571, mean_LOGLOSS=0.6602, epsilon=0.0200, best_mean_AUC=0.7075, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.6067, LOGLOSS=0.6834, best_epoch=11
+    Inner fold 2 retained model: AUC=0.7708, LOGLOSS=0.6504, best_epoch=9
+    Inner fold 3 retained model: AUC=0.7381, LOGLOSS=0.6458, best_epoch=11
+    Inner fold 4 retained model: AUC=0.6667, LOGLOSS=0.6685, best_epoch=10
+    Inner fold 5 retained model: AUC=0.7063, LOGLOSS=0.6530, best_epoch=11
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss0_degmodglobal'.
+
+Outer fold 3
+  Selected hp across inner folds: lr1e-04_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss0_degmodglobal (mean_AUC=0.6743, std_AUC=0.0217, mean_LOGLOSS=0.6697, epsilon=0.0200, best_mean_AUC=0.6743, tied_configs=4)
+    Inner fold 1 retained model: AUC=0.6700, LOGLOSS=0.6717, best_epoch=7
+    Inner fold 2 retained model: AUC=0.6858, LOGLOSS=0.6875, best_epoch=6
+    Inner fold 3 retained model: AUC=0.6825, LOGLOSS=0.6576, best_epoch=23
+    Inner fold 4 retained model: AUC=0.6349, LOGLOSS=0.6831, best_epoch=5
+    Inner fold 5 retained model: AUC=0.6984, LOGLOSS=0.6485, best_epoch=30
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss0_degmodglobal'.
+
+Outer fold 4
+  Selected hp across inner folds: lr1e-04_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss0_degmodglobal (mean_AUC=0.7191, std_AUC=0.0223, mean_LOGLOSS=0.6456, epsilon=0.0200, best_mean_AUC=0.7322, tied_configs=6)
+    Inner fold 1 retained model: AUC=0.6917, LOGLOSS=0.6346, best_epoch=27
+    Inner fold 2 retained model: AUC=0.7411, LOGLOSS=0.6196, best_epoch=41
+    Inner fold 3 retained model: AUC=0.6964, LOGLOSS=0.6549, best_epoch=14
+    Inner fold 4 retained model: AUC=0.7460, LOGLOSS=0.6542, best_epoch=12
+    Inner fold 5 retained model: AUC=0.7202, LOGLOSS=0.6646, best_epoch=53
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss0_degmodglobal'.
+
+Outer fold 5
+  Selected hp across inner folds: lr1e-04_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss0_degmodglobal (mean_AUC=0.7173, std_AUC=0.0479, mean_LOGLOSS=0.6632, epsilon=0.0200, best_mean_AUC=0.7327, tied_configs=6)
+    Inner fold 1 retained model: AUC=0.6522, LOGLOSS=0.7069, best_epoch=23
+    Inner fold 2 retained model: AUC=0.7431, LOGLOSS=0.6444, best_epoch=11
+    Inner fold 3 retained model: AUC=0.7905, LOGLOSS=0.6052, best_epoch=17
+    Inner fold 4 retained model: AUC=0.6825, LOGLOSS=0.7058, best_epoch=34
+    Inner fold 5 retained model: AUC=0.7183, LOGLOSS=0.6538, best_epoch=8
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss0_degmodglobal'.
+Run finished in 3025.54 seconds.
+Running seed=55602, degrading_modality=global, train_missing_prop=0.2
+Missing pattern seed: 2026
+Best-epoch warmup: 5
+Retrain outer train: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Output directory: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label\training_runs\VAE_MLP_retrainfalse_k5\TRAIN_MISSING\GLOBAL\20.0\seed_55602
+Hyperparameter combinations to evaluate: 24
+Test missingness combinations to evaluate: 5
+Using device: cuda (NVIDIA GeForce RTX 3070)
+
+Outer fold 1
+  Selected hp across inner folds: lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss20_degmodglobal (mean_AUC=0.6989, std_AUC=0.0367, mean_LOGLOSS=0.6572, epsilon=0.0200, best_mean_AUC=0.6989, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.7589, LOGLOSS=0.6582, best_epoch=6
+    Inner fold 2 retained model: AUC=0.6601, LOGLOSS=0.6562, best_epoch=16
+    Inner fold 3 retained model: AUC=0.6706, LOGLOSS=0.6673, best_epoch=5
+    Inner fold 4 retained model: AUC=0.6825, LOGLOSS=0.6404, best_epoch=18
+    Inner fold 5 retained model: AUC=0.7226, LOGLOSS=0.6638, best_epoch=6
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss20_degmodglobal'.
+
+Outer fold 2
+  Selected hp across inner folds: lr5e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss20_degmodglobal (mean_AUC=0.6843, std_AUC=0.0612, mean_LOGLOSS=0.6564, epsilon=0.0200, best_mean_AUC=0.6847, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.5632, LOGLOSS=0.6921, best_epoch=17
+    Inner fold 2 retained model: AUC=0.7075, LOGLOSS=0.6391, best_epoch=20
+    Inner fold 3 retained model: AUC=0.7242, LOGLOSS=0.6554, best_epoch=12
+    Inner fold 4 retained model: AUC=0.7242, LOGLOSS=0.6684, best_epoch=7
+    Inner fold 5 retained model: AUC=0.7024, LOGLOSS=0.6268, best_epoch=28
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss20_degmodglobal'.
+
+Outer fold 3
+  Selected hp across inner folds: lr5e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss20_degmodglobal (mean_AUC=0.6280, std_AUC=0.0421, mean_LOGLOSS=0.6810, epsilon=0.0200, best_mean_AUC=0.6461, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.6324, LOGLOSS=0.6803, best_epoch=16
+    Inner fold 2 retained model: AUC=0.6502, LOGLOSS=0.6758, best_epoch=9
+    Inner fold 3 retained model: AUC=0.6329, LOGLOSS=0.6881, best_epoch=5
+    Inner fold 4 retained model: AUC=0.5496, LOGLOSS=0.6903, best_epoch=9
+    Inner fold 5 retained model: AUC=0.6746, LOGLOSS=0.6704, best_epoch=16
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss20_degmodglobal'.
+
+Outer fold 4
+  Selected hp across inner folds: lr5e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss20_degmodglobal (mean_AUC=0.6886, std_AUC=0.0216, mean_LOGLOSS=0.6607, epsilon=0.0200, best_mean_AUC=0.6894, tied_configs=7)
+    Inner fold 1 retained model: AUC=0.6838, LOGLOSS=0.6461, best_epoch=35
+    Inner fold 2 retained model: AUC=0.7273, LOGLOSS=0.6683, best_epoch=8
+    Inner fold 3 retained model: AUC=0.6885, LOGLOSS=0.6446, best_epoch=28
+    Inner fold 4 retained model: AUC=0.6825, LOGLOSS=0.6647, best_epoch=64
+    Inner fold 5 retained model: AUC=0.6607, LOGLOSS=0.6796, best_epoch=5
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss20_degmodglobal'.
+
+Outer fold 5
+  Selected hp across inner folds: lr5e-05_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss20_degmodglobal (mean_AUC=0.6979, std_AUC=0.0309, mean_LOGLOSS=0.6566, epsilon=0.0200, best_mean_AUC=0.7016, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.7273, LOGLOSS=0.6694, best_epoch=5
+    Inner fold 2 retained model: AUC=0.6719, LOGLOSS=0.6722, best_epoch=27
+    Inner fold 3 retained model: AUC=0.7411, LOGLOSS=0.6380, best_epoch=46
+    Inner fold 4 retained model: AUC=0.6865, LOGLOSS=0.6342, best_epoch=61
+    Inner fold 5 retained model: AUC=0.6627, LOGLOSS=0.6690, best_epoch=21
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss20_degmodglobal'.
+Run finished in 8869.45 seconds.
+Running seed=55602, degrading_modality=global, train_missing_prop=0.4
+Missing pattern seed: 2026
+Best-epoch warmup: 5
+Retrain outer train: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Output directory: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label\training_runs\VAE_MLP_retrainfalse_k5\TRAIN_MISSING\GLOBAL\40.0\seed_55602
+Hyperparameter combinations to evaluate: 24
+Test missingness combinations to evaluate: 5
+Using device: cuda (NVIDIA GeForce RTX 3070)
+
+Outer fold 1
+  Selected hp across inner folds: lr5e-05_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss40_degmodglobal (mean_AUC=0.6316, std_AUC=0.0306, mean_LOGLOSS=0.6807, epsilon=0.0200, best_mean_AUC=0.6385, tied_configs=6)
+    Inner fold 1 retained model: AUC=0.6719, LOGLOSS=0.6717, best_epoch=5
+    Inner fold 2 retained model: AUC=0.6482, LOGLOSS=0.6720, best_epoch=26
+    Inner fold 3 retained model: AUC=0.6230, LOGLOSS=0.6947, best_epoch=35
+    Inner fold 4 retained model: AUC=0.6349, LOGLOSS=0.6781, best_epoch=29
+    Inner fold 5 retained model: AUC=0.5797, LOGLOSS=0.6870, best_epoch=5
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss40_degmodglobal'.
+
+Outer fold 2
+  Selected hp across inner folds: lr5e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss40_degmodglobal (mean_AUC=0.6197, std_AUC=0.0661, mean_LOGLOSS=0.6773, epsilon=0.0200, best_mean_AUC=0.6363, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.5494, LOGLOSS=0.6919, best_epoch=22
+    Inner fold 2 retained model: AUC=0.6897, LOGLOSS=0.6664, best_epoch=19
+    Inner fold 3 retained model: AUC=0.6349, LOGLOSS=0.6714, best_epoch=6
+    Inner fold 4 retained model: AUC=0.6885, LOGLOSS=0.6683, best_epoch=12
+    Inner fold 5 retained model: AUC=0.5357, LOGLOSS=0.6884, best_epoch=30
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss40_degmodglobal'.
+
+Outer fold 3
+  Selected hp across inner folds: lr5e-05_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss40_degmodglobal (mean_AUC=0.6244, std_AUC=0.0323, mean_LOGLOSS=0.6784, epsilon=0.0200, best_mean_AUC=0.6385, tied_configs=8)
+    Inner fold 1 retained model: AUC=0.6522, LOGLOSS=0.6809, best_epoch=40
+    Inner fold 2 retained model: AUC=0.6660, LOGLOSS=0.6719, best_epoch=31
+    Inner fold 3 retained model: AUC=0.5813, LOGLOSS=0.6928, best_epoch=9
+    Inner fold 4 retained model: AUC=0.5952, LOGLOSS=0.6867, best_epoch=7
+    Inner fold 5 retained model: AUC=0.6270, LOGLOSS=0.6598, best_epoch=30
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss40_degmodglobal'.
+
+Outer fold 4
+  Selected hp across inner folds: lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss40_degmodglobal (mean_AUC=0.7025, std_AUC=0.0435, mean_LOGLOSS=0.6472, epsilon=0.0200, best_mean_AUC=0.7029, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.6621, LOGLOSS=0.6720, best_epoch=14
+    Inner fold 2 retained model: AUC=0.6680, LOGLOSS=0.6589, best_epoch=28
+    Inner fold 3 retained model: AUC=0.7659, LOGLOSS=0.6184, best_epoch=22
+    Inner fold 4 retained model: AUC=0.7440, LOGLOSS=0.6202, best_epoch=42
+    Inner fold 5 retained model: AUC=0.6726, LOGLOSS=0.6663, best_epoch=19
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss40_degmodglobal'.
+
+Outer fold 5
+  Selected hp across inner folds: lr1e-04_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss40_degmodglobal (mean_AUC=0.6658, std_AUC=0.0406, mean_LOGLOSS=0.6761, epsilon=0.0200, best_mean_AUC=0.6658, tied_configs=5)
+    Inner fold 1 retained model: AUC=0.6779, LOGLOSS=0.6785, best_epoch=5
+    Inner fold 2 retained model: AUC=0.6265, LOGLOSS=0.6862, best_epoch=30
+    Inner fold 3 retained model: AUC=0.7332, LOGLOSS=0.6541, best_epoch=21
+    Inner fold 4 retained model: AUC=0.6706, LOGLOSS=0.6803, best_epoch=57
+    Inner fold 5 retained model: AUC=0.6210, LOGLOSS=0.6813, best_epoch=50
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p2__wd1e-04trmiss40_degmodglobal'.
+Run finished in 15477.49 seconds.
+Running seed=55602, degrading_modality=global, train_missing_prop=0.6
+Missing pattern seed: 2026
+Best-epoch warmup: 5
+Retrain outer train: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Output directory: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label\training_runs\VAE_MLP_retrainfalse_k5\TRAIN_MISSING\GLOBAL\60.0\seed_55602
+Hyperparameter combinations to evaluate: 24
+Test missingness combinations to evaluate: 5
+Using device: cuda (NVIDIA GeForce RTX 3070)
+
+Outer fold 1
+  Selected hp across inner folds: lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss60_degmodglobal (mean_AUC=0.6200, std_AUC=0.0769, mean_LOGLOSS=0.6781, epsilon=0.0200, best_mean_AUC=0.6332, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.6897, LOGLOSS=0.6778, best_epoch=5
+    Inner fold 2 retained model: AUC=0.5652, LOGLOSS=0.6891, best_epoch=12
+    Inner fold 3 retained model: AUC=0.5933, LOGLOSS=0.6911, best_epoch=7
+    Inner fold 4 retained model: AUC=0.7282, LOGLOSS=0.6261, best_epoch=40
+    Inner fold 5 retained model: AUC=0.5238, LOGLOSS=0.7060, best_epoch=5
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss60_degmodglobal'.
+
+Outer fold 2
+  Selected hp across inner folds: lr1e-05_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss60_degmodglobal (mean_AUC=0.5792, std_AUC=0.0657, mean_LOGLOSS=0.6883, epsilon=0.0200, best_mean_AUC=0.5931, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.4941, LOGLOSS=0.6948, best_epoch=75
+    Inner fold 2 retained model: AUC=0.6522, LOGLOSS=0.6834, best_epoch=22
+    Inner fold 3 retained model: AUC=0.6448, LOGLOSS=0.6890, best_epoch=6
+    Inner fold 4 retained model: AUC=0.5933, LOGLOSS=0.6842, best_epoch=19
+    Inner fold 5 retained model: AUC=0.5119, LOGLOSS=0.6898, best_epoch=9
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs16_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss60_degmodglobal'.
+
+Outer fold 3
+  Selected hp across inner folds: lr1e-04_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss60_degmodglobal (mean_AUC=0.6371, std_AUC=0.0326, mean_LOGLOSS=0.6739, epsilon=0.0200, best_mean_AUC=0.6465, tied_configs=4)
+    Inner fold 1 retained model: AUC=0.6779, LOGLOSS=0.6647, best_epoch=12
+    Inner fold 2 retained model: AUC=0.6304, LOGLOSS=0.6568, best_epoch=17
+    Inner fold 3 retained model: AUC=0.6687, LOGLOSS=0.6722, best_epoch=9
+    Inner fold 4 retained model: AUC=0.5893, LOGLOSS=0.6982, best_epoch=15
+    Inner fold 5 retained model: AUC=0.6190, LOGLOSS=0.6776, best_epoch=7
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss60_degmodglobal'.
+
+Outer fold 4
+  Selected hp across inner folds: lr1e-04_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss60_degmodglobal (mean_AUC=0.6343, std_AUC=0.0186, mean_LOGLOSS=0.6861, epsilon=0.0200, best_mean_AUC=0.6488, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.6344, LOGLOSS=0.6909, best_epoch=59
+    Inner fold 2 retained model: AUC=0.6462, LOGLOSS=0.6795, best_epoch=11
+    Inner fold 3 retained model: AUC=0.6389, LOGLOSS=0.6941, best_epoch=35
+    Inner fold 4 retained model: AUC=0.6528, LOGLOSS=0.6872, best_epoch=29
+    Inner fold 5 retained model: AUC=0.5992, LOGLOSS=0.6790, best_epoch=5
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss60_degmodglobal'.
+
+Outer fold 5
+  Selected hp across inner folds: lr1e-04_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss60_degmodglobal (mean_AUC=0.6792, std_AUC=0.0689, mean_LOGLOSS=0.6685, epsilon=0.0200, best_mean_AUC=0.6903, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.6680, LOGLOSS=0.6763, best_epoch=6
+    Inner fold 2 retained model: AUC=0.7747, LOGLOSS=0.6361, best_epoch=19
+    Inner fold 3 retained model: AUC=0.7174, LOGLOSS=0.6711, best_epoch=10
+    Inner fold 4 retained model: AUC=0.6706, LOGLOSS=0.6731, best_epoch=16
+    Inner fold 5 retained model: AUC=0.5655, LOGLOSS=0.6858, best_epoch=43
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss60_degmodglobal'.
+Run finished in 21832.48 seconds.
+Running seed=55602, degrading_modality=global, train_missing_prop=0.8
+Missing pattern seed: 2026
+Best-epoch warmup: 5
+Retrain outer train: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Output directory: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label\training_runs\VAE_MLP_retrainfalse_k5\TRAIN_MISSING\GLOBAL\80.0\seed_55602
+Hyperparameter combinations to evaluate: 24
+Test missingness combinations to evaluate: 5
+Using device: cuda (NVIDIA GeForce RTX 3070)
+
+Outer fold 1
+  Selected hp across inner folds: lr1e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal (mean_AUC=0.5767, std_AUC=0.0266, mean_LOGLOSS=0.6874, epsilon=0.0200, best_mean_AUC=0.5916, tied_configs=5)
+    Inner fold 1 retained model: AUC=0.5494, LOGLOSS=0.6888, best_epoch=40
+    Inner fold 2 retained model: AUC=0.5553, LOGLOSS=0.6980, best_epoch=31
+    Inner fold 3 retained model: AUC=0.5655, LOGLOSS=0.6870, best_epoch=6
+    Inner fold 4 retained model: AUC=0.6210, LOGLOSS=0.6794, best_epoch=78
+    Inner fold 5 retained model: AUC=0.5921, LOGLOSS=0.6838, best_epoch=14
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal'.
+
+Outer fold 2
+  Selected hp across inner folds: lr1e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal (mean_AUC=0.5780, std_AUC=0.0454, mean_LOGLOSS=0.6948, epsilon=0.0200, best_mean_AUC=0.5780, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.5158, LOGLOSS=0.7008, best_epoch=17
+    Inner fold 2 retained model: AUC=0.6423, LOGLOSS=0.6883, best_epoch=6
+    Inner fold 3 retained model: AUC=0.6151, LOGLOSS=0.6909, best_epoch=27
+    Inner fold 4 retained model: AUC=0.5675, LOGLOSS=0.6859, best_epoch=12
+    Inner fold 5 retained model: AUC=0.5496, LOGLOSS=0.7081, best_epoch=5
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal'.
+
+Outer fold 3
+  Selected hp across inner folds: lr5e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal (mean_AUC=0.6058, std_AUC=0.0312, mean_LOGLOSS=0.6828, epsilon=0.0200, best_mean_AUC=0.6106, tied_configs=7)
+    Inner fold 1 retained model: AUC=0.6186, LOGLOSS=0.6786, best_epoch=8
+    Inner fold 2 retained model: AUC=0.6364, LOGLOSS=0.6796, best_epoch=13
+    Inner fold 3 retained model: AUC=0.6369, LOGLOSS=0.6765, best_epoch=13
+    Inner fold 4 retained model: AUC=0.5714, LOGLOSS=0.6949, best_epoch=7
+    Inner fold 5 retained model: AUC=0.5655, LOGLOSS=0.6845, best_epoch=19
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal'.
+
+Outer fold 4
+  Selected hp across inner folds: lr1e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal (mean_AUC=0.5986, std_AUC=0.0526, mean_LOGLOSS=0.6883, epsilon=0.0200, best_mean_AUC=0.6048, tied_configs=4)
+    Inner fold 1 retained model: AUC=0.6324, LOGLOSS=0.6822, best_epoch=14
+    Inner fold 2 retained model: AUC=0.6542, LOGLOSS=0.6843, best_epoch=22
+    Inner fold 3 retained model: AUC=0.5060, LOGLOSS=0.6993, best_epoch=29
+    Inner fold 4 retained model: AUC=0.6230, LOGLOSS=0.6825, best_epoch=15
+    Inner fold 5 retained model: AUC=0.5774, LOGLOSS=0.6929, best_epoch=31
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs16_modL1_fusion16_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal'.
+
+Outer fold 5
+  Selected hp across inner folds: lr1e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal (mean_AUC=0.6258, std_AUC=0.0459, mean_LOGLOSS=0.6875, epsilon=0.0200, best_mean_AUC=0.6436, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.6700, LOGLOSS=0.6880, best_epoch=11
+    Inner fold 2 retained model: AUC=0.6522, LOGLOSS=0.6784, best_epoch=60
+    Inner fold 3 retained model: AUC=0.6087, LOGLOSS=0.6935, best_epoch=8
+    Inner fold 4 retained model: AUC=0.5437, LOGLOSS=0.6984, best_epoch=21
+    Inner fold 5 retained model: AUC=0.6548, LOGLOSS=0.6792, best_epoch=5
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs8_modL1_fusion32_fusionL1_fusionBN0_drop0p1__wd1e-04trmiss80_degmodglobal'.
+Run finished in 27803.96 seconds.
+
+Launching pAM...
+Running
+Dataframes read. Starting pAM training.
+Parsed seeds: [55602]
+Total training runs to execute: 5
+Running seed=55602, degrading_modality=global, train_missing_prop=0.0
+Missing pattern seed: 2026
+Best-epoch warmup: 5
+Retrain outer train: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Output directory: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label\training_runs\pAM_retrainfalse_k5\TRAIN_MISSING\GLOBAL\0.0\seed_55602
+Hyperparameter combinations to evaluate: 24
+Test missingness combinations to evaluate: 5
+Using device: cuda (NVIDIA GeForce RTX 3070)
+
+Outer fold 1
+  Selected hp across inner folds: lr5e-05_bs8_drop0p2_temp1p0__wd1e-04trmiss0_degmodglobal (mean_AUC=0.7054, std_AUC=0.0411, mean_LOGLOSS=0.6564, epsilon=0.0200, best_mean_AUC=0.7203, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.7055, LOGLOSS=0.6566, best_epoch=8
+    Inner fold 2 retained model: AUC=0.6877, LOGLOSS=0.6628, best_epoch=5
+    Inner fold 3 retained model: AUC=0.7024, LOGLOSS=0.6734, best_epoch=12
+    Inner fold 4 retained model: AUC=0.6528, LOGLOSS=0.6651, best_epoch=40
+    Inner fold 5 retained model: AUC=0.7785, LOGLOSS=0.6239, best_epoch=14
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs8_drop0p2_temp1p0__wd1e-04trmiss0_degmodglobal'.
+
+Outer fold 2
+  Selected hp across inner folds: lr1e-04_bs16_drop0p4_temp2p0__wd1e-04trmiss0_degmodglobal (mean_AUC=0.6954, std_AUC=0.0533, mean_LOGLOSS=0.6623, epsilon=0.0200, best_mean_AUC=0.6954, tied_configs=1)
+    Inner fold 1 retained model: AUC=0.5988, LOGLOSS=0.6807, best_epoch=7
+    Inner fold 2 retained model: AUC=0.7569, LOGLOSS=0.6309, best_epoch=37
+    Inner fold 3 retained model: AUC=0.6885, LOGLOSS=0.6753, best_epoch=5
+    Inner fold 4 retained model: AUC=0.7262, LOGLOSS=0.6690, best_epoch=6
+    Inner fold 5 retained model: AUC=0.7063, LOGLOSS=0.6556, best_epoch=5
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs16_drop0p4_temp2p0__wd1e-04trmiss0_degmodglobal'.
+
+Outer fold 3
+  Selected hp across inner folds: lr1e-05_bs16_drop0p2_temp1p0__wd1e-04trmiss0_degmodglobal (mean_AUC=0.6462, std_AUC=0.0666, mean_LOGLOSS=0.6802, epsilon=0.0200, best_mean_AUC=0.6580, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.6304, LOGLOSS=0.6768, best_epoch=21
+    Inner fold 2 retained model: AUC=0.7016, LOGLOSS=0.6653, best_epoch=36
+    Inner fold 3 retained model: AUC=0.6448, LOGLOSS=0.6811, best_epoch=22
+    Inner fold 4 retained model: AUC=0.5317, LOGLOSS=0.7103, best_epoch=12
+    Inner fold 5 retained model: AUC=0.7222, LOGLOSS=0.6677, best_epoch=5
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs16_drop0p2_temp1p0__wd1e-04trmiss0_degmodglobal'.
+
+Outer fold 4
+  Selected hp across inner folds: lr1e-04_bs8_drop0p4_temp2p0__wd1e-04trmiss0_degmodglobal (mean_AUC=0.7215, std_AUC=0.0492, mean_LOGLOSS=0.6530, epsilon=0.0200, best_mean_AUC=0.7215, tied_configs=4)
+    Inner fold 1 retained model: AUC=0.6996, LOGLOSS=0.6606, best_epoch=9
+    Inner fold 2 retained model: AUC=0.7036, LOGLOSS=0.6470, best_epoch=22
+    Inner fold 3 retained model: AUC=0.6607, LOGLOSS=0.6683, best_epoch=9
+    Inner fold 4 retained model: AUC=0.8075, LOGLOSS=0.6417, best_epoch=9
+    Inner fold 5 retained model: AUC=0.7361, LOGLOSS=0.6475, best_epoch=25
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_drop0p4_temp2p0__wd1e-04trmiss0_degmodglobal'.
+
+Outer fold 5
+  Selected hp across inner folds: lr1e-04_bs8_drop0p4_temp2p0__wd1e-04trmiss0_degmodglobal (mean_AUC=0.7363, std_AUC=0.0417, mean_LOGLOSS=0.6420, epsilon=0.0200, best_mean_AUC=0.7363, tied_configs=1)
+    Inner fold 1 retained model: AUC=0.6877, LOGLOSS=0.6585, best_epoch=15
+    Inner fold 2 retained model: AUC=0.7055, LOGLOSS=0.6428, best_epoch=22
+    Inner fold 3 retained model: AUC=0.8063, LOGLOSS=0.6201, best_epoch=12
+    Inner fold 4 retained model: AUC=0.7560, LOGLOSS=0.6377, best_epoch=12
+    Inner fold 5 retained model: AUC=0.7262, LOGLOSS=0.6509, best_epoch=31
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_drop0p4_temp2p0__wd1e-04trmiss0_degmodglobal'.
+Run finished in 3311.20 seconds.
+Running seed=55602, degrading_modality=global, train_missing_prop=0.2
+Missing pattern seed: 2026
+Best-epoch warmup: 5
+Retrain outer train: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Output directory: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label\training_runs\pAM_retrainfalse_k5\TRAIN_MISSING\GLOBAL\20.0\seed_55602
+Hyperparameter combinations to evaluate: 24
+Test missingness combinations to evaluate: 5
+Using device: cuda (NVIDIA GeForce RTX 3070)
+
+Outer fold 1
+  Selected hp across inner folds: lr5e-05_bs16_drop0p2_temp2p0__wd1e-04trmiss20_degmodglobal (mean_AUC=0.6773, std_AUC=0.0246, mean_LOGLOSS=0.6635, epsilon=0.0200, best_mean_AUC=0.6869, tied_configs=4)
+    Inner fold 1 retained model: AUC=0.6897, LOGLOSS=0.6599, best_epoch=5
+    Inner fold 2 retained model: AUC=0.6700, LOGLOSS=0.6684, best_epoch=8
+    Inner fold 3 retained model: AUC=0.6607, LOGLOSS=0.6796, best_epoch=20
+    Inner fold 4 retained model: AUC=0.7183, LOGLOSS=0.6526, best_epoch=10
+    Inner fold 5 retained model: AUC=0.6480, LOGLOSS=0.6572, best_epoch=10
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs16_drop0p2_temp2p0__wd1e-04trmiss20_degmodglobal'.
+
+Outer fold 2
+  Selected hp across inner folds: lr5e-05_bs8_drop0p4_temp2p0__wd1e-04trmiss20_degmodglobal (mean_AUC=0.6272, std_AUC=0.0211, mean_LOGLOSS=0.6750, epsilon=0.0200, best_mean_AUC=0.6296, tied_configs=12)
+    Inner fold 1 retained model: AUC=0.6067, LOGLOSS=0.6927, best_epoch=14
+    Inner fold 2 retained model: AUC=0.6087, LOGLOSS=0.6723, best_epoch=21
+    Inner fold 3 retained model: AUC=0.6647, LOGLOSS=0.6671, best_epoch=11
+    Inner fold 4 retained model: AUC=0.6230, LOGLOSS=0.6750, best_epoch=16
+    Inner fold 5 retained model: AUC=0.6329, LOGLOSS=0.6679, best_epoch=8
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs8_drop0p4_temp2p0__wd1e-04trmiss20_degmodglobal'.
+
+Outer fold 3
+  Selected hp across inner folds: lr1e-05_bs16_drop0p2_temp1p0__wd1e-04trmiss20_degmodglobal (mean_AUC=0.6347, std_AUC=0.0476, mean_LOGLOSS=0.6751, epsilon=0.0200, best_mean_AUC=0.6374, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.7213, LOGLOSS=0.6607, best_epoch=36
+    Inner fold 2 retained model: AUC=0.5791, LOGLOSS=0.6949, best_epoch=6
+    Inner fold 3 retained model: AUC=0.6171, LOGLOSS=0.6795, best_epoch=9
+    Inner fold 4 retained model: AUC=0.6409, LOGLOSS=0.6711, best_epoch=5
+    Inner fold 5 retained model: AUC=0.6151, LOGLOSS=0.6691, best_epoch=36
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs16_drop0p2_temp1p0__wd1e-04trmiss20_degmodglobal'.
+
+Outer fold 4
+  Selected hp across inner folds: lr5e-05_bs16_drop0p4_temp2p0__wd1e-04trmiss20_degmodglobal (mean_AUC=0.6660, std_AUC=0.0386, mean_LOGLOSS=0.6726, epsilon=0.0200, best_mean_AUC=0.6796, tied_configs=4)
+    Inner fold 1 retained model: AUC=0.7055, LOGLOSS=0.6553, best_epoch=17
+    Inner fold 2 retained model: AUC=0.6719, LOGLOSS=0.6720, best_epoch=12
+    Inner fold 3 retained model: AUC=0.7044, LOGLOSS=0.6635, best_epoch=65
+    Inner fold 4 retained model: AUC=0.6448, LOGLOSS=0.6930, best_epoch=23
+    Inner fold 5 retained model: AUC=0.6032, LOGLOSS=0.6790, best_epoch=10
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr5e-05_bs16_drop0p4_temp2p0__wd1e-04trmiss20_degmodglobal'.
+
+Outer fold 5
+  Selected hp across inner folds: lr1e-04_bs16_drop0p4_temp1p0__wd1e-04trmiss20_degmodglobal (mean_AUC=0.6844, std_AUC=0.0466, mean_LOGLOSS=0.6589, epsilon=0.0200, best_mean_AUC=0.6913, tied_configs=5)
+    Inner fold 1 retained model: AUC=0.6759, LOGLOSS=0.6646, best_epoch=13
+    Inner fold 2 retained model: AUC=0.6581, LOGLOSS=0.6611, best_epoch=22
+    Inner fold 3 retained model: AUC=0.7727, LOGLOSS=0.6160, best_epoch=28
+    Inner fold 4 retained model: AUC=0.6786, LOGLOSS=0.6724, best_epoch=23
+    Inner fold 5 retained model: AUC=0.6369, LOGLOSS=0.6806, best_epoch=14
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs16_drop0p4_temp1p0__wd1e-04trmiss20_degmodglobal'.
+Run finished in 11156.06 seconds.
+Running seed=55602, degrading_modality=global, train_missing_prop=0.4
+Missing pattern seed: 2026
+Best-epoch warmup: 5
+Retrain outer train: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Output directory: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label\training_runs\pAM_retrainfalse_k5\TRAIN_MISSING\GLOBAL\40.0\seed_55602
+Hyperparameter combinations to evaluate: 24
+Test missingness combinations to evaluate: 5
+Using device: cuda (NVIDIA GeForce RTX 3070)
+
+Outer fold 1
+  Selected hp across inner folds: lr1e-04_bs8_drop0p4_temp1p0__wd1e-04trmiss40_degmodglobal (mean_AUC=0.6406, std_AUC=0.0433, mean_LOGLOSS=0.6849, epsilon=0.0200, best_mean_AUC=0.6503, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.5909, LOGLOSS=0.6894, best_epoch=8
+    Inner fold 2 retained model: AUC=0.6047, LOGLOSS=0.7477, best_epoch=9
+    Inner fold 3 retained model: AUC=0.6389, LOGLOSS=0.6803, best_epoch=8
+    Inner fold 4 retained model: AUC=0.7143, LOGLOSS=0.6540, best_epoch=9
+    Inner fold 5 retained model: AUC=0.6542, LOGLOSS=0.6531, best_epoch=15
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_drop0p4_temp1p0__wd1e-04trmiss40_degmodglobal'.
+
+Outer fold 2
+  Selected hp across inner folds: lr1e-04_bs16_drop0p2_temp2p0__wd1e-04trmiss40_degmodglobal (mean_AUC=0.6112, std_AUC=0.0735, mean_LOGLOSS=0.6802, epsilon=0.0200, best_mean_AUC=0.6129, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.6225, LOGLOSS=0.6876, best_epoch=6
+    Inner fold 2 retained model: AUC=0.7134, LOGLOSS=0.6470, best_epoch=27
+    Inner fold 3 retained model: AUC=0.6587, LOGLOSS=0.6615, best_epoch=5
+    Inner fold 4 retained model: AUC=0.5556, LOGLOSS=0.6864, best_epoch=9
+    Inner fold 5 retained model: AUC=0.5060, LOGLOSS=0.7184, best_epoch=6
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs16_drop0p2_temp2p0__wd1e-04trmiss40_degmodglobal'.
+
+Outer fold 3
+  Selected hp across inner folds: lr1e-05_bs8_drop0p4_temp2p0__wd1e-04trmiss40_degmodglobal (mean_AUC=0.6609, std_AUC=0.0945, mean_LOGLOSS=0.6753, epsilon=0.0200, best_mean_AUC=0.6609, tied_configs=1)
+    Inner fold 1 retained model: AUC=0.7609, LOGLOSS=0.6375, best_epoch=66
+    Inner fold 2 retained model: AUC=0.5534, LOGLOSS=0.6997, best_epoch=7
+    Inner fold 3 retained model: AUC=0.5476, LOGLOSS=0.6924, best_epoch=33
+    Inner fold 4 retained model: AUC=0.7599, LOGLOSS=0.6653, best_epoch=10
+    Inner fold 5 retained model: AUC=0.6825, LOGLOSS=0.6816, best_epoch=5
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs8_drop0p4_temp2p0__wd1e-04trmiss40_degmodglobal'.
+
+Outer fold 4
+  Selected hp across inner folds: lr1e-04_bs8_drop0p2_temp1p0__wd1e-04trmiss40_degmodglobal (mean_AUC=0.6719, std_AUC=0.0381, mean_LOGLOSS=0.6612, epsilon=0.0200, best_mean_AUC=0.6719, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.6344, LOGLOSS=0.6688, best_epoch=60
+    Inner fold 2 retained model: AUC=0.7292, LOGLOSS=0.6525, best_epoch=35
+    Inner fold 3 retained model: AUC=0.6687, LOGLOSS=0.6513, best_epoch=58
+    Inner fold 4 retained model: AUC=0.6984, LOGLOSS=0.6349, best_epoch=17
+    Inner fold 5 retained model: AUC=0.6290, LOGLOSS=0.6988, best_epoch=68
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_drop0p2_temp1p0__wd1e-04trmiss40_degmodglobal'.
+
+Outer fold 5
+  Selected hp across inner folds: lr1e-04_bs8_drop0p2_temp2p0__wd1e-04trmiss40_degmodglobal (mean_AUC=0.6591, std_AUC=0.0858, mean_LOGLOSS=0.6741, epsilon=0.0200, best_mean_AUC=0.6591, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.6107, LOGLOSS=0.6770, best_epoch=5
+    Inner fold 2 retained model: AUC=0.7569, LOGLOSS=0.6337, best_epoch=6
+    Inner fold 3 retained model: AUC=0.6858, LOGLOSS=0.6792, best_epoch=27
+    Inner fold 4 retained model: AUC=0.7242, LOGLOSS=0.6422, best_epoch=5
+    Inner fold 5 retained model: AUC=0.5179, LOGLOSS=0.7385, best_epoch=43
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_drop0p2_temp2p0__wd1e-04trmiss40_degmodglobal'.
+Run finished in 18842.72 seconds.
+Running seed=55602, degrading_modality=global, train_missing_prop=0.6
+Missing pattern seed: 2026
+Best-epoch warmup: 5
+Retrain outer train: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Output directory: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label\training_runs\pAM_retrainfalse_k5\TRAIN_MISSING\GLOBAL\60.0\seed_55602
+Hyperparameter combinations to evaluate: 24
+Test missingness combinations to evaluate: 5
+Using device: cuda (NVIDIA GeForce RTX 3070)
+
+Outer fold 1
+  Selected hp across inner folds: lr1e-05_bs8_drop0p4_temp2p0__wd1e-04trmiss60_degmodglobal (mean_AUC=0.6093, std_AUC=0.0397, mean_LOGLOSS=0.6755, epsilon=0.0200, best_mean_AUC=0.6227, tied_configs=3)
+    Inner fold 1 retained model: AUC=0.5632, LOGLOSS=0.6824, best_epoch=14
+    Inner fold 2 retained model: AUC=0.5731, LOGLOSS=0.6730, best_epoch=11
+    Inner fold 3 retained model: AUC=0.6706, LOGLOSS=0.6438, best_epoch=9
+    Inner fold 4 retained model: AUC=0.6349, LOGLOSS=0.6947, best_epoch=6
+    Inner fold 5 retained model: AUC=0.6046, LOGLOSS=0.6835, best_epoch=5
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs8_drop0p4_temp2p0__wd1e-04trmiss60_degmodglobal'.
+
+Outer fold 2
+  Selected hp across inner folds: lr1e-05_bs16_drop0p2_temp2p0__wd1e-04trmiss60_degmodglobal (mean_AUC=0.5511, std_AUC=0.0453, mean_LOGLOSS=0.7070, epsilon=0.0200, best_mean_AUC=0.5686, tied_configs=5)
+    Inner fold 1 retained model: AUC=0.5395, LOGLOSS=0.7070, best_epoch=5
+    Inner fold 2 retained model: AUC=0.5138, LOGLOSS=0.7035, best_epoch=7
+    Inner fold 3 retained model: AUC=0.5437, LOGLOSS=0.6994, best_epoch=17
+    Inner fold 4 retained model: AUC=0.6389, LOGLOSS=0.6520, best_epoch=18
+    Inner fold 5 retained model: AUC=0.5198, LOGLOSS=0.7733, best_epoch=5
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs16_drop0p2_temp2p0__wd1e-04trmiss60_degmodglobal'.
+
+Outer fold 3
+  Selected hp across inner folds: lr1e-04_bs8_drop0p2_temp2p0__wd1e-04trmiss60_degmodglobal (mean_AUC=0.6351, std_AUC=0.0744, mean_LOGLOSS=0.6827, epsilon=0.0200, best_mean_AUC=0.6382, tied_configs=2)
+    Inner fold 1 retained model: AUC=0.5632, LOGLOSS=0.7256, best_epoch=22
+    Inner fold 2 retained model: AUC=0.7451, LOGLOSS=0.5905, best_epoch=39
+    Inner fold 3 retained model: AUC=0.6091, LOGLOSS=0.7045, best_epoch=5
+    Inner fold 4 retained model: AUC=0.6984, LOGLOSS=0.6421, best_epoch=5
+    Inner fold 5 retained model: AUC=0.5595, LOGLOSS=0.7505, best_epoch=44
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_drop0p2_temp2p0__wd1e-04trmiss60_degmodglobal'.
+
+Outer fold 4
+  Selected hp across inner folds: lr1e-04_bs8_drop0p2_temp1p0__wd1e-04trmiss60_degmodglobal (mean_AUC=0.5903, std_AUC=0.0184, mean_LOGLOSS=0.7095, epsilon=0.0200, best_mean_AUC=0.6101, tied_configs=4)
+    Inner fold 1 retained model: AUC=0.6028, LOGLOSS=0.7178, best_epoch=41
+    Inner fold 2 retained model: AUC=0.5672, LOGLOSS=0.7120, best_epoch=32
+    Inner fold 3 retained model: AUC=0.6151, LOGLOSS=0.6957, best_epoch=11
+    Inner fold 4 retained model: AUC=0.5952, LOGLOSS=0.7274, best_epoch=58
+    Inner fold 5 retained model: AUC=0.5714, LOGLOSS=0.6947, best_epoch=5
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_drop0p2_temp1p0__wd1e-04trmiss60_degmodglobal'.
+
+Outer fold 5
+  Selected hp across inner folds: lr1e-04_bs8_drop0p2_temp1p0__wd1e-04trmiss60_degmodglobal (mean_AUC=0.6936, std_AUC=0.0795, mean_LOGLOSS=0.6560, epsilon=0.0200, best_mean_AUC=0.6936, tied_configs=1)
+    Inner fold 1 retained model: AUC=0.5850, LOGLOSS=0.7166, best_epoch=19
+    Inner fold 2 retained model: AUC=0.8083, LOGLOSS=0.5990, best_epoch=8
+    Inner fold 3 retained model: AUC=0.7095, LOGLOSS=0.6339, best_epoch=8
+    Inner fold 4 retained model: AUC=0.7381, LOGLOSS=0.6331, best_epoch=5
+    Inner fold 5 retained model: AUC=0.6270, LOGLOSS=0.6972, best_epoch=25
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_drop0p2_temp1p0__wd1e-04trmiss60_degmodglobal'.
+Run finished in 26546.09 seconds.
+Running seed=55602, degrading_modality=global, train_missing_prop=0.8
+Missing pattern seed: 2026
+Best-epoch warmup: 5
+Retrain outer train: False
+Save inner outputs: True
+Use ensemble predictions: True
+Progressive missingness study: True
+Task type: binary_classification
+HP selection epsilon: 0.0200
+Scheduler type: reduce_lr_on_plateau
+Active scheduler config: lr_patience=6
+Output directory: C:\MARC\TFM\m3trics_repo\m3trics_repo/results/MIMM_OS_9_label\training_runs\pAM_retrainfalse_k5\TRAIN_MISSING\GLOBAL\80.0\seed_55602
+Hyperparameter combinations to evaluate: 24
+Test missingness combinations to evaluate: 5
+Using device: cuda (NVIDIA GeForce RTX 3070)
+
+Outer fold 1
+  Selected hp across inner folds: lr1e-04_bs8_drop0p2_temp1p0__wd1e-04trmiss80_degmodglobal (mean_AUC=0.6236, std_AUC=0.0383, mean_LOGLOSS=0.7036, epsilon=0.0200, best_mean_AUC=0.6236, tied_configs=1)
+    Inner fold 1 retained model: AUC=0.6779, LOGLOSS=0.6598, best_epoch=5
+    Inner fold 2 retained model: AUC=0.5593, LOGLOSS=0.7487, best_epoch=5
+    Inner fold 3 retained model: AUC=0.6389, LOGLOSS=0.6871, best_epoch=66
+    Inner fold 4 retained model: AUC=0.6210, LOGLOSS=0.7544, best_epoch=32
+    Inner fold 5 retained model: AUC=0.6211, LOGLOSS=0.6684, best_epoch=6
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs8_drop0p2_temp1p0__wd1e-04trmiss80_degmodglobal'.
+
+Outer fold 2
+  Selected hp across inner folds: lr1e-05_bs8_drop0p2_temp1p0__wd1e-04trmiss80_degmodglobal (mean_AUC=0.6320, std_AUC=0.0726, mean_LOGLOSS=0.6840, epsilon=0.0200, best_mean_AUC=0.6320, tied_configs=1)
+    Inner fold 1 retained model: AUC=0.6344, LOGLOSS=0.6656, best_epoch=8
+    Inner fold 2 retained model: AUC=0.5791, LOGLOSS=0.7258, best_epoch=14
+    Inner fold 3 retained model: AUC=0.6389, LOGLOSS=0.6863, best_epoch=26
+    Inner fold 4 retained model: AUC=0.5476, LOGLOSS=0.7583, best_epoch=14
+    Inner fold 5 retained model: AUC=0.7599, LOGLOSS=0.5840, best_epoch=6
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs8_drop0p2_temp1p0__wd1e-04trmiss80_degmodglobal'.
+
+Outer fold 3
+  Selected hp across inner folds: lr1e-05_bs8_drop0p4_temp1p0__wd1e-04trmiss80_degmodglobal (mean_AUC=0.5864, std_AUC=0.0441, mean_LOGLOSS=0.7498, epsilon=0.0200, best_mean_AUC=0.5971, tied_configs=5)
+    Inner fold 1 retained model: AUC=0.5632, LOGLOSS=0.7945, best_epoch=15
+    Inner fold 2 retained model: AUC=0.5889, LOGLOSS=0.7333, best_epoch=27
+    Inner fold 3 retained model: AUC=0.6706, LOGLOSS=0.6565, best_epoch=7
+    Inner fold 4 retained model: AUC=0.5595, LOGLOSS=0.7381, best_epoch=61
+    Inner fold 5 retained model: AUC=0.5496, LOGLOSS=0.8267, best_epoch=18
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs8_drop0p4_temp1p0__wd1e-04trmiss80_degmodglobal'.
+
+Outer fold 4
+  Selected hp across inner folds: lr1e-05_bs8_drop0p2_temp1p0__wd1e-04trmiss80_degmodglobal (mean_AUC=0.6029, std_AUC=0.0793, mean_LOGLOSS=0.7276, epsilon=0.0200, best_mean_AUC=0.6029, tied_configs=1)
+    Inner fold 1 retained model: AUC=0.6364, LOGLOSS=0.6982, best_epoch=6
+    Inner fold 2 retained model: AUC=0.7391, LOGLOSS=0.6218, best_epoch=40
+    Inner fold 3 retained model: AUC=0.5774, LOGLOSS=0.8060, best_epoch=15
+    Inner fold 4 retained model: AUC=0.5119, LOGLOSS=0.7181, best_epoch=6
+    Inner fold 5 retained model: AUC=0.5496, LOGLOSS=0.7940, best_epoch=9
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-05_bs8_drop0p2_temp1p0__wd1e-04trmiss80_degmodglobal'.
+
+Outer fold 5
+  Selected hp across inner folds: lr1e-04_bs16_drop0p4_temp2p0__wd1e-04trmiss80_degmodglobal (mean_AUC=0.6426, std_AUC=0.0543, mean_LOGLOSS=0.6968, epsilon=0.0200, best_mean_AUC=0.6548, tied_configs=5)
+    Inner fold 1 retained model: AUC=0.5652, LOGLOSS=0.7608, best_epoch=14
+    Inner fold 2 retained model: AUC=0.7055, LOGLOSS=0.6435, best_epoch=51
+    Inner fold 3 retained model: AUC=0.6047, LOGLOSS=0.7244, best_epoch=21
+    Inner fold 4 retained model: AUC=0.7004, LOGLOSS=0.6683, best_epoch=50
+    Inner fold 5 retained model: AUC=0.6369, LOGLOSS=0.6871, best_epoch=21
+  Outer test predictions will be saved for the retained inner-fold models for hp='lr1e-04_bs16_drop0p4_temp2p0__wd1e-04trmiss80_degmodglobal'.
+Run finished in 33374.08 seconds.

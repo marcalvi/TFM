@@ -112,26 +112,26 @@ RADIO_REPORT_DROP_COLS="study_date,time_to_diagnosis,source_file,report_text"
 # Select the models to run after preprocessing.
 # Method compatibility overview:
 #   Binary-classification only:
-#     ZI_LR       = zero-imputed concatenated embeddings + LogisticRegression
-#     KNN_LR      = KNN-imputed concatenated embeddings + LogisticRegression
-#     ZI_RF       = zero-imputed concatenated embeddings + RandomForestClassifier
-#     KNN_RF      = KNN-imputed concatenated embeddings + RandomForestClassifier
+#     ZI_PCA_LR   = zero-imputed concatenated embeddings + PCA + LogisticRegression
+#     KNN_PCA_LR  = KNN-imputed concatenated embeddings + PCA + LogisticRegression
+#     ZI_PCA_RF   = zero-imputed concatenated embeddings + PCA + RandomForestClassifier
+#     KNN_PCA_RF  = KNN-imputed concatenated embeddings + PCA + RandomForestClassifier
 #     Note: RF means binary-classification Random Forest; RSF is the survival model.
 #   Survival only:
-#     ZI_CoxNet   = zero-imputed concatenated embeddings + regularized Cox elastic-net
-#     KNN_CoxNet  = KNN-imputed concatenated embeddings + regularized Cox elastic-net
-#     ZI_RSF      = zero-imputed concatenated embeddings + Random Survival Forest
-#     KNN_RSF     = KNN-imputed concatenated embeddings + Random Survival Forest
+#     ZI_PCA_CoxNet   = zero-imputed concatenated embeddings + PCA + regularized Cox elastic-net
+#     KNN_PCA_CoxNet  = KNN-imputed concatenated embeddings + PCA + regularized Cox elastic-net
+#     ZI_PCA_RSF      = zero-imputed concatenated embeddings + PCA + Random Survival Forest
+#     KNN_PCA_RSF     = KNN-imputed concatenated embeddings + PCA + Random Survival Forest
 #     Note: RSF means Random Survival Forest; it is not a binary-classification random forest.
 #   Binary classification and survival compatible:
 #     ZI_MLP, KNN_MLP, VAE_MLP, pAM, HealNet, SMILe
 #   Dependency note:
 #     CoxNet/RSF require scikit-survival. Install/update the conda env from env/m3trics_*.yml.
 # Example BC run:
-#   RUN_MODELS="ZI_LR,KNN_LR,ZI_RF,KNN_RF,ZI_MLP,KNN_MLP,pAM"
+#   RUN_MODELS="ZI_PCA_LR,KNN_PCA_LR,ZI_PCA_RF,KNN_PCA_RF,ZI_MLP,KNN_MLP,pAM"
 # Example survival run:
 #   TASK_TYPE="survival"
-#   RUN_MODELS="ZI_CoxNet,KNN_CoxNet,ZI_RSF,KNN_RSF,ZI_MLP,KNN_MLP,HealNet"
+#   RUN_MODELS="ZI_PCA_CoxNet,KNN_PCA_CoxNet,ZI_PCA_RSF,KNN_PCA_RSF,ZI_MLP,KNN_MLP,HealNet"
 # Available scheduler types: cosine_annealing, reduce_lr_on_plateau
 #   cosine_annealing requires MIN_LR
 #   reduce_lr_on_plateau requires LR_PATIENCE
@@ -139,10 +139,10 @@ RADIO_REPORT_DROP_COLS="study_date,time_to_diagnosis,source_file,report_text"
 # -----------------------------------------------------------------------------------------
 
 # Methods
-RUN_MODELS="ZI_LR,KNN_LR,ZI_RF,KNN_RF,ZI_MLP,KNN_MLP,VAE_MLP,pAM,HealNet,SMILe"
+RUN_MODELS="ZI_PCA_LR,KNN_PCA_LR,ZI_PCA_RF,KNN_PCA_RF,ZI_MLP,KNN_MLP,VAE_MLP,pAM,HealNet,SMILe"
 
 # Knowledge Distillation
-# DISTILL_MODELS is a comma-separated list of base methods that are also trained as _KD variants.
+# DISTILL_MODELS is a comma-separated list of base methods that are also trained as DI- prefixed variants.
 # Base methods are launched automatically if missing from RUN_MODELS. The teacher is pretrained first;
 # then the student is trained with the configured modality availability. In progressive missingness mode
 # this means simulated missingness; in static-cohort mode this means the observed dataset as-is.
@@ -179,7 +179,7 @@ MISSING_PATTERN_SEED=2026
 # enough to support meaningful statistical comparisons.
 # Static-cohort mode: if MISSINGNESS_STUDY=false, synthetic missingness is disabled
 # and the input dataset is trained as-is, preserving its natural modality availability.
-# For _KD variants in static-cohort mode, the teacher is pretrained first and the
+# For DI- variants in static-cohort mode, the teacher is pretrained first and the
 # student is trained on the full observed cohort without extra synthetic missingness.
 # -----------------------------------------------------------------------------------------
 

@@ -30,6 +30,9 @@ from scripts.utils import (
     normalize_model_name,
     survival_logits_to_outputs,
 )
+
+
+_VAE_SPLIT_IMPUTER_CACHE = {}
 from dataset.preprocess_dataset import collapse_patient_rows, filter_by_patients
 from dataset.attention_pooling import AttentionPooler
 from scripts.model_training import (
@@ -86,6 +89,29 @@ class _ConstantBinaryClassifier:
         pos = np.full(n_rows, self.positive_probability, dtype=np.float64)
         neg = 1.0 - pos
         return np.column_stack([neg, pos])
+
+
+class _SklearnPCAPipeline:
+    """Small picklable wrapper that applies a split-fitted PCA before prediction."""
+
+    def __init__(self, estimator, pca=None):
+        self.estimator = estimator
+        self.pca = pca
+
+    def _transform(self, X):
+        X = np.asarray(X, dtype=np.float32)
+        if self.pca is None:
+            return X
+        return self.pca.transform(X).astype(np.float32, copy=False)
+
+    def predict_proba(self, X):
+        return self.estimator.predict_proba(self._transform(X))
+
+    def predict(self, X):
+        return self.estimator.predict(self._transform(X))
+
+    def __getattr__(self, name):
+        return getattr(self.estimator, name)
 
 
 def _is_lr_model(model_name_l):
@@ -146,6 +172,54 @@ def _parse_optional_float_or_str(raw_value):
     if value in {"sqrt", "log2", "auto"}:
         return value
     return float(value)
+
+
+def _parse_pca_n_components(raw_value):
+    value = str(raw_value).strip().lower()
+    if value in {"none", "null", "", "false", "0"}:
+        return None
+    try:
+        parsed = float(value)
+    except ValueError as exc:
+        raise ValueError(
+            "pca_n_components must be 'none', an integer component count, "
+            "or a float in (0, 1) interpreted as explained variance."
+        ) from exc
+    if 0.0 < parsed < 1.0:
+        return float(parsed)
+    if parsed >= 1.0:
+        return int(round(parsed))
+    raise ValueError("pca_n_components must be > 0 or 'none'.")
+
+
+def _fit_pca_if_requested(X, hp_cfg, seed):
+    if "pca_n_components" not in dict(hp_cfg or {}):
+        return X, None
+
+    requested = _parse_pca_n_components(hp_cfg.get("pca_n_components", "none"))
+    if requested is None:
+        return X, None
+
+    X = np.asarray(X, dtype=np.float32)
+    if X.ndim != 2:
+        raise ValueError(f"PCA expects a 2D design matrix, got shape {X.shape}.")
+    n_samples, n_features = X.shape
+    max_components = int(min(n_samples, n_features))
+    if max_components < 2:
+        return X, None
+
+    from sklearn.decomposition import PCA
+
+    if isinstance(requested, int):
+        n_components = max(1, min(int(requested), max_components))
+        svd_solver = "auto"
+    else:
+        n_components = float(requested)
+        svd_solver = "full"
+
+    pca = PCA(n_components=n_components, svd_solver=svd_solver, random_state=int(seed))
+    X_pca = pca.fit_transform(X).astype(np.float32, copy=False)
+    return X_pca, pca
 
 
 def _build_coxnet_kwargs_from_hp_cfg(hp_cfg):
@@ -264,6 +338,7 @@ def _fit_lr_classifier(dataset, hp_cfg, seed):
     if unique_classes.size < 2:
         return _ConstantBinaryClassifier(float(np.mean(y)))
 
+    X_fit, pca = _fit_pca_if_requested(X, hp_cfg, seed=seed)
     lr_kwargs = _build_lr_kwargs_from_hp_cfg(hp_cfg)
     model = LogisticRegression(
         C=lr_kwargs["C"],
@@ -273,8 +348,8 @@ def _fit_lr_classifier(dataset, hp_cfg, seed):
         max_iter=lr_kwargs["max_iter"],
         random_state=int(seed),
     )
-    model.fit(X, y)
-    return model
+    model.fit(X_fit, y)
+    return _SklearnPCAPipeline(model, pca=pca)
 
 
 def _fit_rf_classifier(dataset, hp_cfg, seed):
@@ -285,9 +360,10 @@ def _fit_rf_classifier(dataset, hp_cfg, seed):
     if unique_classes.size < 2:
         return _ConstantBinaryClassifier(float(np.mean(y)))
 
+    X_fit, pca = _fit_pca_if_requested(X, hp_cfg, seed=seed)
     model = RandomForestClassifier(**_build_rf_kwargs_from_hp_cfg(hp_cfg, seed=seed))
-    model.fit(X, y)
-    return model
+    model.fit(X_fit, y)
+    return _SklearnPCAPipeline(model, pca=pca)
 
 
 def _fit_sklearn_classification_model(dataset, model_name_l, hp_cfg, seed):
@@ -310,6 +386,7 @@ def _fit_survival_baseline_model(dataset, model_name_l, hp_cfg, seed):
     X, y_struct, _, event_observed, _, _, _ = _dataset_to_survival_matrix(dataset)
     if np.unique(event_observed).size < 2 or not np.any(event_observed):
         return _ConstantRiskSurvivalModel()
+    X_fit, pca = _fit_pca_if_requested(X, hp_cfg, seed=seed)
 
     model_name_l = normalize_model_name(model_name_l)
     try:
@@ -325,22 +402,22 @@ def _fit_survival_baseline_model(dataset, model_name_l, hp_cfg, seed):
             raise ValueError(f"Unsupported survival sklearn baseline: {model_name_l}")
     except ModuleNotFoundError as exc:
         raise ModuleNotFoundError(
-            "ZI_CoxNet, KNN_CoxNet, ZI_RSF and KNN_RSF require scikit-survival. "
+            "CoxNet and RSF baselines require scikit-survival. "
             "Install it with conda-forge package 'scikit-survival'."
         ) from exc
 
     try:
-        model.fit(X, y_struct)
+        model.fit(X_fit, y_struct)
     except Exception:
         if model_name_l == "coxnet":
             from sksurv.linear_model import CoxPHSurvivalAnalysis
 
             # Rare small-fold fallback when the elastic-net path is numerically unstable.
             model = CoxPHSurvivalAnalysis(alpha=float(hp_cfg.get("coxnet_alpha", 0.1)))
-            model.fit(X, y_struct)
+            model.fit(X_fit, y_struct)
         else:
             raise
-    return model
+    return _SklearnPCAPipeline(model, pca=pca)
 
 
 def _predict_lr_outputs(model, dataset):
@@ -483,6 +560,143 @@ def _transform_modalities_with_fitted_scalers(dfs_raw, scalers, patient_id_col="
     return dfs_scaled
 
 
+def _normalize_feature_reduction_config(feature_reduction=None, pca_num_components=None):
+    feature_reduction = {
+        str(k): str(v).strip().lower()
+        for k, v in dict(feature_reduction or {}).items()
+        if str(v).strip()
+    }
+    pca_num_components = {
+        str(k): str(v).strip().lower()
+        for k, v in dict(pca_num_components or {}).items()
+        if str(v).strip()
+    }
+    for modality_name, method in feature_reduction.items():
+        if method not in {"none", "pca"}:
+            raise ValueError(
+                f"Unsupported feature_reduction='{method}' for modality '{modality_name}'. "
+                "Valid values: none, pca."
+            )
+    return feature_reduction, pca_num_components
+
+
+def _parse_modality_pca_components(raw_value, n_samples, n_features):
+    value = str(raw_value).strip().lower()
+    if value in {"", "none", "null", "false", "0"}:
+        return None
+    parsed = float(value)
+    if 0.0 < parsed < 1.0:
+        return float(parsed)
+    if parsed >= 1.0:
+        return max(1, min(int(round(parsed)), int(min(n_samples, n_features))))
+    raise ValueError("pca_num_components must be an integer, a float in (0, 1), or none.")
+
+
+def fit_and_transform_feature_reduction(
+    dfs_train,
+    dfs_eval,
+    feature_reduction=None,
+    pca_num_components=None,
+    patient_id_col="patient",
+    seed=0,
+):
+    """Fit per-modality feature reduction on train only and transform train/eval."""
+    feature_reduction, pca_num_components = _normalize_feature_reduction_config(
+        feature_reduction=feature_reduction,
+        pca_num_components=pca_num_components,
+    )
+    if not feature_reduction:
+        return dfs_train, dfs_eval, {}
+
+    from sklearn.decomposition import PCA
+
+    dfs_train_out = {}
+    dfs_eval_out = {}
+    reducers = {}
+
+    for modality_name, df_train in dfs_train.items():
+        df_eval = dfs_eval[modality_name]
+        method = feature_reduction.get(modality_name, "none")
+        if method == "none":
+            dfs_train_out[modality_name] = df_train
+            dfs_eval_out[modality_name] = df_eval
+            continue
+
+        feats = [c for c in df_train.columns if c != patient_id_col]
+        if not feats:
+            dfs_train_out[modality_name] = df_train
+            dfs_eval_out[modality_name] = df_eval
+            reducers[modality_name] = None
+            continue
+
+        train_values = df_train[feats].to_numpy(dtype=np.float32, copy=True)
+        eval_values = df_eval[feats].to_numpy(dtype=np.float32, copy=True) if len(df_eval) else np.zeros((0, len(feats)), dtype=np.float32)
+        n_samples, n_features = train_values.shape
+        max_components = int(min(n_samples, n_features))
+        if max_components < 2:
+            dfs_train_out[modality_name] = df_train
+            dfs_eval_out[modality_name] = df_eval
+            reducers[modality_name] = None
+            continue
+
+        requested = _parse_modality_pca_components(
+            pca_num_components.get(modality_name, "0.95"),
+            n_samples=n_samples,
+            n_features=n_features,
+        )
+        if requested is None:
+            dfs_train_out[modality_name] = df_train
+            dfs_eval_out[modality_name] = df_eval
+            reducers[modality_name] = None
+            continue
+
+        svd_solver = "full" if isinstance(requested, float) else "auto"
+        reducer = PCA(n_components=requested, svd_solver=svd_solver, random_state=int(seed))
+        train_reduced = reducer.fit_transform(train_values).astype(np.float32, copy=False)
+        eval_reduced = reducer.transform(eval_values).astype(np.float32, copy=False) if len(df_eval) else np.zeros((0, train_reduced.shape[1]), dtype=np.float32)
+        reduced_cols = [f"{modality_name}_pca_{idx + 1}" for idx in range(train_reduced.shape[1])]
+
+        base_train = df_train[[patient_id_col]].copy()
+        base_eval = df_eval[[patient_id_col]].copy()
+        dfs_train_out[modality_name] = pd.concat(
+            [base_train, pd.DataFrame(train_reduced, columns=reduced_cols, index=df_train.index)],
+            axis=1,
+        )
+        dfs_eval_out[modality_name] = pd.concat(
+            [base_eval, pd.DataFrame(eval_reduced, columns=reduced_cols, index=df_eval.index)],
+            axis=1,
+        )
+        reducers[modality_name] = reducer
+
+    return dfs_train_out, dfs_eval_out, reducers
+
+
+def transform_feature_reduction_with_fitted_reducers(
+    dfs_raw,
+    reducers,
+    patient_id_col="patient",
+):
+    """Apply split-fitted per-modality feature reducers to evaluation data."""
+    if not reducers:
+        return dfs_raw
+
+    dfs_out = {}
+    for modality_name, df_raw in dfs_raw.items():
+        reducer = reducers.get(modality_name)
+        if reducer is None:
+            dfs_out[modality_name] = df_raw
+            continue
+        feats = [c for c in df_raw.columns if c != patient_id_col]
+        values = df_raw[feats].to_numpy(dtype=np.float32, copy=True) if len(df_raw) else np.zeros((0, len(feats)), dtype=np.float32)
+        reduced = reducer.transform(values).astype(np.float32, copy=False) if len(df_raw) else np.zeros((0, int(getattr(reducer, "n_components_", 0))), dtype=np.float32)
+        reduced_cols = [f"{modality_name}_pca_{idx + 1}" for idx in range(reduced.shape[1])]
+        dfs_out[modality_name] = pd.concat(
+            [df_raw[[patient_id_col]].copy(), pd.DataFrame(reduced, columns=reduced_cols, index=df_raw.index)],
+            axis=1,
+        )
+    return dfs_out
+
+
 def _prepare_patient_level_modalities(
     dfs_raw,
     patient_id_col="patient",
@@ -568,6 +782,7 @@ def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
         }
     if model_name_l in {"mlp"}:
         return _add_distillation_kwargs({
+            "pm_encoders": bool(hp_cfg.get("pm_encoders", True)),
             "modality_hidden_layers": hp_cfg["modality_hidden_layers"],
             "fusion_hidden_dim": hp_cfg["fusion_hidden_dim"],
             "fusion_hidden_layers": hp_cfg["fusion_hidden_layers"],
@@ -576,6 +791,7 @@ def _build_model_kwargs_from_hp_cfg(model_name_l, hp_cfg):
         }, hp_cfg)
     if model_name_l in {"pam"}:
         return _add_distillation_kwargs({
+            "pm_encoders": bool(hp_cfg.get("pm_encoders", True)),
             "dropout_p": hp_cfg["pam_dropout"],
             "temperature": hp_cfg["pam_temperature"],
         }, hp_cfg)
@@ -663,6 +879,7 @@ def _save_candidate_bundle(
     input_dims,
     model_kwargs,
     scalers,
+    feature_reducers,
     imputer,
     modality_poolers,
 ):
@@ -672,6 +889,7 @@ def _save_candidate_bundle(
         "input_dims": [int(dim) for dim in input_dims],
         "model_kwargs": get_model_init_kwargs(model_name, model_kwargs),
         "scalers": scalers,
+        "feature_reducers": dict(feature_reducers or {}),
         "imputer": imputer,
         "modality_poolers": dict(modality_poolers or {}),
     }
@@ -709,9 +927,53 @@ def _load_candidate_bundle(bundle_path, device):
     return {
         "model": model,
         "scalers": bundle["scalers"],
+        "feature_reducers": bundle.get("feature_reducers", {}),
         "imputer": bundle["imputer"],
         "modality_poolers": modality_poolers,
     }
+
+
+def _freeze_for_cache(value):
+    if isinstance(value, dict):
+        return tuple((str(k), _freeze_for_cache(v)) for k, v in sorted(value.items(), key=lambda item: str(item[0])))
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_for_cache(v) for v in value)
+    try:
+        if isinstance(value, np.generic):
+            return value.item()
+    except Exception:
+        pass
+    return value
+
+
+def _split_imputer_cache_key(
+    split_dataset,
+    split_missing_simulator,
+    apply_split_missing,
+    missing_pattern_seed,
+    imputer_seed,
+    imputer_kwargs,
+):
+    patient_ids = tuple(str(pid) for pid in getattr(split_dataset, "patient_ids", []))
+    modality_dims = tuple(
+        int(df.shape[1] - 1)
+        for df in getattr(split_dataset, "dfs", {}).values()
+    )
+    simulator_key = (
+        int(getattr(split_missing_simulator, "num_modalities", 0)),
+        tuple(str(x) for x in getattr(split_missing_simulator, "modality_names", [])),
+        float(getattr(split_missing_simulator, "missing_prop", 0.0)),
+        str(getattr(split_missing_simulator, "degrading_modality", "global")).lower(),
+    )
+    return (
+        patient_ids,
+        modality_dims,
+        simulator_key,
+        bool(apply_split_missing),
+        int(missing_pattern_seed),
+        int(imputer_seed),
+        _freeze_for_cache(imputer_kwargs or {}),
+    )
 
 
 def _fit_split_imputer(
@@ -726,6 +988,18 @@ def _fit_split_imputer(
     method_l = str(imputation_method).strip().lower()
     if method_l == "zero":
         return None
+    cache_key = None
+    if method_l == "vae":
+        cache_key = _split_imputer_cache_key(
+            split_dataset=split_dataset,
+            split_missing_simulator=split_missing_simulator,
+            apply_split_missing=apply_split_missing,
+            missing_pattern_seed=missing_pattern_seed,
+            imputer_seed=imputer_seed,
+            imputer_kwargs=imputer_kwargs,
+        )
+        if cache_key in _VAE_SPLIT_IMPUTER_CACHE:
+            return _VAE_SPLIT_IMPUTER_CACHE[cache_key]
 
     split_reference_dataset = MultimodalDatasetWithMissing(
         base_dataset=split_dataset,
@@ -734,13 +1008,16 @@ def _fit_split_imputer(
         imputation_method="zero",
         missing_pattern_seed=missing_pattern_seed,
     )
-    return build_imputer(
+    imputer = build_imputer(
         imputation_method=method_l,
         reference_dataset=split_reference_dataset,
         knn_k=5,
         vae_kwargs=imputer_kwargs,
         imputer_seed=imputer_seed,
     )
+    if cache_key is not None:
+        _VAE_SPLIT_IMPUTER_CACHE[cache_key] = imputer
+    return imputer
 
 
 def _observed_modality_missing_prop(dfs, inst_df, patient_id_col):
@@ -1007,6 +1284,11 @@ def _evaluate_retained_inner_models_on_outer_test(
                 loaded_bundle["scalers"],
                 patient_id_col=patient_id_col,
             )
+            dfs_outer_eval_scaled = transform_feature_reduction_with_fitted_reducers(
+                dfs_outer_eval_scaled,
+                loaded_bundle.get("feature_reducers", {}),
+                patient_id_col=patient_id_col,
+            )
             outer_eval_base = MultimodalBaseDataset(
                 dfs=dfs_outer_eval_scaled,
                 label_df=inst_df_test_outer,
@@ -1223,6 +1505,8 @@ def nested_cv(
     imputer_kwargs=None,
     attention_pooling_kwargs=None,
     modality_pooling=None,
+    feature_reduction=None,
+    pca_num_components=None,
     candidate_model_dir=None,
     retrain_outer=True,
     save_inner=False,
@@ -1242,9 +1526,9 @@ def nested_cv(
     apply_missing_train = float(getattr(train_missing_simulator, "missing_prop", 0.0)) > 0.0
     model_name_l = normalize_model_name(model_name)
     if _is_sklearn_classification_model(model_name_l) and _is_survival(task_config):
-        raise ValueError("ZI_LR, KNN_LR, ZI_RF and KNN_RF are classification-only baselines and do not support task_type=survival.")
+        raise ValueError("LR and RF baselines are classification-only and do not support task_type=survival.")
     if _is_sklearn_survival_model(model_name_l) and not _is_survival(task_config):
-        raise ValueError("ZI_CoxNet, KNN_CoxNet, ZI_RSF and KNN_RSF are survival-only baselines.")
+        raise ValueError("CoxNet and RSF baselines are survival-only.")
     predict_bypass_mask = (
         model_name_l == "mlp"
         and str(imputation_method).strip().lower() in {"knn", "vae"}
@@ -1253,6 +1537,10 @@ def nested_cv(
     primary_metric_key = primary_metric_name(task_config)
     primary_loss_key = primary_loss_name(task_config)
     base_dataset_kwargs = _prepare_base_dataset_kwargs(task_config)
+    feature_reduction, pca_num_components = _normalize_feature_reduction_config(
+        feature_reduction=feature_reduction,
+        pca_num_components=pca_num_components,
+    )
 
     # Test-time evaluation setups:
     # by default evaluate once with the provided train simulator.
@@ -1376,6 +1664,15 @@ def nested_cv(
                 dfs_val_inner_prepared,
                 id_col=patient_id_col,
             )
+            dfs_train_inner_scaled, dfs_val_inner_scaled, feature_reducers_inner = fit_and_transform_feature_reduction(
+                dfs_train_inner_scaled,
+                dfs_val_inner_scaled,
+                feature_reduction=feature_reduction,
+                pca_num_components=pca_num_components,
+                patient_id_col=patient_id_col,
+                seed=int(seed + outer_fold_idx * 10_000 + inner_fold_idx * 100),
+            )
+            input_dims_inner = [df.shape[1] - 1 for df in dfs_train_inner_scaled.values()]
 
             train_split_dataset = MultimodalBaseDataset(
                 dfs=dfs_train_inner_scaled,
@@ -1468,7 +1765,7 @@ def nested_cv(
                         train_loader=train_loader,
                         val_loader=val_loader,
                         device=device,
-                        input_dims=input_dims,
+                        input_dims=input_dims_inner,
                         epochs=epochs,
                         lr=hp_cfg["learning_rate"],
                         weight_decay=hp_cfg["weight_decay"],
@@ -1527,9 +1824,10 @@ def nested_cv(
                         bundle_path=bundle_path,
                         model=model,
                         model_name=model_name,
-                        input_dims=input_dims,
+                        input_dims=input_dims_inner,
                         model_kwargs=model_kwargs,
                         scalers=scalers_inner,
+                        feature_reducers=feature_reducers_inner,
                         imputer=prefit_inner_imputer,
                         modality_poolers=modality_poolers_inner,
                     )
@@ -1678,6 +1976,15 @@ def nested_cv(
                 dfs_train_outer_prepared,
                 id_col=patient_id_col,
             )
+            dfs_train_outer_scaled, _, feature_reducers_outer = fit_and_transform_feature_reduction(
+                dfs_train_outer_scaled,
+                dfs_train_outer_scaled,
+                feature_reduction=feature_reduction,
+                pca_num_components=pca_num_components,
+                patient_id_col=patient_id_col,
+                seed=int(seed + outer_fold_idx * 100_000),
+            )
+            input_dims_outer = [df.shape[1] - 1 for df in dfs_train_outer_scaled.values()]
 
             outer_train_split_dataset = MultimodalBaseDataset(
                 dfs=dfs_train_outer_scaled,
@@ -1755,7 +2062,7 @@ def nested_cv(
                 outer_train_model, outer_refit_history = train_model_on_full_dataset(
                     train_loader=outer_train_loader,
                     device=device,
-                    input_dims=input_dims,
+                    input_dims=input_dims_outer,
                     epochs=refit_epochs,
                     lr=selected_hp_cfg["learning_rate"],
                     weight_decay=selected_hp_cfg["weight_decay"],
@@ -1865,6 +2172,11 @@ def nested_cv(
             dfs_outer_eval_scaled = _transform_modalities_with_fitted_scalers(
                 dfs_outer_eval_prepared,
                 scalers_outer,
+                patient_id_col=patient_id_col,
+            )
+            dfs_outer_eval_scaled = transform_feature_reduction_with_fitted_reducers(
+                dfs_outer_eval_scaled,
+                feature_reducers_outer,
                 patient_id_col=patient_id_col,
             )
             outer_eval_base = MultimodalBaseDataset(

@@ -140,7 +140,7 @@ If the user selects a method that is not present in `fingerprint.json` while `FI
 
 ## Auxiliary Outputs And Distillation
 
-Knowledge distillation is configured from the launcher with `DISTILL_MODELS`, not by adding a separate method class. If a supported torch method appears in `DISTILL_MODELS`, M3TRICS trains the base method normally and also trains a `<method>_KD` variant. The KD run first pretrains a teacher, freezes it, and then trains a student under the configured modality-availability conditions. In static-cohort mode, this is the observed cohort as-is; in progressive missingness mode, this includes the configured synthetic missingness.
+Knowledge distillation is configured from the launcher with `DISTILL_MODELS`, not by adding a separate method class. If a supported torch method appears in `DISTILL_MODELS`, M3TRICS trains the base method normally and also trains a `DI-<method>` variant. The KD run first pretrains a teacher, freezes it, and then trains a student under the configured modality-availability conditions. In static-cohort mode, this is the observed cohort as-is; in progressive missingness mode, this includes the configured synthetic missingness.
 
 The student loss combines the task loss with two optional distillation terms controlled by `DISTILL_ALPHA` and `DISTILL_BETA`. These values can be comma-separated lists and are expanded into the hyperparameter grid.
 
@@ -162,12 +162,23 @@ Current generic KD representations are:
 
 ## Non-PyTorch Baselines
 
-The logistic-regression, Random Forest, CoxNet, and Random Survival Forest baselines are handled directly in `scripts/train_ncv.py` because they are sklearn/sksurv estimators, not `torch.nn.Module` objects.
+The logistic-regression, Random Forest, CoxNet, and Random Survival Forest baselines are handled directly in `scripts/train_ncv.py` because they are sklearn/sksurv estimators, not `torch.nn.Module` objects. If launcher-level per-modality PCA is enabled, it is fitted only on the corresponding training split and applied to every method before these baselines receive concatenated features.
 
-- `ZI_LR` and `KNN_LR` are binary-classification-only baselines.
-- `ZI_RF` and `KNN_RF` are binary-classification-only baselines.
-- `ZI_CoxNet`, `KNN_CoxNet`, `ZI_RSF`, and `KNN_RSF` are survival-only baselines.
+- `ZI_LR`, `KNN_LR`, and `VAE_LR` are binary-classification-only baselines.
+- `ZI_RF`, `KNN_RF`, and `VAE_RF` are binary-classification-only baselines.
+- `ZI_CoxNet`, `KNN_CoxNet`, `VAE_CoxNet`, `ZI_RSF`, `KNN_RSF`, and `VAE_RSF` are survival-only baselines.
 - `RF` means `sklearn.ensemble.RandomForestClassifier`.
 - `RSF` means Random Survival Forest, not a binary-classification random forest.
 
 New sklearn-style baselines should follow the same pattern: fit on the nested-CV training split, predict on validation/test splits, and write the same prediction columns as neural models. Survival baselines that predict risk directly should write `inner_model_<k>_risk` plus `event_time`, `event_observed`, `censorship`, and `y_disc`; C-index analysis uses the risk column directly.
+
+VAE-based imputation is treated as a split-level imputer. When several `VAE_*` methods are run in the same M3TRICS execution, the VAE imputer is trained once for each matching split, missingness pattern, and VAE-imputer configuration, then reused by the downstream `VAE_LR`, `VAE_RF`, `VAE_CoxNet`, `VAE_RSF`, `VAE_MMLP`, and `VAE_pMMLP` models.
+
+## Per-Modality Encoders And Feature Reduction
+
+`MultimodalMLP` and `PAM` support `pm_encoders`:
+
+- `pm_encoders=true`: each modality is first projected by a learned per-modality encoder before fusion (`pMMLP` / `pAM`).
+- `pm_encoders=false`: the model uses the preprocessed modality features directly (`MMLP` / `AM`).
+
+Launcher-level per-modality PCA is independent from these learned encoders. PCA is fitted inside each CV training split and can be used to compare explicit feature reduction against learned per-modality projections in small clinical cohorts.

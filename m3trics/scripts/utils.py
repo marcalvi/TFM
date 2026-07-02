@@ -166,6 +166,18 @@ def _append_distillation_suffix(name, cfg):
     return f"{name}_kd_a{alpha_str}_b{beta_str}"
 
 
+def _is_pca_enabled_value(value):
+    return str(value).strip().lower() not in {"", "none", "null", "false", "0"}
+
+
+def _format_pca_suffix(cfg):
+    value = cfg.get("pca_n_components", None)
+    if value is None or not _is_pca_enabled_value(value):
+        return ""
+    clean = str(value).strip().replace(".", "p")
+    return f"_pca{clean}"
+
+
 # Format hp_name for runs' names
 def _format_hp_name(cfg, train_missing_pct, degrading_modality, model_name):
     model_name = normalize_model_name(model_name)
@@ -177,19 +189,22 @@ def _format_hp_name(cfg, train_missing_pct, degrading_modality, model_name):
         penalty_str = str(cfg["lr_penalty"]).replace("_", "")
         solver_str = str(cfg["lr_solver"]).replace("_", "")
         cw_str = str(cfg["lr_class_weight"]).replace("_", "")
+        pca_str = _format_pca_suffix(cfg)
         return (
             f"C{c_str}_"
             f"pen{penalty_str}_"
             f"solver{solver_str}_"
             f"cw{cw_str}_"
             f"maxit{int(cfg['lr_max_iter'])}_"
+            f"{pca_str}_"
             f"trmiss{train_missing_pct}_"
             f"degmod{degrading_modality}"
-        )
+        ).replace("__", "_")
     if model_name in {"rf"}:
         depth_str = str(cfg["rf_max_depth"]).replace("_", "").replace(".", "p")
         features_str = str(cfg["rf_max_features"]).replace("_", "").replace(".", "p")
         cw_str = str(cfg["rf_class_weight"]).replace("_", "")
+        pca_str = _format_pca_suffix(cfg)
         return (
             f"trees{int(cfg['rf_n_estimators'])}_"
             f"depth{depth_str}_"
@@ -197,39 +212,46 @@ def _format_hp_name(cfg, train_missing_pct, degrading_modality, model_name):
             f"leaf{int(cfg['rf_min_samples_leaf'])}_"
             f"feat{features_str}_"
             f"cw{cw_str}_"
+            f"{pca_str}_"
             f"trmiss{train_missing_pct}_"
             f"degmod{degrading_modality}"
-        )
+        ).replace("__", "_")
     if model_name in {"coxnet"}:
         alpha_str = f"{float(cfg['coxnet_alpha']):g}".replace(".", "p")
         l1_str = f"{float(cfg['coxnet_l1_ratio']):g}".replace(".", "p")
         tol_str = f"{float(cfg['coxnet_tol']):.0e}"
+        pca_str = _format_pca_suffix(cfg)
         return (
             f"alpha{alpha_str}_"
             f"l1{l1_str}_"
             f"maxit{int(cfg['coxnet_max_iter'])}_"
             f"tol{tol_str}_"
+            f"{pca_str}_"
             f"trmiss{train_missing_pct}_"
             f"degmod{degrading_modality}"
-        )
+        ).replace("__", "_")
     if model_name in {"rsf"}:
         depth_str = str(cfg["rsf_max_depth"]).replace("_", "").replace(".", "p")
         features_str = str(cfg["rsf_max_features"]).replace("_", "").replace(".", "p")
+        pca_str = _format_pca_suffix(cfg)
         return (
             f"trees{int(cfg['rsf_n_estimators'])}_"
             f"depth{depth_str}_"
             f"split{int(cfg['rsf_min_samples_split'])}_"
             f"leaf{int(cfg['rsf_min_samples_leaf'])}_"
             f"feat{features_str}_"
+            f"{pca_str}_"
             f"trmiss{train_missing_pct}_"
             f"degmod{degrading_modality}"
-        )
+        ).replace("__", "_")
     if model_name in {"pam"}:
         dropout_str = str(cfg["pam_dropout"]).replace(".", "p")
         temp_str = str(cfg["pam_temperature"]).replace(".", "p")
+        pm_str = "1" if bool(cfg.get("pm_encoders", True)) else "0"
         return (
             f"lr{lr_str}_"
             f"bs{bs_str}_"
+            f"pm{pm_str}_"
             f"drop{dropout_str}_"
             f"temp{temp_str}_"
             f"{training_suffix}"
@@ -298,10 +320,12 @@ def _format_hp_name(cfg, train_missing_pct, degrading_modality, model_name):
     modality_layers_str = str(cfg["modality_hidden_layers"])
     fusion_layers_str = str(cfg["fusion_hidden_layers"])
     fusion_bn_str = "1" if bool(cfg.get("fusion_batchnorm", False)) else "0"
+    pm_str = "1" if bool(cfg.get("pm_encoders", True)) else "0"
     dropout_str = str(cfg["dropout"]).replace(".", "p")
     return (
         f"lr{lr_str}_"
         f"bs{bs_str}_"
+        f"pm{pm_str}_"
         f"modL{modality_layers_str}_"
         f"fusion{fusion_str}_"
         f"fusionL{fusion_layers_str}_"
@@ -323,6 +347,9 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
     batch_sizes = parse_value_or_list(args.batch_size, int)
     learning_rates = parse_value_or_list(args.learning_rate, float)
     weight_decays = parse_value_or_list(args.weight_decay, float)
+    pca_n_components_values = parse_value_or_list(
+        getattr(args, "pca_n_components", "none"), str, to_lower=True
+    )
 
     hp_configs = []
     seen = set()
@@ -334,7 +361,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
         lr_class_weights = parse_value_or_list(args.lr_class_weight, str, to_lower=True)
         lr_max_iters = parse_value_or_list(args.lr_max_iter, int)
 
-        for bs, lr, weight_decay, lr_C, lr_penalty, lr_solver, lr_class_weight, lr_max_iter in product(
+        for bs, lr, weight_decay, lr_C, lr_penalty, lr_solver, lr_class_weight, lr_max_iter, pca_n_components in product(
             batch_sizes,
             learning_rates,
             weight_decays,
@@ -343,6 +370,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
             lr_solvers,
             lr_class_weights,
             lr_max_iters,
+            pca_n_components_values,
         ):
             cfg = {
                 "batch_size": int(bs),
@@ -354,6 +382,8 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
                 "lr_class_weight": str(lr_class_weight),
                 "lr_max_iter": int(lr_max_iter),
             }
+            if _is_pca_enabled_value(pca_n_components):
+                cfg["pca_n_components"] = str(pca_n_components)
             key = (
                 cfg["batch_size"],
                 cfg["learning_rate"],
@@ -363,6 +393,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
                 cfg["lr_solver"],
                 cfg["lr_class_weight"],
                 cfg["lr_max_iter"],
+                cfg.get("pca_n_components", "none"),
             )
             if key in seen:
                 continue
@@ -381,7 +412,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
         rf_class_weights = parse_value_or_list(args.rf_class_weight, str, to_lower=True)
         rf_n_jobs = parse_value_or_list(args.rf_n_jobs, int)
 
-        for bs, lr, weight_decay, n_estimators, max_depth, min_split, min_leaf, max_features, class_weight, n_jobs in product(
+        for bs, lr, weight_decay, n_estimators, max_depth, min_split, min_leaf, max_features, class_weight, n_jobs, pca_n_components in product(
             batch_sizes,
             learning_rates,
             weight_decays,
@@ -392,6 +423,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
             rf_max_features,
             rf_class_weights,
             rf_n_jobs,
+            pca_n_components_values,
         ):
             cfg = {
                 "batch_size": int(bs),
@@ -405,6 +437,8 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
                 "rf_class_weight": str(class_weight),
                 "rf_n_jobs": int(n_jobs),
             }
+            if _is_pca_enabled_value(pca_n_components):
+                cfg["pca_n_components"] = str(pca_n_components)
             key = (
                 cfg["batch_size"],
                 cfg["learning_rate"],
@@ -416,6 +450,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
                 cfg["rf_max_features"],
                 cfg["rf_class_weight"],
                 cfg["rf_n_jobs"],
+                cfg.get("pca_n_components", "none"),
             )
             if key in seen:
                 continue
@@ -431,7 +466,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
         coxnet_max_iters = parse_value_or_list(args.coxnet_max_iter, int)
         coxnet_tols = parse_value_or_list(args.coxnet_tol, float)
 
-        for bs, lr, weight_decay, alpha, l1_ratio, max_iter, tol in product(
+        for bs, lr, weight_decay, alpha, l1_ratio, max_iter, tol, pca_n_components in product(
             batch_sizes,
             learning_rates,
             weight_decays,
@@ -439,6 +474,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
             coxnet_l1_ratios,
             coxnet_max_iters,
             coxnet_tols,
+            pca_n_components_values,
         ):
             cfg = {
                 "batch_size": int(bs),
@@ -449,6 +485,8 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
                 "coxnet_max_iter": int(max_iter),
                 "coxnet_tol": float(tol),
             }
+            if _is_pca_enabled_value(pca_n_components):
+                cfg["pca_n_components"] = str(pca_n_components)
             key = (
                 cfg["batch_size"],
                 cfg["learning_rate"],
@@ -457,6 +495,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
                 cfg["coxnet_l1_ratio"],
                 cfg["coxnet_max_iter"],
                 cfg["coxnet_tol"],
+                cfg.get("pca_n_components", "none"),
             )
             if key in seen:
                 continue
@@ -474,7 +513,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
         rsf_max_features = parse_value_or_list(args.rsf_max_features, str, to_lower=True)
         rsf_n_jobs = parse_value_or_list(args.rsf_n_jobs, int)
 
-        for bs, lr, weight_decay, n_estimators, max_depth, min_split, min_leaf, max_features, n_jobs in product(
+        for bs, lr, weight_decay, n_estimators, max_depth, min_split, min_leaf, max_features, n_jobs, pca_n_components in product(
             batch_sizes,
             learning_rates,
             weight_decays,
@@ -484,6 +523,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
             rsf_min_samples_leafs,
             rsf_max_features,
             rsf_n_jobs,
+            pca_n_components_values,
         ):
             cfg = {
                 "batch_size": int(bs),
@@ -496,6 +536,8 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
                 "rsf_max_features": str(max_features),
                 "rsf_n_jobs": int(n_jobs),
             }
+            if _is_pca_enabled_value(pca_n_components):
+                cfg["pca_n_components"] = str(pca_n_components)
             key = (
                 cfg["batch_size"],
                 cfg["learning_rate"],
@@ -506,6 +548,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
                 cfg["rsf_min_samples_leaf"],
                 cfg["rsf_max_features"],
                 cfg["rsf_n_jobs"],
+                cfg.get("pca_n_components", "none"),
             )
             if key in seen:
                 continue
@@ -518,11 +561,13 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
     if model_name in {"pam"}:
         pam_dropouts = parse_value_or_list(args.pam_dropout, float)
         temperatures = parse_value_or_list(args.pam_temperature, float)
+        pm_encoder_values = parse_bool_value_or_list(getattr(args, "pm_encoders", "true"))
 
-        for bs, lr, weight_decay, dropout, temp in product(
+        for bs, lr, weight_decay, pm_encoders, dropout, temp in product(
             batch_sizes,
             learning_rates,
             weight_decays,
+            pm_encoder_values,
             pam_dropouts,
             temperatures,
         ):
@@ -530,6 +575,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
                 "batch_size": int(bs),
                 "learning_rate": float(lr),
                 "weight_decay": float(weight_decay),
+                "pm_encoders": bool(pm_encoders),
                 "pam_dropout": float(dropout),
                 "pam_temperature": float(temp),
             }
@@ -537,6 +583,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
                 cfg["batch_size"],
                 cfg["learning_rate"],
                 cfg["weight_decay"],
+                cfg["pm_encoders"],
                 cfg["pam_dropout"],
                 cfg["pam_temperature"],
             )
@@ -552,12 +599,14 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
         fusion_hidden_dims = parse_value_or_list(args.fusion_hidden_dim, int)
         fusion_hidden_layers = parse_value_or_list(args.fusion_hidden_layers, int)
         fusion_batchnorm_values = parse_bool_value_or_list(args.fusion_batchnorm)
+        pm_encoder_values = parse_bool_value_or_list(getattr(args, "pm_encoders", "true"))
         dropouts = parse_value_or_list(args.dropout, float)
 
-        for bs, lr, weight_decay, mod_layers, fusion_dim, fusion_layers, fusion_batchnorm, dropout in product(
+        for bs, lr, weight_decay, pm_encoders, mod_layers, fusion_dim, fusion_layers, fusion_batchnorm, dropout in product(
             batch_sizes,
             learning_rates,
             weight_decays,
+            pm_encoder_values,
             modality_hidden_layers,
             fusion_hidden_dims,
             fusion_hidden_layers,
@@ -568,6 +617,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
                 "batch_size": int(bs),
                 "learning_rate": float(lr),
                 "weight_decay": float(weight_decay),
+                "pm_encoders": bool(pm_encoders),
                 "modality_hidden_layers": int(mod_layers),
                 "fusion_hidden_dim": int(fusion_dim),
                 "fusion_hidden_layers": int(fusion_layers),
@@ -578,6 +628,7 @@ def build_hyperparameter_grid(args, train_missing_prop, degrading_modality):
                 cfg["batch_size"],
                 cfg["learning_rate"],
                 cfg["weight_decay"],
+                cfg["pm_encoders"],
                 cfg["modality_hidden_layers"],
                 cfg["fusion_hidden_dim"],
                 cfg["fusion_hidden_layers"],
@@ -1087,7 +1138,7 @@ def build_model(model_name, input_dims, model_kwargs):
     model_name = normalize_model_name(model_name)
     if model_name in {"lr"}:
         raise ValueError(
-            "Logistic regression is a sklearn baseline handled directly in scripts/train_ncv.py."
+            "PCA logistic regression is a sklearn baseline handled directly in scripts/train_ncv.py."
         )
     if model_name in {"rf"}:
         raise ValueError(
@@ -1095,7 +1146,7 @@ def build_model(model_name, input_dims, model_kwargs):
         )
     if model_name in {"coxnet", "rsf"}:
         raise ValueError(
-            "CoxNet and Random Survival Forest are sksurv baselines handled directly in scripts/train_ncv.py."
+            "PCA CoxNet and PCA Random Survival Forest are sksurv baselines handled directly in scripts/train_ncv.py."
         )
     if model_name in {"mlp"}:
         return MultimodalMLP(input_dims, **model_kwargs)
@@ -1109,7 +1160,7 @@ def build_model(model_name, input_dims, model_kwargs):
     if model_name in {"healnet"}:
         return HealNetBinaryWrapper(input_dims, **model_kwargs)
     raise ValueError(
-        f"Unsupported model '{model_name}'. Supported: lr, coxnet, rsf, mlp, pam, smile, healnet"
+        f"Unsupported model '{model_name}'. Supported: pca_lr, pca_rf, pca_coxnet, pca_rsf, mlp, pam, smile, healnet"
     )
 
 

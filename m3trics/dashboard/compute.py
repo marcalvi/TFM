@@ -16,6 +16,7 @@ from __future__ import annotations
 import csv
 import math
 import re
+import warnings
 from collections import defaultdict
 from pathlib import Path
 
@@ -332,13 +333,26 @@ def _normalise_hp_display_name(hp_name: str) -> str:
     return re.sub(r'trmiss[^_]*_degmod[^_]*$', '', str(hp_name)).rstrip('_')
 
 
+def _is_distillation_model(model_name: str, distillation_models: set[str] | None = None) -> bool:
+    name = str(model_name or '').strip()
+    configured = {str(m).strip() for m in (distillation_models or set()) if str(m).strip()}
+    return (
+        name in configured
+        or name.upper().startswith('DI-')
+        or name.upper().endswith('_KD')
+        or name in {'Di-MMLP', 'Di-PAM'}
+    )
+
+
 def _base_model_name(model_name: str) -> str:
     """Normalise dashboard method names to their underlying model family."""
     name = str(model_name or '').strip()
+    if name.upper().startswith('DI-'):
+        name = name[3:]
     if name.endswith('_KD'):
         name = name[:-3]
     name_l = name.lower().replace('-', '_')
-    for prefix in ('zi_', 'knn_'):
+    for prefix in ('zi_', 'knn_', 'vae_'):
         if name_l.startswith(prefix):
             name_l = name_l[len(prefix):]
             break
@@ -351,7 +365,8 @@ def _base_model_name(model_name: str) -> str:
         'rsf': 'rsf',
         'mlp': 'mlp',
         'mmlp': 'mlp',
-        'vae_mlp': 'mlp',
+        'pmmlp': 'mlp',
+        'p_mmlp': 'mlp',
         'pam': 'pam',
         'healnet': 'healnet',
         'smile': 'smile',
@@ -590,6 +605,14 @@ def _trapz_normalized(xs: list[float], ys: list[float]) -> float:
     return area / x_range if x_range > 0 else ys[0]
 
 
+def _mean_degradation_ratio(curve: list[tuple[float, float]], baseline: float | None) -> float | None:
+    """Mean of baseline / performance over all valid points, including baseline = 1."""
+    if baseline is None or baseline <= 0:
+        return None
+    ratios = [baseline / y for _, y in curve if y not in (None, 0)]
+    return sum(ratios) / len(ratios) if ratios else None
+
+
 def compute_method_metrics(
     mean_auc_summary: list[dict],
     distillation_models: set[str] | None = None,
@@ -597,7 +620,7 @@ def compute_method_metrics(
     """
     Compute per-method metrics:
       baseline_auc, test_aupmc, train_aupmc, bft_aupmc,
-      bft_train_prop, and positive degradation coefficients.
+      bft_train_prop, and mean degradation ratios (MDR).
 
     Distillation methods are excluded from train-time metrics.
     """
@@ -632,7 +655,8 @@ def compute_method_metrics(
 
         # Train-time AUPMC: fix test_prop=0, integrate over train_props
         train_aupmc = None
-        if model not in distillation_models:
+        is_distill = _is_distillation_model(model, distillation_models)
+        if not is_distill:
             train_curve = [(tp, _get(tp, 0.0)) for tp in all_train_props]
             train_curve = [(x, y) for x, y in train_curve if y is not None]
             if train_curve:
@@ -649,28 +673,21 @@ def compute_method_metrics(
                 if bft_aupmc is None or a > bft_aupmc:
                     bft_aupmc, bft_train_prop = a, tp
 
-        # Positive degradation coefficients: area where baseline/performance > 1.
-        train_deg = None
-        if baseline and baseline > 0 and model not in distillation_models:
+        # MDR: mean of baseline/performance along the trajectory.
+        train_mdr = None
+        if not is_distill:
             train_curve_for_deg = [(tp, _get(tp, 0.0)) for tp in all_train_props]
             train_curve_for_deg = [(x, y) for x, y in train_curve_for_deg if y is not None]
-            if train_curve_for_deg:
-                ratios = [max(baseline / y - 1, 0) if y else 0 for _, y in train_curve_for_deg]
-                train_deg = _trapz_normalized([x for x, _ in train_curve_for_deg], ratios)
+            train_mdr = _mean_degradation_ratio(train_curve_for_deg, baseline)
 
-        test_deg = None
-        if baseline and baseline > 0 and test_curve:
-            ratios = [max(baseline / y - 1, 0) if y else 0 for _, y in test_curve]
-            test_deg = _trapz_normalized([x for x, _ in test_curve], ratios)
+        test_mdr = _mean_degradation_ratio(test_curve, baseline)
 
-        bft_deg = None
+        bft_mdr = None
         if bft_train_prop is not None:
             bft_baseline = _get(bft_train_prop, 0.0)
             bft_curve_for_deg = [(tp, _get(bft_train_prop, tp)) for tp in all_test_props]
             bft_curve_for_deg = [(x, y) for x, y in bft_curve_for_deg if y is not None]
-            if bft_baseline and bft_baseline > 0 and bft_curve_for_deg:
-                ratios = [max(bft_baseline / y - 1, 0) if y else 0 for _, y in bft_curve_for_deg]
-                bft_deg = _trapz_normalized([x for x, _ in bft_curve_for_deg], ratios)
+            bft_mdr = _mean_degradation_ratio(bft_curve_for_deg, bft_baseline)
 
         result.append({
             'model_name':           model,
@@ -679,9 +696,13 @@ def compute_method_metrics(
             'train_aupmc':          train_aupmc,
             'bft_aupmc':            bft_aupmc,
             'bft_train_prop':       bft_train_prop,
-            'train_degradation_coef': train_deg,
-            'test_degradation_coef': test_deg,
-            'bft_degradation_coef':   bft_deg,
+            'train_mdr':            train_mdr,
+            'test_mdr':             test_mdr,
+            'bft_mdr':              bft_mdr,
+            # Backward-compatible aliases used by older dashboard code.
+            'train_degradation_coef': train_mdr,
+            'test_degradation_coef': test_mdr,
+            'bft_degradation_coef':   bft_mdr,
         })
 
     return result
@@ -795,7 +816,7 @@ def compute_degradation_curves(
                 })
 
         train_rows = [r for r in rows if abs(r['test_missing_prop']) < 1e-4]
-        if model not in distillation_models:
+        if not _is_distillation_model(model, distillation_models):
             _add_curve('train', (0.0, 0.0), train_rows)
 
         test_rows = [r for r in rows if abs(r['train_missing_prop']) < 1e-4]
@@ -929,10 +950,11 @@ def compute_wilcoxon(replicates: list[dict], alpha: float = 0.05) -> list[dict]:
     if not _SCIPY:
         return []
 
-    by_cond: dict[tuple, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+    by_cond: dict[tuple, dict[str, dict[tuple[int, int], float]]] = defaultdict(lambda: defaultdict(dict))
     for r in replicates:
         cond = (r['train_missing_prop'], r['test_missing_prop'])
-        by_cond[cond][r['model_name']].append(r['auc'])
+        rep_key = (int(r['seed']), int(r['outer_fold']))
+        by_cond[cond][r['model_name']][rep_key] = r['auc']
 
     result = []
     for cond, model_aucs in by_cond.items():
@@ -942,17 +964,23 @@ def compute_wilcoxon(replicates: list[dict], alpha: float = 0.05) -> list[dict]:
         for i in range(len(models)):
             for j in range(i + 1, len(models)):
                 m1, m2 = models[i], models[j]
-                a1, a2 = model_aucs[m1], model_aucs[m2]
-                n = min(len(a1), len(a2))
+                paired_keys = sorted(set(model_aucs[m1]) & set(model_aucs[m2]))
+                a1 = [model_aucs[m1][k] for k in paired_keys]
+                a2 = [model_aucs[m2][k] for k in paired_keys]
+                n = len(paired_keys)
                 if n < 2:
                     continue
                 try:
-                    _, p = _scipy_stats.wilcoxon(a1[:n], a2[:n], alternative='two-sided')
+                    with warnings.catch_warnings():
+                        warnings.simplefilter('ignore', RuntimeWarning)
+                        _, p = _scipy_stats.wilcoxon(a1, a2, alternative='two-sided')
                 except Exception:
+                    p = 1.0
+                if p is None or not math.isfinite(float(p)):
                     p = 1.0
                 pairs.append((m1, m2))
                 raw_ps.append(p)
-                deltas.append(sum(a1[:n]) / n - sum(a2[:n]) / n)
+                deltas.append(sum(a1) / n - sum(a2) / n)
 
         if not pairs:
             continue
