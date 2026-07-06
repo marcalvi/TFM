@@ -31,7 +31,7 @@ fi
 
 # ── Configuration ───────────────────────────────────────────────────────────
 # Results directory. Override if needed.
-RESULTS_DIR="${RESULTS_DIR:-${SCRIPT_DIR}/results}"
+RESULTS_DIR="${RESULTS_DIR:-${SCRIPT_DIR}/results/TFM}"
 if [[ "${RESULTS_DIR}" != /* ]]; then
     RESULTS_DIR="${SCRIPT_DIR}/${RESULTS_DIR}"
 fi

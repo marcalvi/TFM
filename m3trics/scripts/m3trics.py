@@ -1336,6 +1336,12 @@ def _run_selected_models(args, modality_configs):
             launch_configs.append(_distilled_model_config(base_config))
             launched_keys.add((key, True))
 
+    distilled_labels = [
+        str(cfg.get("display_name"))
+        for cfg in launch_configs
+        if bool(cfg.get("knowledge_distillation", False))
+    ]
+
     fingerprint_path = str(getattr(args, "fingerprint_hp_json", "") or "").strip()
     fingerprint_overrides = _load_fingerprint_hp_overrides(fingerprint_path)
     if fingerprint_overrides:
@@ -1361,8 +1367,31 @@ def _run_selected_models(args, modality_configs):
     print(f"Use ensemble predictions: {bool(args.use_ensemble)}")
     print(f"Progressive missingness study: {bool(args.missingness_study)}")
     print(f"Distillation models: {args.distill_models or 'none'}")
+    print(f"Distilled runs to launch: {', '.join(distilled_labels) if distilled_labels else 'none'}")
     print(f"Distillation alpha grid: {args.distill_alpha}")
     print(f"Distillation beta grid: {args.distill_beta}")
+    launch_plan = [
+        {
+            "display_name": str(cfg.get("display_name")),
+            "base_model": str(cfg.get("model")),
+            "knowledge_distillation": bool(cfg.get("knowledge_distillation", False)),
+            "fingerprint_combinations": cfg.get("_fingerprint_combination_count"),
+        }
+        for cfg in launch_configs
+    ]
+    launch_plan_path = os.path.join(args.results_root, "launch_plan.json")
+    os.makedirs(args.results_root, exist_ok=True)
+    with open(launch_plan_path, "w") as f:
+        json.dump(
+            {
+                "run_models": selected_models,
+                "distill_models": distill_models,
+                "launch_configs": launch_plan,
+            },
+            f,
+            indent=2,
+        )
+    print(f"Launch plan saved to: {launch_plan_path}")
     print(f"Task type: {normalize_task_type(args.task_type)}")
     if normalize_task_type(args.task_type) == "survival":
         print(

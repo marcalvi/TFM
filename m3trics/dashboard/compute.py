@@ -48,6 +48,29 @@ def _read_csv(path: Path) -> list[dict]:
         return []
 
 
+def _training_runs_dir(results_dir: Path, ds_key: str) -> Path | None:
+    """Resolve training_runs even when results are nested or case differs.
+
+    Dashboard dataset keys can come from analysis outputs, for example
+    ``mmColorectal_OS_21_label``, while raw training results may live under a
+    wrapper directory such as ``results/TFM/mmColorectal_os_21_label``. Use an
+    exact path first, then a case-insensitive recursive fallback.
+    """
+    direct = results_dir / ds_key / 'training_runs'
+    if direct.exists():
+        return direct
+
+    ds_norm = str(ds_key).strip().lower()
+    for candidate in sorted(results_dir.glob('**/training_runs')):
+        try:
+            parent_rel = candidate.parent.relative_to(results_dir)
+        except ValueError:
+            parent_rel = candidate.parent
+        if candidate.parent.name.lower() == ds_norm or str(parent_rel).lower() == ds_norm:
+            return candidate
+    return None
+
+
 def _f(val, default=None):
     try:
         return float(val)
@@ -151,8 +174,8 @@ def load_retained_inner_replicates_from_predictions(
     outer_test_metrics.csv even though inner_model_* predictions were present.
     This loader avoids losing those methods in the dashboard.
     """
-    training_runs = results_dir / ds_key / 'training_runs'
-    if not training_runs.exists():
+    training_runs = _training_runs_dir(results_dir, ds_key)
+    if training_runs is None or not training_runs.exists():
         return []
 
     suffix = f'_retrain{retrain}_'
@@ -248,8 +271,8 @@ def load_replicates(
         if prediction_records:
             return prediction_records
 
-    training_runs = results_dir / ds_key / 'training_runs'
-    if not training_runs.exists():
+    training_runs = _training_runs_dir(results_dir, ds_key)
+    if training_runs is None or not training_runs.exists():
         return []
 
     suffix     = f'_retrain{retrain}_'
@@ -440,8 +463,8 @@ def compute_hp_selection_summary(
     deduplicated so the denominator is the nested-CV evaluation count
     (n_seeds x n_outer_folds), not the number of missingness cells.
     """
-    training_runs = results_dir / ds_key / 'training_runs'
-    if not training_runs.exists():
+    training_runs = _training_runs_dir(results_dir, ds_key)
+    if training_runs is None or not training_runs.exists():
         return []
 
     suffix = f'_retrain{retrain}_'
