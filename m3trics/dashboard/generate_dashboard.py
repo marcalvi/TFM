@@ -20,9 +20,11 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent))
 try:
     from compute import compute_progressive_dataset as _compute_prog_ds
+    from compute import _training_runs_dir as _resolve_training_runs_dir
     _HAS_COMPUTE = True
 except ImportError:
     _HAS_COMPUTE = False
+    _resolve_training_runs_dir = None
 
 # ── CONFIG ──────────────────────────────────────────────────────────────────────
 DATASET_META = {
@@ -196,6 +198,10 @@ def _infer_dataset_meta(ds_key: str) -> dict:
         'task_type': 'Detected from results',
     }
 
+def _has_meta_key_ci(meta: dict, ds_key: str) -> bool:
+    ds_norm = str(ds_key).lower()
+    return any(str(k).lower() == ds_norm for k in meta)
+
 # mode_key → (subdir under retrainXXX, display label, retrain flag)
 MODE_DEFS = [
     ('ensemble',     'retrainfalse', 'ensemble',     'Inner model ensemble'),
@@ -206,8 +212,8 @@ MODE_DEFS = [
 
 def _detect_metric_from_results(results_dir: Path, ds_key: str) -> dict:
     """Detect metric type by peeking at a sample outer_test_metrics.csv in results/."""
-    training_runs = results_dir / ds_key / 'training_runs'
-    if not training_runs.exists():
+    training_runs = _resolve_training_runs_dir(results_dir, ds_key) if _resolve_training_runs_dir else results_dir / ds_key / 'training_runs'
+    if training_runs is None or not training_runs.exists():
         return METRIC_INFO['auc']
     for model_dir in sorted(training_runs.iterdir()):
         if not model_dir.is_dir():
@@ -379,28 +385,49 @@ def _img_b64(path: Path) -> str:
         return 'data:image/png;base64,' + base64.b64encode(path.read_bytes()).decode()
     return ''
 
+def _static_dataset_allowlist(prog_analysis_dir: Path) -> set[str]:
+    """Return datasets with explicit static-cohort evidence, avoiding stale legacy CSVs.
+
+    Static outputs used for the dashboard are legacy notebook artifacts. Some old folders may
+    remain in analysis/fixed_dataset_analysis_outputs even when static-cohort experiments were
+    not run for the current report. We therefore only expose datasets with an explicit marker:
+    STATIC_DATASETS env override, static_dashboard_ready.flag, or fixed-cohort README assets.
+    """
+    env = os.environ.get('STATIC_DATASETS', '').strip()
+    if env:
+        return {x.strip() for x in env.split(',') if x.strip()}
+    allowed: set[str] = set()
+    fixed_dir = prog_analysis_dir.parent / 'fixed_dataset_analysis_outputs'
+    if fixed_dir.exists():
+        for flag in fixed_dir.glob('*/static_dashboard_ready.flag'):
+            allowed.add(flag.parent.name)
+    assets_dir = prog_analysis_dir.parent / 'assets' / 'readme_figures'
+    if assets_dir.exists():
+        for fig in assets_dir.glob('*_fixed_*'):
+            prefix = fig.name.split('_fixed_', 1)[0]
+            for ds_key, meta in DATASET_META.items():
+                if prefix == meta.get('name') or prefix == ds_key:
+                    allowed.add(ds_key)
+    return allowed
+
 def load_static(prog_analysis_dir: Path) -> dict:
     """Load fixed-dataset (static-cohort) outputs from fixed_dataset_analysis_outputs/."""
     fixed_dir = prog_analysis_dir.parent / 'fixed_dataset_analysis_outputs'
     if not fixed_dir.exists():
         return {}
+    static_allowed = _static_dataset_allowlist(prog_analysis_dir)
     result = {}
     for ds_dir in sorted(fixed_dir.iterdir()):
         if not ds_dir.is_dir():
             continue
         ds_key = ds_dir.name
+        if static_allowed and ds_key not in static_allowed:
+            continue
         meta = _infer_dataset_meta(ds_key)
         base = ds_dir / 'retrainfalse'
         if not base.exists():
             continue
         metric = _detect_metric_info(base, fixed=True)
-        figs = base / 'figures'
-        fig_perf = _img_b64(figs / 'fixed_inner.png')
-        fig_pairwise = _img_b64(figs / 'fixed_pairwise.png')
-        # The static-cohort UI currently renders the precomputed figures. Old
-        # or partial CSV-only folders should not make the static section visible.
-        if not fig_perf or not fig_pairwise:
-            continue
         n_rep = None
         ms = _records_with_aliases(_csv(base / 'fixed_dataset_method_summary.csv'), metric['key'])
         if ms:
@@ -414,8 +441,6 @@ def load_static(prog_analysis_dir: Path) -> dict:
             'pairwise_wilcoxon':_records_with_aliases(_csv(base / 'fixed_dataset_pairwise_wilcoxon.csv'), metric['key']),
             'pairwise_sig':     _records_with_aliases(_csv(base / 'fixed_dataset_pairwise_significant.csv'), metric['key']),
             'replicates':       _records_with_aliases(_csv(base / metric['replicate_file']), metric['key']),
-            'fig_perf':         fig_perf,
-            'fig_pairwise':     fig_pairwise,
         }
         if not _has_static_payload(result[ds_key]):
             result.pop(ds_key, None)
@@ -438,13 +463,17 @@ def load_all(
     effective_meta = dict(DATASET_META)
     if analysis_dir.exists():
         for d in sorted(analysis_dir.iterdir()):
-            if d.is_dir() and d.name not in effective_meta:
+            if d.is_dir() and not _has_meta_key_ci(effective_meta, d.name):
                 effective_meta[d.name] = _infer_dataset_meta(d.name)
     # Also discover datasets from results/
     if results_dir and results_dir.exists():
         for d in sorted(results_dir.iterdir()):
-            if d.is_dir() and d.name not in effective_meta:
+            if d.is_dir() and not _has_meta_key_ci(effective_meta, d.name):
                 effective_meta[d.name] = _infer_dataset_meta(d.name)
+        for tr in sorted(results_dir.glob('**/training_runs')):
+            ds_name = tr.parent.name
+            if not _has_meta_key_ci(effective_meta, ds_name):
+                effective_meta[ds_name] = _infer_dataset_meta(ds_name)
 
     # Discover all modality subdirectories present across datasets
     all_modalities: set[str] = set()
@@ -454,8 +483,8 @@ def load_all(
             all_modalities.update(d.name for d in ds_dir.iterdir() if d.is_dir())
         # Also from results/ training_runs structure
         if results_dir:
-            tr = results_dir / ds_key / 'training_runs'
-            if tr.exists():
+            tr = _resolve_training_runs_dir(results_dir, ds_key) if _resolve_training_runs_dir else results_dir / ds_key / 'training_runs'
+            if tr and tr.exists():
                 for model_dir in tr.iterdir():
                     if model_dir.is_dir():
                         tm = model_dir / 'TRAIN_MISSING'
@@ -732,6 +761,7 @@ html{color-scheme:dark;scrollbar-color:var(--scroll-thumb) var(--scroll-track)}
 .app{display:flex;width:calc(100vw / var(--dash-scale));height:calc(100vh / var(--dash-scale));
      background:var(--bg);color:var(--t1);transform:scale(var(--dash-scale));
      transform-origin:top left;will-change:transform}
+.app,.app *{-webkit-user-select:none;-moz-user-select:none;user-select:none}
 
 /* ── SIDEBAR ─────────────────────────────── */
 .sb{width:var(--sw);min-width:var(--sw);background:var(--sb);border-right:1px solid var(--bd);
@@ -859,7 +889,11 @@ html{color-scheme:dark;scrollbar-color:var(--scroll-thumb) var(--scroll-track)}
   -webkit-user-select:none;
   user-select:none;
 }
-#ch-tr .hoverlayer .hovertext,#ch-dg .hoverlayer .hovertext{display:none!important}
+#ch-tr .hoverlayer .hovertext,#ch-dg .hoverlayer .hovertext,#sc-performance-plot .hoverlayer .hovertext,#sc-pairwise-plot .hoverlayer .hovertext{display:none!important}
+.download-menu{position:fixed;z-index:7000;display:none;min-width:142px;padding:6px;border-radius:12px;border:1px solid var(--bd2);background:var(--menu-bg);box-shadow:var(--sh)}
+.download-menu.open{display:block}
+.download-item{padding:8px 10px;border-radius:9px;color:var(--t2);font-size:12.5px;font-weight:750;cursor:pointer;user-select:none}
+.download-item:hover{background:var(--hov);color:var(--t1)}
 .m3tip{position:fixed;z-index:6000;pointer-events:none;display:none;
        background:var(--tip-bg,rgba(19,19,46,.97));border:1.15px solid var(--tip-c,#a855f7);
        border-radius:9px;padding:10px 12px;box-shadow:0 10px 28px rgba(0,0,0,.32);
@@ -881,6 +915,12 @@ html{color-scheme:dark;scrollbar-color:var(--scroll-thumb) var(--scroll-track)}
 .ct::-webkit-scrollbar-thumb{background:transparent!important}
 .ct::-webkit-scrollbar-thumb:hover{background:transparent!important}
 .sec{display:none}.sec.on{display:block}
+.sec.static-fill.on{display:flex;flex-direction:column;height:100%;min-height:0}
+.static-fill .sr{flex:0 0 auto}
+.static-fill .g1{flex:1;min-height:0;margin-bottom:0}
+.static-plot-card{height:100%;display:flex;flex-direction:column;min-height:0}
+.static-plot-card .cp{flex:1;min-height:0;padding:0 12px 10px}
+.static-plot{width:100%;height:100%}
 /* ── STAT CARDS ───────────────────────────── */
 .sr{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px}
 .sc{border-radius:var(--r);padding:14px 16px;position:relative;overflow:hidden;box-shadow:var(--sh2)}
@@ -905,6 +945,15 @@ html{color-scheme:dark;scrollbar-color:var(--scroll-thumb) var(--scroll-track)}
 .card:hover{border-color:var(--bd2)}
 .ch{height:var(--panel-head-h);padding:0 14px;border-bottom:1px solid var(--bd);
     display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ch .ct2{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ch-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:max-content}
+.help-sep{width:1px;height:24px;background:var(--bd2);opacity:.8;margin:0 5px;flex:0 0 auto;align-self:center}
+.help-btn{width:var(--panel-pill-h);height:var(--panel-pill-h);border-radius:50%;border:1px solid var(--bd);
+  background:var(--card);color:var(--t3);display:inline-flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:850;line-height:1;cursor:pointer;user-select:none;transition:background var(--ease),border-color var(--ease),color var(--ease),transform var(--ease);
+  box-shadow:0 0 0 1px rgba(255,255,255,.02) inset}
+.help-btn:hover{background:var(--hov);border-color:var(--bd2);color:var(--t1);transform:translateY(-1px)}
+.help-btn:active{transform:translateY(0)}
 .ct2{font-size:14.5px;font-weight:700;color:var(--t1);letter-spacing:.15px}
 .badge{font-size:12px;font-weight:600;padding:2px 8px;border-radius:20px;
        background:rgba(168,85,247,.12);color:var(--a3);border:1px solid rgba(168,85,247,.22);
@@ -925,6 +974,16 @@ html{color-scheme:dark;scrollbar-color:var(--scroll-thumb) var(--scroll-track)}
   background:linear-gradient(90deg,transparent,rgba(168,85,247,.55),transparent)}
 .traj-resize-handle:hover,.traj-card.resizing .traj-resize-handle{opacity:1;background:linear-gradient(180deg,transparent,rgba(168,85,247,.14))}
 body.traj-resizing{cursor:ns-resize!important;user-select:none!important}
+
+.metric-resizable-card{position:relative}
+.metric-resizable-card .cp{padding-bottom:18px}
+.metric-resize-handle{position:absolute;left:0;right:0;bottom:0;height:13px;cursor:ns-resize;
+  display:flex;align-items:center;justify-content:center;opacity:.52;transition:opacity var(--ease),background var(--ease);
+  background:linear-gradient(180deg,transparent,rgba(168,85,247,.08));touch-action:none;user-select:none}
+.metric-resize-handle::before{content:'';width:54px;height:3px;border-radius:999px;
+  background:linear-gradient(90deg,transparent,rgba(168,85,247,.55),transparent)}
+.metric-resize-handle:hover,.metric-resizable-card.resizing .metric-resize-handle{opacity:1;background:linear-gradient(180deg,transparent,rgba(168,85,247,.14))}
+body.metric-resizing{cursor:ns-resize!important;user-select:none!important}
 
 .traj-widget-board{position:relative;display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:10px;transition:grid-template-columns .24s cubic-bezier(.22,1,.36,1),gap .2s ease}
 .traj-widget-board.traj-side{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
@@ -947,6 +1006,23 @@ body.traj-resizing{cursor:ns-resize!important;user-select:none!important}
 .traj-widget-board.traj-side .pvbtn{padding:0 9px;font-size:11.5px;height:var(--panel-pill-h)}
 .traj-widget-board.traj-side .ci-sep{margin:0 3px}
 body.widget-dragging{cursor:grabbing!important;user-select:none!important}
+
+.mw-board{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-bottom:10px;transition:grid-template-columns .24s cubic-bezier(.22,1,.36,1),gap .2s ease}
+.mw-board.mw-stack{grid-template-columns:1fr}
+.mw-slot{min-width:0;transition:transform .22s cubic-bezier(.22,1,.36,1),opacity .18s ease}
+.mw-card{position:relative;min-width:0;transition:transform .22s cubic-bezier(.22,1,.36,1),box-shadow .2s ease,border-color .2s ease,opacity .18s ease}
+.mw-card .mw-drag-handle{cursor:grab;position:relative;background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,0))}
+.mw-card .mw-drag-handle:active{cursor:grabbing}
+.mw-card.dragging{z-index:50;border-color:rgba(168,85,247,.55);box-shadow:0 18px 50px rgba(0,0,0,.38),0 0 0 1px rgba(168,85,247,.16) inset}
+.mw-card.dragging .cp{pointer-events:none}
+.mw-board.widget-previewing .mw-slot:not(.drag-source) .mw-card{opacity:.82}
+.mw-drop-preview{position:absolute;z-index:8;pointer-events:none;border:1.5px solid rgba(224,228,255,.46);
+  background:linear-gradient(180deg,rgba(224,228,255,.105),rgba(168,85,247,.07));border-radius:var(--r);
+  box-shadow:0 18px 50px rgba(0,0,0,.2),0 0 0 1px rgba(168,85,247,.12) inset;opacity:0;
+  transform:scale(.985);transition:left .16s cubic-bezier(.22,1,.36,1),top .16s cubic-bezier(.22,1,.36,1),
+  width .16s cubic-bezier(.22,1,.36,1),height .16s cubic-bezier(.22,1,.36,1),opacity .12s ease,transform .16s cubic-bezier(.22,1,.36,1)}
+.mw-drop-preview.on{opacity:1;transform:scale(1)}
+[data-theme=light] .mw-drop-preview{border-color:rgba(109,40,217,.34);background:linear-gradient(180deg,rgba(109,40,217,.08),rgba(0,153,204,.045))}
 
 /* ── TABLE ────────────────────────────────── */
 .tw{overflow-x:auto;padding:0 12px 12px}
@@ -980,6 +1056,18 @@ body.widget-dragging{cursor:grabbing!important;user-select:none!important}
 .hp-item:hover{background:var(--hov);color:var(--t1)}
 .hp-item.on{background:linear-gradient(90deg,var(--a3),var(--a1));color:#fff;font-weight:750}
 .hp-item.disabled{opacity:.55;cursor:not-allowed}
+.bars-sort-filter{position:relative;transform:translateZ(0)}
+.bars-sort-filter .dd-btn{min-width:110px;transition:none;justify-content:center}
+.bars-sort-filter .dd-val{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bars-sort-filter .dd-caret{transform:translateZ(0)}
+.bars-sort-menu{position:fixed;min-width:130px;z-index:5000;
+  background:var(--menu-bg);border:1px solid var(--bd2);border-radius:var(--rsm);
+  box-shadow:var(--sh);overflow:hidden;display:none}
+.bars-sort-menu.open{display:block}
+.bars-sort-item{padding:8px 16px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--t2);
+  transition:background var(--ease),color var(--ease);white-space:nowrap;user-select:none;text-align:left}
+.bars-sort-item:hover{background:var(--hov);color:var(--t1)}
+.bars-sort-item.on{background:linear-gradient(90deg,var(--a3),var(--a1));color:#fff;font-weight:750}
 .hpw{position:relative;max-height:360px;overflow-y:auto;overflow-x:hidden}
 .hpw::after{content:'';display:block;height:18px;flex:0 0 auto}
 .hp-table-shell{position:relative;min-width:0}
@@ -1084,6 +1172,29 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
                 color:var(--t3);text-align:center;padding:40px}
 .noresults-title{font-size:20px;font-weight:700;color:var(--t2)}
 .noresults-sub{font-size:14.5px;max-width:360px;line-height:1.6}
+
+/* ── HELP MODAL ──────────────────────────── */
+.help-modal{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;
+  background:rgba(3,3,18,.62);backdrop-filter:blur(8px);padding:28px}
+.help-modal.open{display:flex}
+.help-box{width:min(760px,calc(100vw - 44px));max-height:min(78vh,760px);overflow:auto;
+  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012)),var(--card);
+  border:1px solid var(--bd2);border-radius:20px;box-shadow:0 30px 90px rgba(0,0,0,.46);
+  color:var(--t2)}
+.help-head{height:56px;padding:0 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.help-title{font-size:17px;font-weight:850;color:var(--t1);letter-spacing:-.15px}
+.help-close{width:30px;height:30px;border-radius:50%;border:1px solid var(--bd2);background:var(--hov);color:var(--t2);
+  display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;line-height:1;padding:0;cursor:pointer}
+.help-close:hover{color:var(--t1);border-color:rgba(168,85,247,.55)}
+.help-body{padding:16px 18px 18px;font-size:13.5px;line-height:1.52}
+.help-body p{margin:0 0 10px}
+.help-body ul{margin:8px 0 12px 18px;padding:0}
+.help-body li{margin:5px 0}
+.help-body code{font-family:'JetBrains Mono','SFMono-Regular',Menlo,monospace;font-size:12.5px;color:var(--a1)}
+.help-eq{margin:10px 0;padding:10px 12px;border-radius:12px;background:rgba(0,212,255,.07);
+  border:1px solid rgba(0,212,255,.14);font-family:'JetBrains Mono','SFMono-Regular',Menlo,monospace;
+  color:var(--t1);font-size:12.5px;overflow-x:auto}
+.help-sub{font-size:12px;font-weight:850;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 6px}
 /* ── PLOTLY HOVER TOOLTIP ──────────────── */
 </style>
 </head>
@@ -1112,11 +1223,6 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21H3M21 3H3"/><path d="M7 3v18M17 3v18M3 7h18M3 17h18"/></svg>
       <span>Condition Analysis</span>
     </div>
-    <div class="ni" data-s="summary" data-study="progressive" onclick="nav('summary','progressive')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      <span>Cross-Cohort Summary</span>
-    </div>
-
     <div id="nav-static-lbl" class="sec-lbl" style="margin-top:12px">Static-Cohort</div>
     <div class="ni" data-s="sc-perf" data-study="static" onclick="nav('sc-perf','static')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -1210,7 +1316,7 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
         </div>
       </div>
       <div class="g1"><div class="card">
-        <div class="ch"><span class="ct2">Performance Heatmaps across the m<sub>train</sub> × m<sub>test</sub> Missingness Grid &mdash; Mean <span id="hm-metric-lbl">AUC</span> &plusmn; 95% C.I.</span></div>
+        <div class="ch"><span class="ct2">Performance Heatmaps across the m<sub>train</sub> × m<sub>test</sub> Missingness Grid &mdash; Mean <span id="hm-metric-lbl">AUC</span> &plusmn; 95% C.I.</span><div class="ch-actions"><button class="help-btn" onclick="openHelp(event,'heatmaps')" onpointerdown="event.stopPropagation()" aria-label="Help">?</button></div></div>
         <div class="cp" style="padding-top:0"><div id="ch-hm"></div></div>
       </div></div>
       <div class="traj-widget-board traj-stack" id="traj-widgets">
@@ -1223,6 +1329,8 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
                 <span class="pvbtn on" data-chart="traj" data-p="bft"   onclick="togglePanel('traj','bft')">Best fixed-train</span>
                 <span class="ci-sep" aria-hidden="true"></span>
                 <span class="pvbtn ci-toggle on" data-chart="traj" data-ci="1" onclick="toggleCI('traj')">95% C.I.</span>
+                <span class="help-sep" aria-hidden="true"></span>
+                <button class="help-btn" onclick="openHelp(event,'performance-trajectories')" onpointerdown="event.stopPropagation()" aria-label="Help">?</button>
               </div></div>
             <div class="cp"><div id="ch-tr"></div></div>
             <div class="traj-resize-handle" data-plot="ch-tr" title="Click or drag to resize panel"></div>
@@ -1237,6 +1345,8 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
                 <span class="pvbtn on" data-chart="deg" data-p="bft"   onclick="togglePanel('deg','bft')">Best fixed-train</span>
                 <span class="ci-sep" aria-hidden="true"></span>
                 <span class="pvbtn ci-toggle on" data-chart="deg" data-ci="1" onclick="toggleCI('deg')">95% C.I.</span>
+                <span class="help-sep" aria-hidden="true"></span>
+                <button class="help-btn" onclick="openHelp(event,'degradation-trajectories')" onpointerdown="event.stopPropagation()" aria-label="Help">?</button>
               </div></div>
             <div class="cp"><div id="ch-dg"></div></div>
             <div class="traj-resize-handle" data-plot="ch-dg" title="Click or drag to resize panel"></div>
@@ -1249,6 +1359,8 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
           <div class="hp-header-filters">
             <div class="hp-method-filter" id="hp-method-filter"></div>
             <div class="hp-tp-filter" id="hp-trainprop-filter"></div>
+            <span class="help-sep" aria-hidden="true"></span>
+            <button class="help-btn" onclick="openHelp(event,'hp-summary')" onpointerdown="event.stopPropagation()" aria-label="Help">?</button>
           </div>
         </div>
         <div class="tw hpw" id="hp-sel"></div>
@@ -1259,16 +1371,32 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
     <!-- METRICS -->
     <div class="sec" id="s-metrics">
       <div class="metric-snap" id="metric-snap"></div>
-      <div class="g2">
-        <div class="card"><div class="ch"><span class="ct2">Scenario AUPMC Comparison</span><span class="badge">higher is better</span></div><div class="cp"><div id="ch-br"></div></div></div>
-        <div class="card"><div class="ch"><span class="ct2">Performance vs Degradation</span><span class="badge">upper-left is not ideal</span></div><div class="cp"><div id="ch-rd"></div></div></div>
+      <div class="mw-board mw-side" id="metric-widgets">
+        <div class="mw-slot" data-widget="bars">
+          <div class="card metric-resizable-card mw-card" data-widget="bars" data-plot="ch-br">
+            <div class="ch mw-drag-handle"><span class="ct2">Performance across scenarios comparison</span><div class="ch-actions"><div class="bars-sort-filter" id="bars-sort-filter"></div><span class="help-sep" aria-hidden="true"></span><button class="help-btn" onclick="openHelp(event,'scenario-performance')" onpointerdown="event.stopPropagation()" aria-label="Help">?</button></div></div>
+            <div class="cp"><div id="ch-br"></div></div>
+            <div class="metric-resize-handle" data-plot="ch-br" title="Click or drag to resize panel"></div>
+          </div>
+        </div>
+        <div class="mw-slot" data-widget="scatter">
+          <div class="card metric-resizable-card mw-card" data-widget="scatter" data-plot="ch-rd">
+            <div class="ch mw-drag-handle"><span class="ct2">Performance vs Degradation</span>
+              <div class="pv-btns">
+                <span class="pvbtn" data-scatter-p="train" onclick="selectScatterPanel('train')">Train-time</span>
+                <span class="pvbtn" data-scatter-p="test"  onclick="selectScatterPanel('test')">Test-time</span>
+                <span class="pvbtn on" data-scatter-p="bft" onclick="selectScatterPanel('bft')">Best fixed-train</span>
+                <span class="help-sep" aria-hidden="true"></span>
+                <button class="help-btn" onclick="openHelp(event,'performance-degradation')" onpointerdown="event.stopPropagation()" aria-label="Help">?</button>
+              </div>
+            </div>
+            <div class="cp"><div id="ch-rd"></div></div>
+            <div class="metric-resize-handle" data-plot="ch-rd" title="Click or drag to resize panel"></div>
+          </div>
+        </div>
       </div>
       <div class="g1"><div class="card">
-        <div class="ch"><span class="ct2">Metric Fingerprint Heatmap</span><span class="badge">method × robustness metrics</span></div>
-        <div class="cp"><div id="ch-mh"></div></div>
-      </div></div>
-      <div class="g1"><div class="card">
-        <div class="ch"><span class="ct2">Method-Level Metrics Table</span><span class="badge">click header to sort · click row to highlight</span></div>
+        <div class="ch"><span class="ct2">Method-Level Metrics Table</span><div class="ch-actions"><span class="badge">click header to sort · click row to highlight</span><span class="help-sep" aria-hidden="true"></span><button class="help-btn" onclick="openHelp(event,'metrics-table')" onpointerdown="event.stopPropagation()" aria-label="Help">?</button></div></div>
         <div class="tw" id="tbl"></div>
       </div></div>
     </div>
@@ -1277,11 +1405,11 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
     <div class="sec" id="s-conds">
       <div class="g2">
       <div class="card">
-        <div class="ch"><span class="ct2">Top Method by Condition</span><span class="badge">highest mean score</span></div>
+        <div class="ch"><span class="ct2">Top Method by Condition</span><div class="ch-actions"><span class="badge">highest mean score</span><span class="help-sep" aria-hidden="true"></span><button class="help-btn" onclick="openHelp(event,'top-method-condition')" onpointerdown="event.stopPropagation()" aria-label="Help">?</button></div></div>
         <div class="cgw" id="cgc"></div>
       </div>
       <div class="card">
-        <div class="ch"><span class="ct2">Leading Group by Condition</span><span class="badge">not significantly beaten</span></div>
+        <div class="ch"><span class="ct2">Leading Group by Condition</span><div class="ch-actions"><span class="badge">not significantly beaten</span><span class="help-sep" aria-hidden="true"></span><button class="help-btn" onclick="openHelp(event,'leading-group-condition')" onpointerdown="event.stopPropagation()" aria-label="Help">?</button></div></div>
         <div class="cgw" id="cgg"></div>
       </div>
       </div>
@@ -1289,34 +1417,22 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
       <div class="card">
         <div class="ch">
           <span class="ct2">Selected Condition Detail</span>
-          <span class="badge" id="cdlbl">0% train / 0% test</span>
+          <div class="ch-actions"><span class="badge" id="cdlbl">0% train / 0% test</span><span class="help-sep" aria-hidden="true"></span><button class="help-btn" onclick="openHelp(event,'condition-detail')" onpointerdown="event.stopPropagation()" aria-label="Help">?</button></div>
         </div>
         <div class="tw" id="cond-detail"></div>
       </div>
       <div class="card">
         <div class="ch">
           <span class="ct2">Pairwise Wilcoxon — Significant wins (FDR p&lt;0.05)</span>
-          <span class="badge" id="clbl">0% train / 0% test</span>
+          <div class="ch-actions"><span class="badge" id="clbl">0% train / 0% test</span><span class="help-sep" aria-hidden="true"></span><button class="help-btn" onclick="openHelp(event,'pairwise-wilcoxon')" onpointerdown="event.stopPropagation()" aria-label="Help">?</button></div>
         </div>
         <div class="cp"><div id="ch-wl"></div></div>
       </div>
       </div>
     </div>
 
-    <!-- SUMMARY -->
-    <div class="sec" id="s-summary">
-      <div class="g1"><div class="card">
-        <div class="ch"><span class="ct2">Cross-Cohort AUPMC</span><span class="badge badge-c">BFT AUPMC per cohort</span></div>
-        <div class="cp"><div id="ch-xc"></div></div>
-      </div></div>
-      <div class="g2">
-        <div class="card"><div class="ch"><span class="ct2">Method Rankings Across Cohorts</span><span class="badge">by BFT AUPMC</span></div><div class="tw" id="tbl-rk"></div></div>
-        <div class="card"><div class="ch"><span class="ct2">Top-Group Frequency</span><span class="badge">fraction of conditions</span></div><div class="cp"><div id="ch-tg"></div></div></div>
-      </div>
-    </div>
-
     <!-- STATIC COHORT — PERFORMANCE -->
-    <div class="sec" id="s-sc-perf">
+    <div class="sec static-fill" id="s-sc-perf">
       <div class="sr sc-static-cards">
         <div class="sc sc1">
           <div class="sc-l">Dataset</div>
@@ -1331,20 +1447,20 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
         <div class="sc sc5">
           <div class="sc-l">Replicates per model</div>
           <div class="sc-v" id="sc-nrep">–</div>
-          <div class="sc-s">retained inner models</div>
+          <div class="sc-s" id="sc-nrep-lbl">–</div>
         </div>
       </div>
-      <div class="g1"><div class="card">
-        <div class="ch"><span class="ct2">Method Performance — <span id="sc-metric-dist-lbl">AUC</span> Distribution</span><span class="badge">Static-cohort · Retained inner models</span></div>
-        <div class="cp sc-fig-wrap"><img id="sc-fig-perf" class="sc-fig" src="" alt="Performance figure"></div>
+      <div class="g1"><div class="card static-plot-card">
+        <div class="ch"><span class="ct2">Method Performance — <span id="sc-metric-dist-lbl">AUC</span> Distribution</span><div class="ch-actions"><button class="help-btn" onclick="openHelp(event,'static-performance')" onpointerdown="event.stopPropagation()" aria-label="Help">?</button></div></div>
+        <div class="cp"><div id="sc-performance-plot" class="static-plot"></div></div>
       </div></div>
     </div>
 
     <!-- STATIC COHORT — PAIRWISE TESTS -->
-    <div class="sec" id="s-sc-pairwise">
-      <div class="g1"><div class="card">
-        <div class="ch"><span class="ct2">Pairwise Wilcoxon Tests — Significant Comparisons</span><span class="badge">FDR p&lt;0.05</span></div>
-        <div class="cp sc-fig-wrap"><img id="sc-fig-pairwise" class="sc-fig" src="" alt="Pairwise tests figure"></div>
+    <div class="sec static-fill" id="s-sc-pairwise">
+      <div class="g1"><div class="card static-plot-card">
+        <div class="ch"><span class="ct2">Pairwise Wilcoxon Tests — Significant Comparisons</span><div class="ch-actions"><button class="help-btn" onclick="openHelp(event,'static-pairwise')" onpointerdown="event.stopPropagation()" aria-label="Help">?</button></div></div>
+        <div class="cp"><div id="sc-pairwise-plot" class="static-plot"></div></div>
       </div></div>
     </div>
 
@@ -1360,6 +1476,20 @@ body.hp-resizing{cursor:ns-resize!important;user-select:none!important}
   </div>
 </main>
 </div>
+</div>
+
+<div class="download-menu" id="download-menu">
+  <div class="download-item" onclick="downloadPlotPngTheme('dark')">Dark mode PNG</div>
+  <div class="download-item" onclick="downloadPlotPngTheme('light')">Light mode PNG</div>
+</div>
+<div class="help-modal" id="help-modal" onclick="closeHelp(event)">
+  <div class="help-box" role="dialog" aria-modal="true" aria-labelledby="help-title" onclick="event.stopPropagation()">
+    <div class="help-head">
+      <div class="help-title" id="help-title">Widget help</div>
+      <button class="help-close" onclick="closeHelp(event)" aria-label="Close help">×</button>
+    </div>
+    <div class="help-body" id="help-body"></div>
+  </div>
 </div>
 
 <script>
@@ -1378,6 +1508,181 @@ const MODALITY_LABELS    = {global:'Global',path:'Pathology',radio:'Radiology',
 const MC  = $$MC$$;
 const MD  = $$MD$$;
 const SM  = $$SM$$;
+
+// ── WIDGET HELP CONTENT ───────────────────────────────────────────────────
+const HELP_CONTENT = {
+  heatmaps: {
+    title: 'Performance heatmaps',
+    body: `
+      <p>This widget shows the mean predictive performance for each method across the progressive missingness grid.</p>
+      <ul>
+        <li><b>Rows</b>: train-time missingness proportion, <code>m_train</code>.</li>
+        <li><b>Columns</b>: test-time missingness proportion, <code>m_test</code>.</li>
+        <li><b>Cell value</b>: mean AUC or C-index, depending on the modelling task, with 95% confidence interval.</li>
+        <li><b>Colour</b>: darker cells indicate lower expected performance.</li>
+      </ul>
+      <div class="help-sub">Interpretation</div>
+      <p>The heatmap is the most direct view of method behaviour under each specific train-test missingness condition. It should be read locally, because a method can be strong in one missingness region and weak in another.</p>`
+  },
+  'performance-trajectories': {
+    title: 'Method-level performance trajectories',
+    body: `
+      <p>This widget compresses the missingness grid into predefined trajectories. The y-axis is the predictive metric: AUC for binary classification or C-index for survival tasks.</p>
+      <ul>
+        <li><b>Train-time trajectory</b>: test data remain complete and train missingness increases.</li>
+        <li><b>Test-time trajectory</b>: training data remain complete and test missingness increases.</li>
+        <li><b>Best fixed-train trajectory</b>: selects the train missingness level that maximises performance across the test-time curve, then evaluates that fixed training setup as test missingness increases.</li>
+      </ul>
+      <div class="help-eq">AUPMC = (1 / (m_max - m_min)) ∫ P(m) dm</div>
+      <p><b>AUPMC</b> is the area under the performance-missingness curve. Higher AUPMC means that the method preserves more absolute performance as missingness increases.</p>
+      <p>The 95% C.I. toggle shows uncertainty around the trajectory points.</p>`
+  },
+  'degradation-trajectories': {
+    title: 'Method-level degradation trajectories',
+    body: `
+      <p>This widget shows relative degradation instead of absolute performance. Each point compares a method against its own trajectory-specific baseline.</p>
+      <div class="help-eq">DR_i(m) = Baseline_i / Performance_i(m)</div>
+      <ul>
+        <li><b>DR = 1</b>: no degradation relative to the baseline.</li>
+        <li><b>DR &gt; 1</b>: performance is worse than baseline.</li>
+        <li><b>DR &lt; 1</b>: performance is better than baseline.</li>
+      </ul>
+      <div class="help-sub">Baselines</div>
+      <ul>
+        <li><b>Train-time</b>: baseline is performance at <code>m_train=0, m_test=0</code>.</li>
+        <li><b>Test-time</b>: baseline is performance at <code>m_train=0, m_test=0</code>.</li>
+        <li><b>Best fixed-train</b>: baseline is performance at <code>m_train=m*_train, m_test=0</code>.</li>
+      </ul>
+      <div class="help-eq">MDR = mean_m DR_i(m)</div>
+      <p><b>MDR</b> is the mean degradation ratio across the selected trajectory. Lower MDR is better; values closer to 1 indicate stronger robustness.</p>`
+  },
+  'hp-summary': {
+    title: 'Hyperparameter selection summary',
+    body: `
+      <p>This table summarises which hyperparameter combinations were selected across outer folds and seeds.</p>
+      <ul>
+        <li>Each row corresponds to one selected hyperparameter combination for the chosen method.</li>
+        <li><b>Selected</b> counts how many outer evaluations selected that combination.</li>
+        <li>The percentage is computed over the number of outer folds × seeds available for that method and train-missingness setting.</li>
+      </ul>
+      <p>The widget helps detect whether model selection is stable or whether many configurations are selected with similar frequency.</p>`
+  },
+  'scenario-performance': {
+    title: 'Performance across scenarios comparison',
+    body: `
+      <p>This bar chart compares complete-data performance and trajectory-level AUPMC values for the selected methods.</p>
+      <ul>
+        <li><b>Baseline</b>: complete-data AUC/C-index.</li>
+        <li><b>Train AUPMC</b>: absolute performance preserved when train-time missingness increases.</li>
+        <li><b>Test AUPMC</b>: absolute performance preserved when test-time missingness increases.</li>
+        <li><b>BFT AUPMC</b>: performance under the best fixed train-missingness trajectory.</li>
+      </ul>
+      <p>This widget is useful to see whether the best complete-data model is also robust under missing modalities.</p>`
+  },
+  'performance-degradation': {
+    title: 'Performance vs degradation',
+    body: `
+      <p>This scatter plot compares absolute performance and relative robustness for the selected scenario.</p>
+      <ul>
+        <li><b>x-axis</b>: AUPMC for the selected trajectory. Further right is better.</li>
+        <li><b>y-axis</b>: MDR for the selected trajectory. Lower is better.</li>
+      </ul>
+      <p>The ideal region is therefore <b>down-right</b>: high preserved performance and low relative degradation.</p>
+      <div class="help-eq">AUPMC high + MDR close to 1 ⇒ strong and stable method</div>`
+  },
+  'metrics-table': {
+    title: 'Method-level metrics table',
+    body: `
+      <p>This table reports the method-level summary metrics used in the dashboard.</p>
+      <ul>
+        <li><b>Baseline AUC/C-index</b>: performance with complete train and complete test data.</li>
+        <li><b>AUPMC</b>: normalised area under each performance-missingness trajectory.</li>
+        <li><b>MDR</b>: mean degradation ratio across each degradation trajectory.</li>
+      </ul>
+      <p>You can sort by any column. For performance columns, higher is better. For MDR columns, lower is better.</p>`
+  },
+  'top-method-condition': {
+    title: 'Top method by condition',
+    body: `
+      <p>This condition-level heatmap shows which method has the highest mean performance in each train-test missingness cell.</p>
+      <p>It is a local winner map. It does not imply that the winner is statistically better than all alternatives; use the leading-group and Wilcoxon widgets for statistical support.</p>`
+  },
+  'leading-group-condition': {
+    title: 'Leading group by condition',
+    body: `
+      <p>This widget shows the methods that belong to the top equivalent group for each missingness condition.</p>
+      <p>A method is kept in the leading group if it is not significantly beaten by the best method in that cell after pairwise testing and FDR correction.</p>
+      <div class="help-eq">Wilcoxon signed-rank tests + FDR correction within each condition</div>
+      <p>This is useful to identify flexible methods that remain competitive across many scenarios, not only single-cell winners.</p>`
+  },
+  'condition-detail': {
+    title: 'Selected condition detail',
+    body: `
+      <p>This table expands the selected train-test missingness cell.</p>
+      <ul>
+        <li>Methods are ranked by mean AUC/C-index in that specific condition.</li>
+        <li>The table includes the mean metric, 95% C.I., leading-group status, and significant wins/losses.</li>
+      </ul>
+      <p>Use this view when you need to justify a method choice for one concrete deployment scenario.</p>`
+  },
+  'pairwise-wilcoxon': {
+    title: 'Pairwise Wilcoxon significant wins',
+    body: `
+      <p>This widget summarises statistically significant pairwise comparisons in the selected condition.</p>
+      <ul>
+        <li>Tests are paired across matched replicates or folds.</li>
+        <li>p-values are corrected using FDR within the condition.</li>
+        <li>Only significant wins at FDR p&lt;0.05 are shown.</li>
+      </ul>
+      <p>This avoids overinterpreting small mean differences that are not statistically supported.</p>`
+  },
+  'cross-cohort-aupmc': {
+    title: 'Cross-cohort AUPMC',
+    body: `
+      <p>This summary compares methods across available cohorts using best fixed-train AUPMC.</p>
+      <p>It is designed to show whether a method generalises across datasets or whether its performance is cohort-specific.</p>`
+  },
+  'cross-cohort-rankings': {
+    title: 'Method rankings across cohorts',
+    body: `
+      <p>This table ranks methods by cross-cohort performance summaries.</p>
+      <p>Rankings should be interpreted together with the condition-level views, because a single global rank can hide scenario-specific behaviour.</p>`
+  },
+  'top-group-frequency': {
+    title: 'Top-group frequency',
+    body: `
+      <p>This widget counts how often each method appears in the statistically supported leading group across conditions.</p>
+      <p>High frequency indicates flexibility: the method remains competitive across many missingness scenarios, even if it is not always the single highest-mean method.</p>`
+  },
+  'static-performance': {
+    title: 'Static-cohort performance distribution',
+    body: `
+      <p>This static-cohort widget reports method performance when the input dataset is used as-is, without progressive synthetic missingness trajectories.</p>
+      <p>The plotted distribution is based on the available retained inner models, outer retrained models, or ensemble outputs depending on the generated results.</p>`
+  },
+  'static-pairwise': {
+    title: 'Static-cohort pairwise tests',
+    body: `
+      <p>This widget shows significant pairwise method comparisons for static-cohort experiments.</p>
+      <p>Pairwise Wilcoxon tests are corrected with FDR. Significant edges indicate method differences supported by the available matched evaluation replicates.</p>`
+  }
+};
+
+function openHelp(ev,key){
+  if(ev){ev.preventDefault();ev.stopPropagation();}
+  const item=HELP_CONTENT[key]||{title:'Widget help',body:'<p>No help content is available for this widget.</p>'};
+  const modal=document.getElementById('help-modal');
+  const title=document.getElementById('help-title');
+  const body=document.getElementById('help-body');
+  if(title)title.textContent=item.title;
+  if(body)body.innerHTML=item.body;
+  modal?.classList.add('open');
+}
+function closeHelp(ev){
+  if(ev){ev.preventDefault();ev.stopPropagation();}
+  document.getElementById('help-modal')?.classList.remove('open');
+}
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape')closeHelp(ev);});
 
 // ── RESPONSIVE DASHBOARD SCALE ─────────────────────────────────────────────
 // The dashboard is designed on large monitors. On MacBook Pro Retina screens,
@@ -1440,13 +1745,16 @@ const S = {ds:null, sec:'global', theme:'dark', mode: AVAIL_MODES[0]?.key||'ense
            trajVis:{train:true,test:true,bft:true},
            degVis:{train:true,test:true,bft:true},
            ciVis:{traj:true,deg:true},
-           hmTextSize:11.5,
+           hmTextSize:15.5,
            trajHeights:{},
            trajWidgetLayout:'stack',
            trajWidgetOrder:['perf','deg'],
+           metricWidgetLayout:'side',
+           metricWidgetOrder:['bars','scatter'],
            trajCompactPanel:'train',
-           hpMethod:null,hpTrainProp:null,
+           hpMethod:null,hpTrainProp:null,barsSortMetric:'baseline_auc',scatterPanel:'bft',
            hpHeight:360,
+           metricHeights:{},
            methodVis:{}};
 
 // ── HELPERS ────────────────────────────────────────────────────────────────
@@ -1469,9 +1777,9 @@ const activeMetricRows = () => {
   const am = activeMethodSet();
   return (D().metrics||[]).filter(r=>am.has(r.model_name));
 };
-const anyDropdownOpen = () => !!document.querySelector('.dd-menu.open,.mf-menu.open,.hp-menu.open,.hp-tp-menu.open');
+const anyDropdownOpen = () => !!document.querySelector('.dd-menu.open,.mf-menu.open,.hp-menu.open,.hp-tp-menu.open,.bars-sort-menu.open');
 function clearPlotHovers(){
-  ['ch-hm','ch-tr','ch-dg','ch-bars','ch-radar','ch-pw','ch-top','sc-heat','sc-bars'].forEach(id=>{
+  ['ch-hm','ch-tr','ch-dg','ch-bars','ch-radar','ch-pw','ch-top','sc-performance-plot','sc-pairwise-plot'].forEach(id=>{
     if(window.Plotly) Plotly.Fx.unhover(id);
   });
 }
@@ -1529,6 +1837,38 @@ function attachTrajectoryTooltip(gd,kind){
   gd.on('plotly_unhover',gd._m3TipUnhover);
 }
 
+function attachM3PlotTooltip(gd,formatter){
+  if(!gd||!gd.on)return;
+  if(gd._m3GenericHover&&gd.removeListener)gd.removeListener('plotly_hover',gd._m3GenericHover);
+  if(gd._m3GenericUnhover&&gd.removeListener)gd.removeListener('plotly_unhover',gd._m3GenericUnhover);
+  gd._m3GenericHover=function(ev){
+    if(anyDropdownOpen()){hideTrajectoryTip();return false;}
+    const pt=(ev.points||[])[0];
+    if(!pt){hideTrajectoryTip();return;}
+    const out=formatter(pt,ev);
+    if(!out){hideTrajectoryTip();return;}
+    const tip=ensureTrajectoryTip();
+    const color=out.color||'#a855f7';
+    tip.style.setProperty('--tip-c',color);
+    tip.innerHTML=out.html;
+    tip.style.display='block';
+    const w=tip.offsetWidth||0,h=tip.offsetHeight||0;
+    const rect=gd.getBoundingClientRect();
+    const ax=pt.xaxis, ay=pt.yaxis;
+    const sc=dashboardScale();
+    const px=rect.left+(ax&&ax.l2p?(ax._offset+ax.l2p(pt.x))*sc:((ev.event||{}).clientX||rect.left)-rect.left);
+    const py=rect.top +(ay&&ay.l2p?(ay._offset+ay.l2p(pt.y))*sc:((ev.event||{}).clientY||rect.top)-rect.top);
+    let flip=false,x=px+14,y=py-h/2;
+    if(x+w>window.innerWidth-8){x=px-w-14;flip=true;}
+    y=Math.max(8,Math.min(window.innerHeight-h-8,y));
+    tip.classList.toggle('flip',flip);
+    tip.style.left=`${x}px`;tip.style.top=`${y}px`;
+  };
+  gd._m3GenericUnhover=hideTrajectoryTip;
+  gd.on('plotly_hover',gd._m3GenericHover);
+  gd.on('plotly_unhover',gd._m3GenericUnhover);
+}
+
 function isVisibleMethodTrace(tr){
   return tr && tr.hoverinfo!=='skip' && tr.name!=='No degradation' && tr.visible!==false && tr.visible!=='legendonly';
 }
@@ -1584,17 +1924,79 @@ function axisDomains(n,g=.045){
   return Array.from({length:n},(_,i)=>[i*(w+g),i*(w+g)+w]);
 }
 function changeHeatmapTextSize(delta){
-  S.hmTextSize=clamp(S.hmTextSize+delta,8,18);
-  rHeatmaps();
+  S.hmTextSize=clamp(S.hmTextSize+delta,8,35.5);
+  render();
 }
 function resetHeatmapTextSize(){
-  S.hmTextSize=11.5;
-  rHeatmaps();
+  S.hmTextSize=15.5;
+  render();
 }
+function hmFont(base){
+  return clamp(base + (S.hmTextSize - 11.5), 7, 38);
+}
+function safeFilePart(v){
+  return String(v||'plot').replace(/[^a-zA-Z0-9._-]+/g,'_').replace(/^_+|_+$/g,'')||'plot';
+}
+let DOWNLOAD_TARGET=null;
+function closeDownloadMenu(){
+  const menu=document.getElementById('download-menu');
+  if(menu)menu.classList.remove('open');
+}
+function showDownloadMenu(gd){
+  if(!gd||!window.Plotly)return;
+  DOWNLOAD_TARGET=gd;
+  const menu=document.getElementById('download-menu');
+  if(!menu)return;
+  const r=gd.getBoundingClientRect();
+  menu.style.left=Math.max(8,Math.min(window.innerWidth-160,r.right-154))+'px';
+  menu.style.top=Math.max(8,r.top+34)+'px';
+  menu.classList.add('open');
+}
+function themeExportPatch(theme){
+  const dark=theme==='dark';
+  const grid=dark?'rgba(255,255,255,.09)':'rgba(0,0,0,.10)';
+  const line=dark?'rgba(255,255,255,.18)':'rgba(0,0,0,.18)';
+  const fg=dark?'#e0e4ff':'#0b0b2e';
+  const plotbg=dark?'#17172f':'#ffffff';
+  const paper=dark?'#101028':'#ffffff';
+  const patch={paper_bgcolor:paper,plot_bgcolor:plotbg,'font.color':fg};
+  const gd=DOWNLOAD_TARGET;
+  const axisKeys=(gd&&gd._fullLayout)?Object.keys(gd._fullLayout).filter(k=>/^xaxis\d*$/.test(k)||/^yaxis\d*$/.test(k)):[];
+  axisKeys.forEach(k=>{
+    patch[`${k}.gridcolor`]=grid;
+    patch[`${k}.linecolor`]=line;
+    patch[`${k}.tickfont.color`]=fg;
+    patch[`${k}.title.font.color`]=fg;
+  });
+  return patch;
+}
+function downloadPlotPngTheme(theme){
+  const gd=DOWNLOAD_TARGET;
+  closeDownloadMenu();
+  if(!gd||!window.Plotly)return;
+  const w=Math.max(900,Math.round(gd.getBoundingClientRect().width||1200));
+  const h=Math.max(520,Math.round(gd.getBoundingClientRect().height||700));
+  const patch=themeExportPatch(theme);
+  Plotly.relayout(gd,patch).then(()=>Plotly.downloadImage(gd,{
+    format:'png',
+    filename:`m3trics_${safeFilePart(S.ds)}_${safeFilePart(gd.id)}_${theme}`,
+    width:w,
+    height:h,
+    scale:2,
+  })).finally(()=>render());
+}
+function downloadPlotPng(gd){showDownloadMenu(gd);}
+document.addEventListener('click',e=>{
+  const menu=document.getElementById('download-menu');
+  const target=e.target instanceof Element ? e.target : null;
+  if(menu&&menu.classList.contains('open')&&target&&!menu.contains(target)&&!target.closest('.modebar-btn'))closeDownloadMenu();
+});
 const HM_PLUS_ICON={width:24,height:24,path:'M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z'};
 const HM_MINUS_ICON={width:24,height:24,path:'M5 11h14v2H5z'};
 const HM_RESET_ICON={width:24,height:24,path:'M12 5a7 7 0 1 1-6.3 4H3l3.8-3.8L10.6 9H7.8A5 5 0 1 0 12 7z'};
-const CFG  = {displayModeBar:true,modeBarButtonsToRemove:['lasso2d','select2d','toImage'],displaylogo:false,responsive:true,scrollZoom:false};
+const DOWNLOAD_ICON={width:24,height:24,path:'M5 20h14v-2H5v2zM13 4h-2v8H8l4 4 4-4h-3V4z'};
+const DOWNLOAD_BUTTON={name:'Download PNG',title:'Download PNG',icon:DOWNLOAD_ICON,click:gd=>downloadPlotPng(gd)};
+const CFG  = {displayModeBar:true,modeBarButtonsToRemove:['lasso2d','select2d','toImage'],modeBarButtonsToAdd:[DOWNLOAD_BUTTON],displaylogo:false,responsive:true,scrollZoom:false};
 const CFG_HM = {displayModeBar:true,displaylogo:false,responsive:true,scrollZoom:false,doubleClick:false,
   modeBarButtons:[[{
     name:'Increase cell text size',title:'Increase cell text size',icon:HM_PLUS_ICON,click:()=>changeHeatmapTextSize(1.0)
@@ -1602,7 +2004,7 @@ const CFG_HM = {displayModeBar:true,displaylogo:false,responsive:true,scrollZoom
     name:'Reset cell text size',title:'Reset cell text size',icon:HM_RESET_ICON,click:()=>resetHeatmapTextSize()
   },{
     name:'Decrease cell text size',title:'Decrease cell text size',icon:HM_MINUS_ICON,click:()=>changeHeatmapTextSize(-1.0)
-  }]]};
+  },DOWNLOAD_BUTTON]]};
 const CFGs = {displayModeBar:false,responsive:true};
 const TRAJ_HEIGHT = 530;
 const TRAJ_EMPTY_HEIGHT = 190;
@@ -1700,6 +2102,7 @@ function resetTrajectoryWidgetArtifacts(board=document.getElementById('traj-widg
     card.style.transform='';
     card.style.transition='';
   });
+  hideTrajectoryDropPreview(board);
   document.body.classList.remove('widget-dragging','traj-resizing');
 }
 function applyTrajectoryHeight(divId,h){
@@ -1871,6 +2274,104 @@ function initHpResize(){
   });
 }
 
+const METRIC_HEIGHT_BASE={ 'ch-br':300, 'ch-rd':300 };
+const METRIC_PAIR=['ch-br','ch-rd'];
+function metricHeight(divId){
+  const base=METRIC_HEIGHT_BASE[divId]||300;
+  return clamp(S.metricHeights[divId]||base,base,base*2);
+}
+function applyMetricHeight(divId,h=null){
+  const base=METRIC_HEIGHT_BASE[divId]||300;
+  const height=clamp(h==null?metricHeight(divId):h,base,base*2);
+  S.metricHeights[divId]=height;
+  const gd=document.getElementById(divId);
+  if(!gd)return;
+  gd.style.height=height+'px';
+  gd._m3MetricHeight=height;
+  if(window.Plotly&&gd.data) Plotly.relayout(gd,{height});
+}
+function applyMetricHeightBoth(h){
+  METRIC_PAIR.forEach(id=>applyMetricHeight(id,h));
+}
+function initMetricResize(){
+  document.querySelectorAll('.metric-resize-handle').forEach(handle=>{
+    if(handle._m3MetricResizeReady)return;
+    handle._m3MetricResizeReady=true;
+    handle.addEventListener('click',ev=>{
+      if(handle._m3SuppressClick){
+        handle._m3SuppressClick=false;
+        ev.preventDefault();
+        ev.stopPropagation();
+        return;
+      }
+      const divId=handle.dataset.plot;
+      const base=METRIC_HEIGHT_BASE[divId]||300;
+      const cur=metricHeight(divId);
+      const newH=cur<base*1.5?base*2:base;
+      if(S.metricWidgetLayout==='stack') applyMetricHeight(divId,newH); else applyMetricHeightBoth(newH);
+      if(S.sec==='metrics'){
+        if(S.metricWidgetLayout==='stack'){if(divId==='ch-br')rBars();else rMetricScatter();}
+        else{rBars();rMetricScatter();}
+      }
+      ev.preventDefault();
+      ev.stopPropagation();
+    });
+    handle.addEventListener('pointerdown',ev=>{
+      const divId=handle.dataset.plot;
+      const card=handle.closest('.metric-resizable-card');
+      const scroller=document.querySelector('.ct');
+      const startY=ev.clientY;
+      const startH=metricHeight(divId);
+      const startScroll=scroller?scroller.scrollTop:0;
+      let lastY=ev.clientY;
+      let moved=false;
+      let raf=null;
+      document.body.classList.add('metric-resizing');
+      if(card)card.classList.add('resizing');
+      handle.setPointerCapture?.(ev.pointerId);
+      const redraw=()=>{
+        if(S.metricWidgetLayout==='stack'){if(divId==='ch-br')rBars();else rMetricScatter();}
+        else{rBars();rMetricScatter();}
+      };
+      const update=()=>{
+        const scrollDelta=scroller?(scroller.scrollTop-startScroll):0;
+        const h=startH+(lastY-startY)+scrollDelta;
+        if(S.metricWidgetLayout==='stack') applyMetricHeight(divId,h); else applyMetricHeightBoth(h);
+      };
+      const autoScroll=()=>{
+        if(!scroller||!document.body.classList.contains('metric-resizing'))return;
+        const r=scroller.getBoundingClientRect();
+        let dy=0;
+        if(lastY>r.bottom-44)dy=Math.min(22,(lastY-(r.bottom-44))*.38+4);
+        else if(lastY<r.top+44)dy=-Math.min(22,((r.top+44)-lastY)*.38+4);
+        if(dy){scroller.scrollTop+=dy;update();raf=requestAnimationFrame(autoScroll);}
+        else raf=null;
+      };
+      const move=e=>{
+        lastY=e.clientY;
+        if(Math.abs(lastY-startY)>3)moved=true;
+        update();
+        if(!raf)raf=requestAnimationFrame(autoScroll);
+      };
+      const up=()=>{
+        document.body.classList.remove('metric-resizing');
+        if(card)card.classList.remove('resizing');
+        if(raf)cancelAnimationFrame(raf);
+        handle._m3SuppressClick=moved;
+        if(moved)setTimeout(()=>{handle._m3SuppressClick=false;},120);
+        redraw();
+        window.removeEventListener('pointermove',move);
+        window.removeEventListener('pointerup',up);
+        window.removeEventListener('pointercancel',up);
+      };
+      window.addEventListener('pointermove',move);
+      window.addEventListener('pointerup',up,{once:true});
+      window.addEventListener('pointercancel',up,{once:true});
+      ev.preventDefault();
+    });
+  });
+}
+
 
 function ptBase(){
   const d=dk();
@@ -1908,7 +2409,7 @@ function emptyPlot(divId,msg,height=TRAJ_EMPTY_HEIGHT){
 // ── NAV ───────────────────────────────────────────────────────────────────
 const STITLE = {
   global:'Global Results', metrics:'Method Metrics', conds:'Condition Analysis',
-  summary:'Cross-Cohort Summary', 'sc-perf':'Performance Results', 'sc-pairwise':'Pairwise Tests',
+  'sc-perf':'Performance Results', 'sc-pairwise':'Pairwise Tests',
 };
 const SLABEL = {progressive:'Progressive Missingness Study', static:'Static-Cohort'};
 
@@ -1942,11 +2443,16 @@ function rebuildCohorts(study){
 }
 
 function updateStaticNavVisibility(){
-  const show=Object.keys(STATIC_DS_DATA[S.ds]||{}).length>0;
+  const show=hasStaticForCurrentDataset();
   const d=show?'':'none';
   document.getElementById('nav-static-lbl').style.display=d;
   document.querySelectorAll('.ni[data-study="static"]').forEach(el=>el.style.display=d);
   return show;
+}
+
+function hasStaticForCurrentDataset(){
+  const sd=STATIC_DS_DATA[S.ds]||{};
+  return !!((sd.replicates||[]).length || (sd.method_summary||[]).length || (sd.pairwise_wilcoxon||[]).length || (sd.friedman||[]).length);
 }
 
 function switchCohort(cohort){
@@ -2006,7 +2512,7 @@ function nav(s, study='progressive'){
   if(studyChanged) rebuildCohorts(study);
   updateStaticNavVisibility();
   const hasData = study==='static'
-    ? Object.keys(STATIC_DS_DATA[S.ds]||{}).length > 0
+    ? hasStaticForCurrentDataset()
     : Object.keys(curMod()).length > 0;
   if(!hasData){
     document.getElementById('s-noresults').classList.add('on');
@@ -2028,7 +2534,7 @@ function toggleDd(id){
   const menu=document.getElementById(`dd-${id}-menu`);
   const wasOpen=menu.classList.contains('open');
   document.querySelectorAll('.dd-menu').forEach(m=>m.classList.remove('open'));
-  closeHpMenu();closeHpTpMenu();
+  closeHpMenu();closeHpTpMenu();closeBarsSortMenu();
   if(!wasOpen){
     menu.classList.add('open');
     clearPlotHovers();
@@ -2039,6 +2545,7 @@ document.addEventListener('click',e=>{
   if(!e.target.closest('.method-filter')&&!e.target.closest('.mf-menu')) document.querySelectorAll('.mf-menu').forEach(m=>m.classList.remove('open'));
   if(!e.target.closest('.hp-method-filter')&&!e.target.closest('.hp-menu')){closeHpMenu();}
   if(!e.target.closest('#hp-trainprop-filter')&&!e.target.closest('.hp-tp-menu')){closeHpTpMenu();}
+  if(!e.target.closest('#bars-sort-filter')&&!e.target.closest('.bars-sort-menu')){closeBarsSortMenu();}
 });
 window.addEventListener('resize',positionMethodMenu);
 document.querySelector('.ct')?.addEventListener('scroll',positionMethodMenu);
@@ -2108,8 +2615,11 @@ function setTrajectoryWidgetLayout(layout,order=null){
   S.trajWidgetLayout=layout;
   if(order)S.trajWidgetOrder=order;
   resetTrajectoryWidgetArtifacts();
-  if(layout==='side') resetTrajectoryHeightsToMin();
-  else ['ch-tr','ch-dg'].forEach(id=>syncTrajectoryPlotHeight(id,trajectoryHeight(id)));
+  if(layout==='side'){
+    const h=Math.max(trajectoryHeight('ch-tr'),trajectoryHeight('ch-dg'));
+    ['ch-tr','ch-dg'].forEach(id=>setTrajectoryHeight(id,h));
+  }
+  ['ch-tr','ch-dg'].forEach(id=>syncTrajectoryPlotHeight(id,trajectoryHeight(id)));
   syncTrajectoryWidgets();
   rTraj();
   rDeg();
@@ -2127,6 +2637,18 @@ function hideTrajectoryDropPreview(board){
   board?.classList.remove('widget-previewing');
   board?.querySelectorAll('.traj-slot').forEach(s=>s.classList.remove('drag-source'));
 }
+function widgetDropZone(board,clientX,clientY,currentLayout='stack'){
+  const r=board.getBoundingClientRect();
+  const x=clientX-r.left;
+  if(currentLayout==='side'){
+    if(x<r.width*.40)return 'left';
+    if(x>r.width*.60)return 'right';
+    return 'center';
+  }
+  if(x<r.width/3)return 'left';
+  if(x>r.width*2/3)return 'right';
+  return 'center';
+}
 function trajectoryCardHeightForPlot(card,plotHeight){
   if(!card)return plotHeight;
   const plotId=card.dataset.plot;
@@ -2136,7 +2658,7 @@ function trajectoryCardHeightForPlot(card,plotHeight){
   const chrome=Math.max(0,currentCardH-currentPlotH);
   return chrome+plotHeight;
 }
-function showTrajectoryDropPreview(board,card,widget,mode,dx,dy){
+function showTrajectoryDropPreview(board,card,widget,zone){
   const preview=ensureTrajectoryDropPreview(board);
   const gap=parseFloat(getComputedStyle(board).gap)||10;
   const slot=card.closest('.traj-slot');
@@ -2144,17 +2666,14 @@ function showTrajectoryDropPreview(board,card,widget,mode,dx,dy){
   const otherCard=board.querySelector(`.traj-card[data-widget="${otherWidget}"]`);
   const draggedH=trajectoryCardHeightForPlot(card,trajectoryHeight(card.dataset.plot));
   const otherH=trajectoryCardHeightForPlot(otherCard,trajectoryHeight(otherCard?.dataset.plot||card.dataset.plot));
-  const minSideH=Math.max(
-    trajectoryCardHeightForPlot(card,TRAJ_HEIGHT),
-    trajectoryCardHeightForPlot(otherCard,TRAJ_HEIGHT)
-  );
+  const sideH=Math.max(draggedH,otherH);
   const bw=board.clientWidth;
   const sideW=(bw-gap)/2;
   let left=0,top=0,width=bw,height=draggedH;
-  if(mode==='side'){
-    width=sideW;height=minSideH;top=0;left=dx<0?0:sideW+gap;
+  if(zone==='left'||zone==='right'){
+    width=sideW;height=sideH;top=0;left=zone==='left'?0:sideW+gap;
   }else{
-    width=bw;height=draggedH;left=0;top=dy<0?0:otherH+gap;
+    width=bw;height=sideH;left=0;top=0;
   }
   preview.style.left=`${left}px`;
   preview.style.top=`${top}px`;
@@ -2170,7 +2689,7 @@ function initTrajectoryWidgetDrag(){
   board._m3DragReady=true;
   board.querySelectorAll('.traj-drag-handle').forEach(handle=>{
     handle.addEventListener('pointerdown',ev=>{
-      if(ev.target.closest('.pv-btns,.pvbtn,.ci-toggle'))return;
+      if(ev.target.closest('.pv-btns,.pvbtn,.ci-toggle,.help-btn'))return;
       const card=handle.closest('.traj-card');
       const widget=card?.dataset.widget;
       if(!card||!widget)return;
@@ -2182,20 +2701,18 @@ function initTrajectoryWidgetDrag(){
       let lastGhostSide=null;
       const move=e=>{
         lastX=e.clientX;lastY=e.clientY;
-        const dx=lastX-startX,dy=lastY-startY;
-        const side=Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy);
-        const stack=Math.abs(dy)>55&&!side;
-        // 3 card positions: zoom only · ghost-left · ghost-right
-        const ghostSide=side?(dx>0?'right':'left'):null;
+        const moved=Math.hypot(lastX-startX,lastY-startY)>28;
+        const zone=moved?widgetDropZone(board,lastX,lastY,S.trajWidgetLayout):null;
+        const ghostSide=zone==='right'?'right':zone==='left'?'left':zone==='center'?'center':null;
         const tx=ghostSide==='right'?14:ghostSide==='left'?-14:0;
         if(ghostSide!==lastGhostSide){lastGhostSide=ghostSide;card.style.transition='transform .14s cubic-bezier(.22,1,.36,1)';}
         card.style.transform=`translate3d(${tx}px,0,0) scale(1.012)`;
-        if(side) showTrajectoryDropPreview(board,card,widget,'side',dx,dy);
-        else if(stack) showTrajectoryDropPreview(board,card,widget,'stack',dx,dy);
+        if(zone) showTrajectoryDropPreview(board,card,widget,zone);
         else hideTrajectoryDropPreview(board);
       };
       const up=()=>{
-        const dx=lastX-startX,dy=lastY-startY;
+        const moved=Math.hypot(lastX-startX,lastY-startY)>28;
+        const zone=moved?widgetDropZone(board,lastX,lastY,S.trajWidgetLayout):null;
         card.classList.remove('dragging');
         card.style.transform='';
         card.style.transition='';
@@ -2205,10 +2722,12 @@ function initTrajectoryWidgetDrag(){
         window.removeEventListener('pointerup',up);
         window.removeEventListener('pointercancel',up);
         const other=widget==='perf'?'deg':'perf';
-        if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)){
-          setTrajectoryWidgetLayout('side',dx<0?[widget,other]:[other,widget]);
-        }else if(Math.abs(dy)>55){
-          setTrajectoryWidgetLayout('stack',dy<0?[widget,other]:[other,widget]);
+        if(zone==='left'){
+          setTrajectoryWidgetLayout('side',[widget,other]);
+        }else if(zone==='right'){
+          setTrajectoryWidgetLayout('side',[other,widget]);
+        }else if(zone==='center'){
+          setTrajectoryWidgetLayout('stack',[widget,other]);
         }
       };
       window.addEventListener('pointermove',move);
@@ -2292,7 +2811,7 @@ function toggleMethodMenu(ev){
   if(!menu)return;
   const wasOpen=menu.classList.contains('open');
   document.querySelectorAll('.dd-menu').forEach(m=>m.classList.remove('open'));
-  closeHpMenu();closeHpTpMenu();
+  closeHpMenu();closeHpTpMenu();closeBarsSortMenu();
   if(wasOpen){
     menu.classList.remove('open');
   }else{
@@ -2393,7 +2912,6 @@ function render(){
     case'global':      rGlobal();       break;
     case'metrics':     rMetrics();      break;
     case'conds':       rConds();        break;
-    case'summary':     rSummary();      break;
     case'sc-perf':     rStaticPerf();   break;
     case'sc-pairwise': rStaticPairwise();break;
   }
@@ -2414,19 +2932,186 @@ function rStaticPerf(){
   document.getElementById('sc-fp').textContent=pv!=null?pv.toFixed(4):'–';
   document.getElementById('sc-fs').textContent=sig!=null?(sig?'Significant (p<0.05)':'Not significant'):'–';
   document.getElementById('sc-nrep').textContent=meta.n_replicates??'–';
-  // figure
-  const img=document.getElementById('sc-fig-perf');
-  if(d.fig_perf){img.src=d.fig_perf;img.style.display='block';}
-  else{img.style.display='none';img.closest('.cp').innerHTML='<div class="es"><p>Figure not generated yet — run the fixed-dataset analysis notebook first.</p></div>';}
+  const scNrepLbl=document.getElementById('sc-nrep-lbl');
+  if(scNrepLbl){const ml=(AVAIL_MODES.find(m=>m.key===S.mode)||{}).label||'–';scNrepLbl.textContent=ml.toLowerCase();}
+  rStaticPerformancePlot();
   updateMeta();
 }
 
 function rStaticPairwise(){
-  const d=SD();
-  const img=document.getElementById('sc-fig-pairwise');
-  if(d.fig_pairwise){img.src=d.fig_pairwise;img.style.display='block';}
-  else{img.style.display='none';img.closest('.cp').innerHTML='<div class="es"><p>Figure not generated yet — run the fixed-dataset analysis notebook first.</p></div>';}
+  rStaticPairwisePlot();
   updateMeta();
+}
+
+function staticPlotHeight(divId){
+  const el=document.getElementById(divId);
+  const cp=el?.closest('.cp');
+  const h=cp?.getBoundingClientRect().height||430;
+  return Math.max(260,Math.floor(h));
+}
+
+function staticMethodsSorted(){
+  const d=SD();
+  const summary=d.method_summary||[];
+  const fromSummary=summary
+    .filter(r=>r.model_name)
+    .sort((a,b)=>(b.mean_auc??-Infinity)-(a.mean_auc??-Infinity))
+    .map(r=>r.model_name);
+  if(fromSummary.length)return fromSummary;
+  return [...new Set((d.replicates||[]).map(r=>r.model_name).filter(Boolean))].sort();
+}
+
+function rStaticPerformancePlot(){
+  const d=SD();
+  const reps=(d.replicates||[]).filter(r=>r.model_name&&r.auc!=null);
+  if(!reps.length){emptyPlot('sc-performance-plot','No static-cohort replicate table found.',380);return;}
+  const ml=metricLabel(d), th=ptBase(), dark=dk();
+  const plotH=staticPlotHeight('sc-performance-plot');
+  const methods=staticMethodsSorted().filter(m=>reps.some(r=>r.model_name===m));
+  const traces=[];
+  const jitter=(i,n)=>((i%17)-8)*0.018 + (Math.floor(i/17)%3-1)*0.006;
+  methods.forEach((m,idx)=>{
+    const vals=reps.filter(r=>r.model_name===m&&r.auc!=null).map(r=>Number(r.auc)).filter(Number.isFinite);
+    if(!vals.length)return;
+    const col=MC[m]||'#8b5cf6';
+    traces.push({
+      type:'violin',
+      x0:idx,
+      y:vals,
+      name:MD[m]||m,
+      width:.72,
+      spanmode:'soft',
+      points:false,
+      box:{visible:true,width:.18,fillcolor:dark?'rgba(12,12,31,.88)':'rgba(255,255,255,.92)',line:{color:col,width:1.5}},
+      meanline:{visible:false},
+      line:{color:col,width:1.7},
+      fillcolor:rgba(col,.18),
+      opacity:.95,
+      hoverinfo:'skip',
+      showlegend:false,
+    });
+    traces.push({
+      type:'scatter',
+      mode:'markers',
+      name:MD[m]||m,
+      x:vals.map((_,i)=>idx+jitter(i,vals.length)),
+      y:vals,
+      marker:{size:4.4,color:col,opacity:.38,line:{width:0}},
+      customdata:vals.map((_,i)=>[MD[m]||m,i+1]),
+      hoverlabel:{bordercolor:col},
+      hovertemplate:`&nbsp;<b>%{customdata[0]}</b>&nbsp;<br>&nbsp;Replicate: %{customdata[1]}&nbsp;<br>&nbsp;${ml}: %{y:.3f}&nbsp;<extra></extra>`,
+      showlegend:false,
+    });
+  });
+  const allVals=reps.map(r=>Number(r.auc)).filter(Number.isFinite);
+  const yMin=Math.max(0,Math.min(...allVals)-.04);
+  const yMax=Math.min(1,Math.max(...allVals)+.04);
+  Plotly.react('sc-performance-plot',traces,{...th,
+    height:plotH,
+    margin:{t:22,b:98,l:70,r:24},
+    showlegend:false,
+    xaxis:{...th.xaxis,title:{text:'Method',font:{size:hmFont(12.5)},standoff:22},
+      tickvals:methods.map((_,i)=>i),ticktext:methods.map(m=>MD[m]||m),tickangle:-25,
+      range:[-.65,methods.length-.35],fixedrange:true,tickfont:{size:hmFont(12.5)},automargin:true},
+    yaxis:{...th.yaxis,title:{text:ml,font:{size:hmFont(12.5)},standoff:14},range:[yMin,yMax],fixedrange:false,tickfont:{size:hmFont(12.5)},automargin:true},
+  },CFG).then(()=>{
+    const gd=document.getElementById('sc-performance-plot');
+    guardHoverWhenDropdownOpen(gd);
+    attachM3PlotTooltip(gd,(pt)=>{
+      const col=(pt.data&&pt.data.marker&&pt.data.marker.color)||'#a855f7';
+      const cd=pt.customdata||[];
+      return {color:col,html:`<b>${escHtml(cd[0]||pt.data.name)}</b><br>Replicate: ${escHtml(cd[1])}<br>${ml}: ${Number(pt.y).toFixed(3)}`};
+    });
+  });
+}
+
+function rStaticPairwisePlot(){
+  const d=SD();
+  const rows=d.pairwise_wilcoxon||[];
+  if(!rows.length){emptyPlot('sc-pairwise-plot','No static-cohort pairwise comparison table found.',390);return;}
+  const ml=metricLabel(d), dl=metricDeltaLabel(d), th=ptBase(), dark=dk();
+  const plotH=staticPlotHeight('sc-pairwise-plot');
+  const methods=staticMethodsSorted().filter(m=>
+    rows.some(r=>r.winner_model===m||r.loser_model===m)
+  );
+  if(methods.length<2){emptyPlot('sc-pairwise-plot','At least two methods are required for pairwise comparison.',390);return;}
+  const idx=Object.fromEntries(methods.map((m,i)=>[m,i]));
+  const zSig=methods.map(()=>methods.map(()=>null));
+  const zBase=methods.map(()=>methods.map(()=>0));
+  const txtBase=methods.map(()=>methods.map(()=>''));
+  const txtSig=methods.map(()=>methods.map(()=>''));
+  const custom=methods.map(()=>methods.map(()=>['','','','','']));
+  methods.forEach((m,i)=>{
+    zBase[i][i]=null; txtBase[i][i]=''; custom[i][i]=[MD[m]||m,MD[m]||m,'0.000','–','Diagonal'];
+  });
+  rows.forEach(r=>{
+    const wi=idx[r.winner_model], li=idx[r.loser_model];
+    if(wi==null||li==null)return;
+    const delta=Number(r.delta_mean_auc);
+    if(!Number.isFinite(delta))return;
+    const q=r.p_value_fdr!=null?Number(r.p_value_fdr):null;
+    const p=r.p_value!=null?Number(r.p_value):null;
+    const sig=!!r.significant_fdr_0p05;
+    const label=sig?`<b>${delta.toFixed(3)}</b>`:delta.toFixed(3);
+    if(sig){
+      zSig[wi][li]=delta;
+      zSig[li][wi]=-delta;
+      txtSig[wi][li]=label;
+      txtSig[li][wi]=label;
+      txtBase[wi][li]='';
+      txtBase[li][wi]='';
+    }else{
+      zBase[wi][li]=0;
+      zBase[li][wi]=0;
+      txtBase[wi][li]=delta.toFixed(3);
+      txtBase[li][wi]=(-delta).toFixed(3);
+    }
+    custom[wi][li]=[MD[r.winner_model]||r.winner_model,MD[r.loser_model]||r.loser_model,delta.toFixed(3),q!=null?q.toFixed(4):(p!=null?p.toFixed(4):'–'),sig?'FDR significant':'Not significant'];
+    custom[li][wi]=[MD[r.loser_model]||r.loser_model,MD[r.winner_model]||r.winner_model,(-delta).toFixed(3),q!=null?q.toFixed(4):(p!=null?p.toFixed(4):'–'),sig?'FDR significant':'Not significant'];
+  });
+  const absMax=Math.max(.001,...zSig.flat().filter(v=>v!=null).map(v=>Math.abs(v)),...rows.map(r=>Math.abs(Number(r.delta_mean_auc)||0)));
+  const labels=methods.map(m=>MD[m]||m);
+  const cs=dark
+    ?[[0,'#1a003a'],[.45,'#2b2555'],[.5,'#191936'],[.55,'#134b68'],[1,'#00d4ff']]
+    :[[0,'#f6c2ff'],[.45,'#f3eefc'],[.5,'#ffffff'],[.55,'#e8f8ff'],[1,'#007799']];
+  const greyScale=dark
+    ?[[0,'rgba(116,124,150,.22)'],[1,'rgba(116,124,150,.22)']]
+    :[[0,'rgba(148,163,184,.30)'],[1,'rgba(148,163,184,.30)']];
+  Plotly.react('sc-pairwise-plot',[{
+    type:'heatmap',
+    z:zBase,x:labels,y:labels,
+    zmin:0,zmax:1,
+    colorscale:greyScale,
+    showscale:false,
+    text:txtBase,texttemplate:'%{text}',textfont:{size:S.hmTextSize,color:dark?'rgba(224,228,255,.60)':'rgba(30,41,59,.62)'},
+    customdata:custom,
+    hovertemplate:`&nbsp;<b>%{customdata[0]}</b> vs <b>%{customdata[1]}</b>&nbsp;<br>&nbsp;Δ ${ml}: %{customdata[2]}&nbsp;<br>&nbsp;q-value: %{customdata[3]}&nbsp;<br>&nbsp;%{customdata[4]}&nbsp;<extra></extra>`,
+  },{
+    type:'heatmap',
+    z:zSig,x:labels,y:labels,
+    zmin:-absMax,zmax:absMax,zmid:0,
+    colorscale:cs,
+    text:txtSig,texttemplate:'%{text}',textfont:{size:S.hmTextSize,color:dark?'rgba(255,255,255,.95)':'rgba(10,10,30,.92)'},
+    customdata:custom,
+    colorbar:{title:{text:dl,font:{size:hmFont(12)}},thickness:10,tickfont:{size:hmFont(11.5)},len:.86},
+    hovertemplate:`&nbsp;<b>%{customdata[0]}</b> vs <b>%{customdata[1]}</b>&nbsp;<br>&nbsp;Δ ${ml}: %{customdata[2]}&nbsp;<br>&nbsp;q-value: %{customdata[3]}&nbsp;<br>&nbsp;%{customdata[4]}&nbsp;<extra></extra>`,
+  }],{...th,
+    height:plotH,
+    margin:{t:20,b:116,l:160,r:32},
+    xaxis:{...th.xaxis,title:{text:'Compared method',font:{size:hmFont(12.5)},standoff:24},tickangle:-25,tickfont:{size:hmFont(12.5)},fixedrange:true,automargin:true},
+    yaxis:{...th.yaxis,title:{text:'Reference method',font:{size:hmFont(12.5)},standoff:24},tickfont:{size:hmFont(12.5)},autorange:'reversed',fixedrange:true,automargin:true},
+    annotations:[{x:.5,y:-.34,xref:'paper',yref:'paper',showarrow:false,
+      text:'Positive values favour the row method; FDR-significant cells are shown in bold.',
+      font:{size:hmFont(12),color:dark?'rgba(224,228,255,.62)':'rgba(11,11,46,.58)'}}],
+  },CFG_HM).then(()=>{
+    const gd=document.getElementById('sc-pairwise-plot');
+    guardHoverWhenDropdownOpen(gd);
+    attachM3PlotTooltip(gd,(pt)=>{
+      const cd=pt.customdata||[];
+      const isSig=String(cd[4]||'').toLowerCase().includes('significant')&&!String(cd[4]||'').toLowerCase().includes('not');
+      return {color:isSig?'#00d4ff':'#94a3b8',html:`<b>${escHtml(cd[0])}</b> vs <b>${escHtml(cd[1])}</b><br>Δ ${ml}: ${escHtml(cd[2])}<br>q-value: ${escHtml(cd[3])}<br>${escHtml(cd[4])}`};
+    });
+  });
 }
 
 // ── GLOBAL ────────────────────────────────────────────────────────────────
@@ -2531,7 +3216,7 @@ function rHeatmaps(){
         ?`<b>${r.mean_auc.toFixed(3)}</b><br>±${ci95.toFixed(3)}`
         :`<b>${r.mean_auc.toFixed(3)}</b>`;
       anns.push({x:ci,y:ri,xref:`x${axN}`,yref:`y${axN}`,
-                 text:label,font:{size:S.hmTextSize,color:tc},
+                 text:label,font:{size:11.5,color:tc},
                  showarrow:false,align:'center'});
     }));
   });
@@ -3150,7 +3835,7 @@ function toggleHpMethodMenu(ev){
   if(!menu)return;
   const wasOpen=menu.classList.contains('open');
   document.querySelectorAll('.dd-menu,.mf-menu').forEach(m=>m.classList.remove('open'));
-  closeHpMenu();closeHpTpMenu();
+  closeHpMenu();closeHpTpMenu();closeBarsSortMenu();
   if(!wasOpen){
     menu.classList.add('open');
     positionHpMethodMenu();
@@ -3200,7 +3885,7 @@ function toggleHpTpMenu(ev){
   if(!menu)return;
   const wasOpen=menu.classList.contains('open');
   document.querySelectorAll('.dd-menu,.mf-menu').forEach(m=>m.classList.remove('open'));
-  closeHpMenu();closeHpTpMenu();
+  closeHpMenu();closeHpTpMenu();closeBarsSortMenu();
   if(!wasOpen){
     menu.classList.add('open');
     positionHpTpMenu();
@@ -3208,8 +3893,261 @@ function toggleHpTpMenu(ev){
   }
 }
 
+// ── BARS SORT ─────────────────────────────────────────────────────────────
+const _barsSortOpts=[
+  {k:'baseline_auc',l:'Baseline AUC'},
+  {k:'train_time_aupmc',l:'Train AUPMC'},
+  {k:'test_time_aupmc',l:'Test AUPMC'},
+  {k:'best_fixed_train_aupmc',l:'BFT AUPMC'},
+];
+function renderBarsSortSelect(){
+  const el=document.getElementById('bars-sort-filter');
+  if(!el)return;
+  const cur=S.barsSortMetric||'best_fixed_train_aupmc';
+  const curOpt=_barsSortOpts.find(o=>o.k===cur)||_barsSortOpts[3];
+  const menuWasOpen=document.getElementById('bars-sort-menu')?.classList.contains('open');
+  el.innerHTML=`<div class="dd-btn" onclick="toggleBarsSortMenu(event)">
+    <span class="dd-lbl">Sort</span>
+    <div class="dd-sep"></div>
+    <span class="dd-val">${curOpt.l}</span>
+    <svg class="dd-caret" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 1l4 4 4-4"/></svg>
+  </div>`;
+  const items=_barsSortOpts.map(o=>{
+    const on=o.k===cur?'on':'';
+    return`<div class="bars-sort-item ${on}" onclick="selectBarsSort('${o.k}',event)">${o.l}</div>`;
+  }).join('');
+  let menu=document.getElementById('bars-sort-menu');
+  if(!menu){menu=document.createElement('div');menu.id='bars-sort-menu';(document.querySelector('.app')||document.body).appendChild(menu);}
+  menu.className='bars-sort-menu';
+  menu.innerHTML=items;
+  if(menuWasOpen){menu.classList.add('open');positionBarsSortMenu();}
+}
+let _bsRafId=null,_bsLastL=null,_bsLastT=null;
+function _barsSortMenuTick(){
+  const menu=document.getElementById('bars-sort-menu');
+  if(!menu||!menu.classList.contains('open')){_bsRafId=null;return;}
+  const btn=document.querySelector('#bars-sort-filter .dd-btn');
+  if(btn){
+    const r=btn.getBoundingClientRect();
+    const sc=dashboardScale();
+    const btnW=Math.round(r.width/sc);
+    const left=Math.round(r.left/sc);
+    const top=Math.round(r.bottom/sc+7/sc);
+    if(left!==_bsLastL||top!==_bsLastT||menu.style.width!==btnW+'px'){
+      menu.style.left=`${left}px`;menu.style.top=`${top}px`;
+      menu.style.width=`${btnW}px`;menu.style.minWidth=`${btnW}px`;
+      _bsLastL=left;_bsLastT=top;
+    }
+  }
+  _bsRafId=requestAnimationFrame(_barsSortMenuTick);
+}
+function positionBarsSortMenu(){_bsLastL=null;_bsLastT=null;if(!_bsRafId)_bsRafId=requestAnimationFrame(_barsSortMenuTick);}
+function closeBarsSortMenu(){
+  const menu=document.getElementById('bars-sort-menu');
+  if(menu)menu.classList.remove('open');
+  if(_bsRafId){cancelAnimationFrame(_bsRafId);_bsRafId=null;}
+  _bsLastL=null;_bsLastT=null;
+}
+function toggleBarsSortMenu(ev){
+  if(ev)ev.stopPropagation();
+  const menu=document.getElementById('bars-sort-menu');
+  if(!menu)return;
+  const wasOpen=menu.classList.contains('open');
+  document.querySelectorAll('.dd-menu,.mf-menu').forEach(m=>m.classList.remove('open'));
+  closeHpMenu();closeHpTpMenu();closeBarsSortMenu();
+  if(!wasOpen){menu.classList.add('open');positionBarsSortMenu();clearPlotHovers();}
+}
+function selectBarsSort(k,ev=null){
+  if(ev)ev.stopPropagation();
+  S.barsSortMetric=k;
+  closeBarsSortMenu();
+  rBars();
+}
+
+// ── METRIC WIDGET DRAG ────────────────────────────────────────────────────
+function syncMetricWidgets(){
+  const board=document.getElementById('metric-widgets');
+  if(!board)return;
+  board.classList.toggle('mw-stack',S.metricWidgetLayout==='stack');
+  board.classList.toggle('mw-side',S.metricWidgetLayout==='side');
+  S.metricWidgetOrder.forEach(w=>{
+    const slot=board.querySelector(`.mw-slot[data-widget="${w}"]`);
+    if(slot)board.appendChild(slot);
+  });
+}
+function resetMetricWidgetArtifacts(board=document.getElementById('metric-widgets')){
+  board?.querySelectorAll('.mw-card').forEach(card=>{
+    card.classList.remove('dragging');
+    card.style.transform='';
+    card.style.transition='';
+  });
+  hideMetricDropPreview(board);
+  document.body.classList.remove('widget-dragging');
+}
+function ensureMetricDropPreview(board){
+  let p=board.querySelector('.mw-drop-preview');
+  if(!p){p=document.createElement('div');p.className='mw-drop-preview';board.appendChild(p);}
+  return p;
+}
+function hideMetricDropPreview(board){
+  const p=board?.querySelector('.mw-drop-preview');
+  if(p)p.classList.remove('on');
+  board?.classList.remove('widget-previewing');
+  board?.querySelectorAll('.mw-slot').forEach(s=>s.classList.remove('drag-source'));
+}
+function showMetricDropPreview(board,card,widget,zone){
+  const preview=ensureMetricDropPreview(board);
+  const gap=parseFloat(getComputedStyle(board).gap)||10;
+  const slot=card.closest('.mw-slot');
+  const otherWidget=widget==='bars'?'scatter':'bars';
+  const otherCard=board.querySelector(`.mw-card[data-widget="${otherWidget}"]`);
+  const bw=board.clientWidth;
+  const cardH=card.clientHeight;
+  const otherH=otherCard?otherCard.clientHeight:cardH;
+  const sideW=(bw-gap)/2;
+  let left=0,top=0,width=bw,height=cardH;
+  if(zone==='left'||zone==='right'){
+    width=sideW;height=Math.max(cardH,otherH);top=0;left=zone==='left'?0:sideW+gap;
+  }else{
+    width=bw;height=Math.max(cardH,otherH);left=0;top=0;
+  }
+  preview.style.left=`${left}px`;
+  preview.style.top=`${top}px`;
+  preview.style.width=`${width}px`;
+  preview.style.height=`${height}px`;
+  preview.classList.add('on');
+  board.classList.add('widget-previewing');
+  board.querySelectorAll('.mw-slot').forEach(s=>s.classList.toggle('drag-source',s===slot));
+}
+let _mwResizeTimer=null;
+let _mwResizeRaf=null;
+function scheduleMetricResize(){
+  if(!_mwResizeRaf){
+    _mwResizeRaf=requestAnimationFrame(()=>{
+      _mwResizeRaf=null;
+      ['ch-br','ch-rd'].forEach(id=>{
+        const gd=document.getElementById(id);
+        if(gd&&window.Plotly&&gd.data)Plotly.Plots.resize(gd);
+      });
+    });
+  }
+  if(_mwResizeTimer)clearTimeout(_mwResizeTimer);
+  _mwResizeTimer=setTimeout(()=>{
+    _mwResizeTimer=null;
+    ['ch-br','ch-rd'].forEach(id=>{
+      const gd=document.getElementById(id);
+      if(gd&&window.Plotly&&gd.data)Plotly.Plots.resize(gd);
+    });
+  },280);
+}
+function initMetricResizeObserver(){
+  if(window._m3MetricResizeObserverReady)return;
+  window._m3MetricResizeObserverReady=true;
+  if(!window.ResizeObserver)return;
+  const ro=new ResizeObserver(()=>scheduleMetricResize());
+  document.querySelectorAll('.mw-card,.mw-slot,#metric-widgets').forEach(el=>ro.observe(el));
+  document.getElementById('metric-widgets')?.addEventListener('transitionend',scheduleMetricResize);
+}
+function setMetricWidgetLayout(layout,order=null){
+  S.metricWidgetLayout=layout;
+  if(order)S.metricWidgetOrder=order;
+  resetMetricWidgetArtifacts();
+  if(layout==='side'){
+    applyMetricHeightBoth(Math.max(metricHeight('ch-br'),metricHeight('ch-rd')));
+  }
+  syncMetricWidgets();
+  rBars();rMetricScatter();
+  scheduleMetricResize();
+}
+function initMetricWidgetDrag(){
+  const board=document.getElementById('metric-widgets');
+  if(!board||board._m3MetricDragReady)return;
+  board._m3MetricDragReady=true;
+  board.querySelectorAll('.mw-drag-handle').forEach(handle=>{
+    handle.addEventListener('pointerdown',ev=>{
+      if(ev.target.closest('.bars-sort-filter,.dd-btn,.bars-sort-menu,.pv-btns,.pvbtn,.help-btn'))return;
+      const card=handle.closest('.mw-card');
+      const widget=card?.dataset.widget;
+      if(!card||!widget)return;
+      if(_mwResizeTimer){clearTimeout(_mwResizeTimer);_mwResizeTimer=null;}
+      const startX=ev.clientX,startY=ev.clientY;
+      card.classList.add('dragging');
+      card.style.transition='box-shadow .2s ease,border-color .2s ease,opacity .18s ease';
+      card.style.transform='translate3d(0,0,0) scale(1.012)';
+      document.body.classList.add('widget-dragging');
+      handle.setPointerCapture?.(ev.pointerId);
+      let lastX=startX,lastY=startY;
+      let lastGhostSide=null;
+      const move=e=>{
+        lastX=e.clientX;lastY=e.clientY;
+        const moved=Math.hypot(lastX-startX,lastY-startY)>28;
+        const zone=moved?widgetDropZone(board,lastX,lastY,S.metricWidgetLayout):null;
+        const ghostSide=zone==='right'?'right':zone==='left'?'left':zone==='center'?'center':null;
+        const tx=ghostSide==='right'?14:ghostSide==='left'?-14:0;
+        if(ghostSide!==lastGhostSide){lastGhostSide=ghostSide;card.style.transition='transform .14s cubic-bezier(.22,1,.36,1)';}
+        card.style.transform=`translate3d(${tx}px,0,0) scale(1.012)`;
+        if(zone) showMetricDropPreview(board,card,widget,zone);
+        else hideMetricDropPreview(board);
+      };
+      const up=()=>{
+        const moved=Math.hypot(lastX-startX,lastY-startY)>28;
+        const zone=moved?widgetDropZone(board,lastX,lastY,S.metricWidgetLayout):null;
+        card.classList.remove('dragging');
+        card.style.transform='';
+        card.style.transition='';
+        hideMetricDropPreview(board);
+        document.body.classList.remove('widget-dragging');
+        window.removeEventListener('pointermove',move);
+        window.removeEventListener('pointerup',up);
+        window.removeEventListener('pointercancel',up);
+        const other=widget==='bars'?'scatter':'bars';
+        if(zone==='left'){
+          setMetricWidgetLayout('side',[widget,other]);
+        }else if(zone==='right'){
+          setMetricWidgetLayout('side',[other,widget]);
+        }else if(zone==='center'){
+          setMetricWidgetLayout('stack',[widget,other]);
+        }
+      };
+      window.addEventListener('pointermove',move);
+      window.addEventListener('pointerup',up,{once:true});
+      window.addEventListener('pointercancel',up,{once:true});
+      ev.preventDefault();
+    });
+  });
+}
+
 // ── METRICS ───────────────────────────────────────────────────────────────
-function rMetrics(){rMetricSnapshot();rBars();rMetricScatter();rMetricHeatmap();rTable();}
+function fitMetricToViewport(){
+  const ct=document.querySelector('.ct');
+  const snap=document.getElementById('metric-snap');
+  const board=document.getElementById('metric-widgets');
+  if(!ct||!snap||!board)return;
+  // measure after layout
+  const ctH=ct.clientHeight;
+  const snapH=snap.offsetHeight;
+  const snapTop=snap.offsetTop; // distance from top of .ct scroll area
+  const margin=snapTop; // top margin; target same bottom margin
+  const boardMt=parseInt(getComputedStyle(board).marginTop)||10;
+  const available=ctH-snapTop-snapH-boardMt-margin;
+  // card chrome = .ch height + .cp padding-bottom
+  const ch=board.querySelector('.ch');
+  const chrome=(ch?ch.offsetHeight:48)+18;
+  const targetH=Math.max(200,Math.round(available-chrome));
+  applyMetricHeightBoth(targetH);
+}
+function rMetrics(){
+  initMetricResize();
+  rMetricSnapshot();
+  syncMetricWidgets();
+  const needFit=!S.metricHeights['ch-br']||S.metricHeights['ch-br']===(METRIC_HEIGHT_BASE['ch-br']||300);
+  if(needFit){
+    requestAnimationFrame(()=>{fitMetricToViewport();rBars();rMetricScatter();});
+  } else {
+    rBars();rMetricScatter();
+  }
+  rTable();
+}
 
 function metricCols(){
   const ml=metricLabel();
@@ -3301,29 +4239,45 @@ function rTable(){
 function srt(k){if(S.sk===k)S.sa=!S.sa;else{S.sk=k;S.sa=k==='model_name';}rTable();}
 function hlM(m){S.hl=S.hl===m?null:m;rTable();}
 
+const _scatterPanels={
+  train:{xk:'train_time_aupmc',yk:'train_mdr',xl:'Train-time AUPMC',yl:'Train MDR'},
+  test: {xk:'test_time_aupmc', yk:'test_mdr', xl:'Test-time AUPMC', yl:'Test MDR'},
+  bft:  {xk:'best_fixed_train_aupmc',yk:'bft_mdr',xl:'BFT AUPMC',yl:'BFT MDR'},
+};
+function updateScatterPanelButtons(){
+  const p=S.scatterPanel||'bft';
+  document.querySelectorAll('[data-scatter-p]').forEach(el=>el.classList.toggle('on',el.dataset.scatterP===p));
+}
+function selectScatterPanel(p){
+  S.scatterPanel=p;
+  updateScatterPanelButtons();
+  rMetricScatter();
+}
 function rMetricScatter(){
-  const r=activeMetricRows().filter(x=>x.best_fixed_train_aupmc!=null&&x.bft_mdr!=null);
-  if(!r.length){emptyPlot('ch-rd','Select at least one method with BFT metrics to visualise it.',300);return;}
+  updateScatterPanelButtons();
+  const p=S.scatterPanel||'bft';
+  const {xk,yk,xl,yl}=_scatterPanels[p]||_scatterPanels.bft;
+  const r=activeMetricRows().filter(x=>x[xk]!=null&&x[yk]!=null);
+  const height=metricHeight('ch-rd');
+  if(!r.length){emptyPlot('ch-rd',`Select at least one method with ${xl} data to visualise it.`,height);return;}
   const th=ptBase(),d=dk();
   const ml=metricLabel();
-  const xs=r.map(x=>x.best_fixed_train_aupmc);
-  const ys=r.map(x=>x.bft_mdr);
+  const xs=r.map(x=>x[xk]);
+  const ys=r.map(x=>x[yk]);
   const traces=[{
     type:'scatter',mode:'markers+text',
     x:xs,y:ys,text:r.map(x=>MD[x.model_name]||x.model_name),
     textposition:'top center',
     textfont:{size:11,color:d?'rgba(224,228,255,.72)':'rgba(11,11,46,.72)'},
     marker:{size:13,color:r.map(x=>MC[x.model_name]||'#888'),line:{width:1.2,color:d?'rgba(255,255,255,.22)':'rgba(0,0,0,.16)'}},
-    customdata:r.map(x=>[MD[x.model_name]||x.model_name,f2(x.baseline_auc),f2(x.best_fixed_train_aupmc),f2(x.bft_mdr)]),
-    hovertemplate:'<b>%{customdata[0]}</b><br>Baseline '+ml+': %{customdata[1]}<br>BFT AUPMC: %{customdata[2]}<br>BFT MDR: %{customdata[3]}<extra></extra>',
+    customdata:r.map(x=>[MD[x.model_name]||x.model_name,f2(x.baseline_auc),f2(x[xk]),f2(x[yk])]),
+    hovertemplate:'<b>%{customdata[0]}</b><br>Baseline '+ml+': %{customdata[1]}<br>'+xl+': %{customdata[2]}<br>'+yl+': %{customdata[3]}<extra></extra>',
   }];
   const xmin=Math.max(Math.min(...xs)-.015,.25),xmax=Math.min(Math.max(...xs)+.015,.95);
   const ymin=Math.max(Math.min(...ys)-.01,0),ymax=Math.max(...ys)+.015;
-  const layout={...th,height:300,margin:{t:18,b:54,l:58,r:18},showlegend:false,
-    xaxis:{...th.xaxis,title:{text:'Best fixed-train AUPMC',font:{size:12.5},standoff:14},range:[xmin,xmax],tickfont:{size:12}},
-    yaxis:{...th.yaxis,title:{text:'Best fixed-train MDR',font:{size:12.5},standoff:8},range:[ymin,ymax],tickfont:{size:12}},
-    annotations:[{x:1,y:0,xref:'paper',yref:'paper',xanchor:'right',yanchor:'bottom',showarrow:false,
-      text:'higher performance · lower degradation',font:{size:11.5,color:d?'rgba(224,228,255,.45)':'rgba(11,11,46,.42)'}}],
+  const layout={...th,height,margin:{t:18,b:54,l:58,r:18},showlegend:false,
+    xaxis:{...th.xaxis,title:{text:xl,font:{size:12.5},standoff:14},range:[xmin,xmax],tickfont:{size:12}},
+    yaxis:{...th.yaxis,title:{text:yl,font:{size:12.5},standoff:8},range:[ymin,ymax],tickfont:{size:12}},
   };
   Plotly.react('ch-rd',traces,layout,CFG);
 }
@@ -3361,18 +4315,21 @@ function rMetricHeatmap(){
   const y=methods.map(m=>MD[m.model_name]||m.model_name);
   const trace={type:'heatmap',z,x:cols.map(c=>c.l),y,text:txt,texttemplate:'%{text}',hoverinfo:'skip',
     colorscale:dk()?[[0,'#2a123f'],[.5,'#7c3aed'],[1,'#00d4ff']]:[[0,'#f3e8ff'],[.55,'#a855f7'],[1,'#0088aa']],
-    zmin:0,zmax:1,showscale:true,colorbar:{title:{text:'Relative score',font:{size:12}},thickness:10,tickfont:{size:11.5}},
-    textfont:{size:12.5,color:d?'rgba(255,255,255,.92)':'rgba(0,0,0,.86)'}};
+    zmin:0,zmax:1,showscale:true,colorbar:{title:{text:'Relative score',font:{size:hmFont(12)}},thickness:10,tickfont:{size:hmFont(11.5)}},
+    textfont:{size:S.hmTextSize,color:d?'rgba(255,255,255,.92)':'rgba(0,0,0,.86)'}};
   Plotly.react(gd,[trace],{...th,height:Math.max(300,82+methods.length*28),margin:{t:18,b:72,l:132,r:28},
-    xaxis:{...th.xaxis,tickangle:-25,tickfont:{size:12}},
-    yaxis:{...th.yaxis,tickfont:{size:12},autorange:'reversed'},
+    xaxis:{...th.xaxis,tickangle:-25,tickfont:{size:hmFont(12)}},
+    yaxis:{...th.yaxis,tickfont:{size:hmFont(12)},autorange:'reversed'},
   },CFG_HM);
 }
 
 function rBars(){
+  renderBarsSortSelect();
   const r=activeMetricRows();
-  if(!r.length){emptyPlot('ch-br','Select at least one method to visualise it.',265);return;}
-  const th=ptBase(); const sorted=[...r].sort((a,b)=>(b.best_fixed_train_aupmc||0)-(a.best_fixed_train_aupmc||0));
+  const height=metricHeight('ch-br');
+  if(!r.length){emptyPlot('ch-br','Select at least one method to visualise it.',height);return;}
+  const sortKey=S.barsSortMetric||'best_fixed_train_aupmc';
+  const th=ptBase(); const sorted=[...r].sort((a,b)=>(b[sortKey]||0)-(a[sortKey]||0));
   const ml=metricLabel();
   const xl=sorted.map(x=>MD[x.model_name]||x.model_name);
   const ms=[
@@ -3385,10 +4342,10 @@ function rBars(){
     marker:{color:m.c,opacity:.9},hovertemplate:`<b>%{x}</b><br>${m.l}: %{y:.3f}<extra></extra>`}));
   const aucs=r.flatMap(x=>[x.baseline_auc,x.train_time_aupmc,x.test_time_aupmc,x.best_fixed_train_aupmc]).filter(v=>v!=null);
   const ymin=Math.max(Math.min(...aucs)-.03,.3),ymax=Math.min(Math.max(...aucs)+.02,.9);
-  const layout={...th,barmode:'group',height:265,margin:{t:14,b:72,l:58,r:12},
+  const layout={...th,barmode:'group',height,margin:{t:14,b:78,l:58,r:12},
     xaxis:{...th.xaxis,tickangle:-30,tickfont:{size:12.5}},
     yaxis:{...th.yaxis,title:{text:'Score',font:{size:12}},range:[ymin,ymax]},
-    showlegend:true,legend:{orientation:'h',x:0,y:-0.52,font:{size:12},bgcolor:'rgba(0,0,0,0)'}};
+    showlegend:true,legend:{orientation:'h',x:.5,xanchor:'center',y:-0.24,yanchor:'top',font:{size:12},bgcolor:'rgba(0,0,0,0)'}};
   Plotly.react('ch-br',traces,layout,CFG);
 }
 
@@ -3553,98 +4510,41 @@ function rWilcoxon(tp,mp){
   const condW=conditionWilcoxon(tp,mp);
   if(!cond.length){emptyPlot('ch-wl','No condition-level data for the selected methods.',360);return;}
   const meths=cond.map(r=>r.model_name);
-  const z=meths.map(()=>meths.map(()=>null));
-  const txt=meths.map(()=>meths.map(()=>'ns'));
+  const zBase=meths.map(()=>meths.map(()=>0));
+  const zSig=meths.map(()=>meths.map(()=>null));
+  const txtBase=meths.map(()=>meths.map(()=>'ns'));
+  const txtSig=meths.map(()=>meths.map(()=>''));
   meths.forEach((mr,i)=>meths.forEach((mc,j)=>{
-    if(i===j){z[i][j]=0;txt[i][j]='—';return;}
+    if(i===j){zBase[i][j]=null;txtBase[i][j]='';return;}
     const w=condW.find(x=>x.winner_model===mr&&x.loser_model===mc&&x.significant_fdr_0p05);
-    if(w){z[i][j]=w.delta_mean_auc;txt[i][j]=`+${w.delta_mean_auc.toFixed(3)}`;}
+    if(w){
+      zSig[i][j]=w.delta_mean_auc;
+      txtSig[i][j]=`+${w.delta_mean_auc.toFixed(3)}`;
+      txtBase[i][j]='';
+    }
   }));
   const yl=cond.map(r=>`${MD[r.model_name]||r.model_name} (${r.mean_auc.toFixed(3)})`);
   const xl=meths.map(m=>MD[m]||m);
   const cs=d?[[0,'rgba(30,0,60,.85)'],[.4,'rgba(80,20,200,.85)'],[1,'rgba(0,210,255,.9)']]
             :[[0,'rgba(255,230,255,.95)'],[.4,'rgba(160,100,255,.95)'],[1,'rgba(0,100,200,.95)']];
+  const greyScale=d
+    ?[[0,'rgba(116,124,150,.22)'],[1,'rgba(116,124,150,.22)']]
+    :[[0,'rgba(148,163,184,.30)'],[1,'rgba(148,163,184,.30)']];
   Plotly.react('ch-wl',[{
-    type:'heatmap',z,x:xl,y:yl,text:txt,texttemplate:'%{text}',textfont:{size:10},
+    type:'heatmap',z:zBase,x:xl,y:yl,text:txtBase,texttemplate:'%{text}',textfont:{size:S.hmTextSize,color:d?'rgba(224,228,255,.55)':'rgba(30,41,59,.58)'},
+    colorscale:greyScale,showscale:false,hoverinfo:'skip',
+  },{
+    type:'heatmap',z:zSig,x:xl,y:yl,text:txtSig,texttemplate:'%{text}',textfont:{size:S.hmTextSize,color:d?'rgba(255,255,255,.92)':'rgba(0,0,0,.86)'},
     colorscale:cs,showscale:true,hoverinfo:'skip',
-    colorbar:{title:{text:dl,font:{size:12}},thickness:10,tickfont:{size:11.5},len:.85},
+    colorbar:{title:{text:dl,font:{size:hmFont(12)}},thickness:10,tickfont:{size:hmFont(11.5)},len:.85},
   }],{...th,
     height:360,margin:{t:14,b:68,l:150,r:28},
-    xaxis:{...th.xaxis,title:{text:'Lower-ranked',font:{size:12}},tickangle:-25,tickfont:{size:12.5}},
-    yaxis:{...th.yaxis,title:{text:'Higher-ranked',font:{size:12}},tickfont:{size:12.5},autorange:'reversed'},
+    xaxis:{...th.xaxis,title:{text:'Lower-ranked',font:{size:hmFont(12)},standoff:24},tickangle:-25,tickfont:{size:hmFont(12.5)},automargin:true},
+    yaxis:{...th.yaxis,title:{text:'Higher-ranked',font:{size:hmFont(12)},standoff:24},tickfont:{size:hmFont(12.5)},autorange:'reversed',automargin:true},
     annotations:[{x:.5,y:-0.26,xref:'paper',yref:'paper',showarrow:false,xanchor:'center',
       text:`Coloured cells = significant win (Wilcoxon, FDR p<0.05). Value = ${dl}. "ns" = not significant.`,
-      font:{size:11.5,color:d?'rgba(255,255,255,.3)':'rgba(0,0,0,.35)'}}],
-  },CFGs);
-}
-
-// ── SUMMARY ───────────────────────────────────────────────────────────────
-function rSummary(){rXCohort();rRankTable();rTopGroup();}
-
-const DSC=['#00d4ff','#a855f7','#ff2d78'];
-
-function rXCohort(){
-  const dks=Object.keys(curMod()||{}); if(!dks.length)return;
-  const th=ptBase();
-  const ml=metricLabel(curMod()[dks[0]]||null);
-  const mets=[{k:'best_fixed_train_aupmc',l:'BFT AUPMC'},{k:'test_time_aupmc',l:'Test AUPMC'},{k:'baseline_auc',l:`Baseline ${ml}`}];
-  const traces=dks.flatMap((dk2,di)=>{
-    const r=(curMod()[dk2]||{}).metrics||[]; const meta=(curMod()[dk2]||{}).meta||{};
-    const sorted=[...r].sort((a,b)=>(b.best_fixed_train_aupmc||0)-(a.best_fixed_train_aupmc||0));
-    const c=DSC[di%3]; const[ri,gi,bi]=hexRgb(c);
-    return mets.map((m,mi)=>({
-      type:'bar',name:`${meta.name||dk2} · ${m.l}`,legendgroup:meta.name||dk2,
-      x:sorted.map(x=>MD[x.model_name]||x.model_name),y:sorted.map(x=>x[m.k]!=null?x[m.k]:0),
-      marker:{color:`rgba(${ri},${gi},${bi},${.9-mi*.28})`},
-      hovertemplate:`<b>%{x}</b><br>${meta.name||dk2} ${m.l}: %{y:.3f}<extra></extra>`,
-    }));
-  });
-  const all=dks.flatMap(k=>((curMod()[k]||{}).metrics||[]).flatMap(x=>['best_fixed_train_aupmc','test_time_aupmc','baseline_auc'].map(m=>x[m]).filter(v=>v!=null)));
-  const ymin=all.length?Math.max(Math.min(...all)-.04,.25):.45;
-  const ymax=all.length?Math.min(Math.max(...all)+.02,.9):.75;
-  Plotly.react('ch-xc',traces,{...th,barmode:'group',height:280,
-    margin:{t:14,b:68,l:52,r:12},
-    xaxis:{...th.xaxis,tickangle:-25,tickfont:{size:12.5}},
-    yaxis:{...th.yaxis,title:{text:'Score',font:{size:12}},range:[ymin,ymax]},
-    showlegend:true,legend:{orientation:'h',x:0,y:-0.52,font:{size:12},bgcolor:'rgba(0,0,0,0)'},
-  },CFG);
-}
-
-function rRankTable(){
-  const dks=Object.keys(curMod()||{}); if(!dks.length)return;
-  const met='best_fixed_train_aupmc';
-  const allM=[...new Set(dks.flatMap(k=>((curMod()[k]||{}).metrics||[]).map(r=>r.model_name)))].sort();
-  const ranks={};
-  dks.forEach(dk2=>{
-    const sorted=[...((curMod()[dk2]||{}).metrics||[])].filter(r=>r[met]!=null).sort((a,b)=>b[met]-a[met]);
-    sorted.forEach((r,i)=>{if(!ranks[r.model_name])ranks[r.model_name]={};ranks[r.model_name][dk2]=i+1;});
-  });
-  allM.forEach(m=>{const v=dks.map(k=>ranks[m]?.[k]||allM.length);ranks[m].avg=v.reduce((a,b)=>a+b,0)/v.length;});
-  const sorted=[...allM].sort((a,b)=>(ranks[a]?.avg||99)-(ranks[b]?.avg||99));
-  const medal=r=>r===1?'🥇':r===2?'🥈':r===3?'🥉':`#${r}`;
-  const ths=['Method',...dks.map(k=>(curMod()[k]||{}).meta?.name||k),'Avg'].map(t=>`<th>${t}</th>`).join('');
-  const trs=sorted.map(m=>`<tr><td><span style="color:${MC[m]||'#aaa'};font-weight:700">${MD[m]||m}</span></td>
-    ${dks.map(k=>{const r=ranks[m]?.[k];return`<td class="${r===1?'best':''}">${r?medal(r):'–'}</td>`;}).join('')}
-    <td style="font-weight:600">${ranks[m]?.avg?.toFixed(1)||'–'}</td></tr>`).join('');
-  document.getElementById('tbl-rk').innerHTML=`<table class="mt"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`;
-}
-
-function rTopGroup(){
-  const dks=Object.keys(curMod()||{}); if(!dks.length)return;
-  const th=ptBase();
-  const allM=[...new Set(dks.flatMap(k=>((curMod()[k]||{}).top_counts||[]).map(r=>r.model_name)))].sort();
-  const traces=dks.map((dk2,di)=>{
-    const r=(curMod()[dk2]||{}).top_counts||[]; const meta=(curMod()[dk2]||{}).meta||{};
-    return{type:'bar',name:meta.name||dk2,x:allM.map(m=>MD[m]||m),
-      y:allM.map(m=>{const x=r.find(v=>v.model_name===m);return x?x.top_equivalent_group_fraction:0;}),
-      marker:{color:DSC[di%3]},hovertemplate:`<b>%{x}</b><br>${meta.name||dk2}: %{y:.0%}<extra></extra>`};
-  });
-  Plotly.react('ch-tg',traces,{...th,barmode:'group',height:250,
-    margin:{t:14,b:62,l:50,r:12},
-    xaxis:{...th.xaxis,tickangle:-28,tickfont:{size:12.5}},
-    yaxis:{...th.yaxis,title:{text:'Fraction in top group',font:{size:12}},tickformat:',.0%'},
-    showlegend:true,legend:{orientation:'h',x:0,y:-0.52,font:{size:12},bgcolor:'rgba(0,0,0,0)'},
-  },CFG);
+      font:{size:hmFont(11.5),color:d?'rgba(255,255,255,.3)':'rgba(0,0,0,.35)'}}],
+  },CFG_HM);
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────
@@ -3672,8 +4572,11 @@ function init(){
 
   initTrajectoryResize();
   initHpResize();
+  initMetricResize();
   initTrajectoryWidgetDrag();
+  initMetricWidgetDrag();
   initTrajectoryResizeObserver();
+  initMetricResizeObserver();
   syncTrajectoryWidgets();
   rebuildCohorts('progressive');  // sets S.ds first
   updateDdLabels();               // now S.ds is populated, ep label resolves correctly

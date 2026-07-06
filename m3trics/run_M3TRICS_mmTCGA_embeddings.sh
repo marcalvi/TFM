@@ -185,7 +185,7 @@ RUN_MODELS="ZI_LR,KNN_LR,VAE_LR,ZI_RF,KNN_RF,VAE_RF,ZI_MMLP,KNN_MMLP,VAE_MMLP,AM
 # then the student is trained with the configured modality availability. In progressive missingness mode
 # this means simulated missingness; in static-cohort mode this means the observed dataset as-is.
 # DISTILL_ALPHA weights the inner-representation matching loss. DISTILL_BETA weights the logit matching loss.
-DISTILL_MODELS="${DISTILL_MODELS:-ZI_pMMLP,HealNet}"
+DISTILL_MODELS="${DISTILL_MODELS:-ZI_MMLP,HealNet}"
 DISTILL_ALPHA="${DISTILL_ALPHA:-0.25}"
 DISTILL_BETA="${DISTILL_BETA:-0.05}"
 
