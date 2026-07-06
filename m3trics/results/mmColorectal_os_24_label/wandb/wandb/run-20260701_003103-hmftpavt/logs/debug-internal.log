@@ -1,0 +1,14 @@
+{"time":"2026-07-01T00:31:03.805376047+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-07-01T00:31:04.131044257+02:00","level":"INFO","msg":"stream: created new stream","id":"hmftpavt"}
+{"time":"2026-07-01T00:31:04.131131527+02:00","level":"INFO","msg":"handler: started","stream_id":"hmftpavt"}
+{"time":"2026-07-01T00:31:04.135977101+02:00","level":"INFO","msg":"stream: started","id":"hmftpavt"}
+{"time":"2026-07-01T00:31:04.135993371+02:00","level":"INFO","msg":"writer: started","stream_id":"hmftpavt"}
+{"time":"2026-07-01T00:31:04.136008171+02:00","level":"INFO","msg":"sender: started","stream_id":"hmftpavt"}
+{"time":"2026-07-01T00:31:04.826282555+02:00","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":65}
+{"time":"2026-07-01T00:31:04.82812789+02:00","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":21}
+{"time":"2026-07-01T00:31:05.937077185+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-07-01T00:31:06.444105959+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-07-01T00:31:06.448931362+02:00","level":"INFO","msg":"stream: closing","id":"hmftpavt"}
+{"time":"2026-07-01T00:31:06.448960022+02:00","level":"INFO","msg":"handler: closed","stream_id":"hmftpavt"}
+{"time":"2026-07-01T00:31:06.449617894+02:00","level":"INFO","msg":"sender: closed","stream_id":"hmftpavt"}
+{"time":"2026-07-01T00:31:06.449630454+02:00","level":"INFO","msg":"stream: closed","id":"hmftpavt"}

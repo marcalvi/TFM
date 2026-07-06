@@ -1,0 +1,14 @@
+{"time":"2026-06-30T12:26:17.8841948+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T12:26:18.167278142+02:00","level":"INFO","msg":"stream: created new stream","id":"n5xsjs4w"}
+{"time":"2026-06-30T12:26:18.167377142+02:00","level":"INFO","msg":"handler: started","stream_id":"n5xsjs4w"}
+{"time":"2026-06-30T12:26:18.170962793+02:00","level":"INFO","msg":"stream: started","id":"n5xsjs4w"}
+{"time":"2026-06-30T12:26:18.170988083+02:00","level":"INFO","msg":"writer: started","stream_id":"n5xsjs4w"}
+{"time":"2026-06-30T12:26:18.171015973+02:00","level":"INFO","msg":"sender: started","stream_id":"n5xsjs4w"}
+{"time":"2026-06-30T12:26:48.172521724+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2026-06-30T12:27:20.19435461+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2026-06-30T12:27:37.820313404+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T12:28:07.81293263+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T12:28:07.817203723+02:00","level":"INFO","msg":"stream: closing","id":"n5xsjs4w"}
+{"time":"2026-06-30T12:28:07.817224173+02:00","level":"INFO","msg":"handler: closed","stream_id":"n5xsjs4w"}
+{"time":"2026-06-30T12:28:07.817766545+02:00","level":"INFO","msg":"sender: closed","stream_id":"n5xsjs4w"}
+{"time":"2026-06-30T12:28:07.817779545+02:00","level":"INFO","msg":"stream: closed","id":"n5xsjs4w"}

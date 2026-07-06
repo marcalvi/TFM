@@ -1,0 +1,12 @@
+{"time":"2026-06-30T11:12:38.139826672+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T11:12:38.437793353+02:00","level":"INFO","msg":"stream: created new stream","id":"jrqwivem"}
+{"time":"2026-06-30T11:12:38.437868923+02:00","level":"INFO","msg":"handler: started","stream_id":"jrqwivem"}
+{"time":"2026-06-30T11:12:38.441403784+02:00","level":"INFO","msg":"stream: started","id":"jrqwivem"}
+{"time":"2026-06-30T11:12:38.441463514+02:00","level":"INFO","msg":"writer: started","stream_id":"jrqwivem"}
+{"time":"2026-06-30T11:12:38.441506624+02:00","level":"INFO","msg":"sender: started","stream_id":"jrqwivem"}
+{"time":"2026-06-30T11:12:42.646234703+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T11:13:00.154258581+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T11:13:00.158784924+02:00","level":"INFO","msg":"stream: closing","id":"jrqwivem"}
+{"time":"2026-06-30T11:13:00.158807234+02:00","level":"INFO","msg":"handler: closed","stream_id":"jrqwivem"}
+{"time":"2026-06-30T11:13:00.159478397+02:00","level":"INFO","msg":"sender: closed","stream_id":"jrqwivem"}
+{"time":"2026-06-30T11:13:00.159518327+02:00","level":"INFO","msg":"stream: closed","id":"jrqwivem"}

@@ -1,0 +1,14 @@
+{"time":"2026-06-30T11:34:05.820918824+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T11:34:08.027353338+02:00","level":"INFO","msg":"stream: created new stream","id":"taxjrd6b"}
+{"time":"2026-06-30T11:34:08.027397178+02:00","level":"INFO","msg":"handler: started","stream_id":"taxjrd6b"}
+{"time":"2026-06-30T11:34:08.030478851+02:00","level":"INFO","msg":"stream: started","id":"taxjrd6b"}
+{"time":"2026-06-30T11:34:08.030485051+02:00","level":"INFO","msg":"writer: started","stream_id":"taxjrd6b"}
+{"time":"2026-06-30T11:34:08.030495401+02:00","level":"INFO","msg":"sender: started","stream_id":"taxjrd6b"}
+{"time":"2026-06-30T11:34:38.032042865+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2026-06-30T11:35:09.497147085+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T11:35:58.374452043+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/ZI_MLP_mmImmuno/taxjrd6b/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T11:36:53.043843808+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T11:36:53.045309078+02:00","level":"INFO","msg":"stream: closing","id":"taxjrd6b"}
+{"time":"2026-06-30T11:36:53.045316448+02:00","level":"INFO","msg":"handler: closed","stream_id":"taxjrd6b"}
+{"time":"2026-06-30T11:36:53.045909478+02:00","level":"INFO","msg":"sender: closed","stream_id":"taxjrd6b"}
+{"time":"2026-06-30T11:36:53.045915098+02:00","level":"INFO","msg":"stream: closed","id":"taxjrd6b"}

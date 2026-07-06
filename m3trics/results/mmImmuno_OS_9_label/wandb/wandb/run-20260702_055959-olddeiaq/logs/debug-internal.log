@@ -1,0 +1,12 @@
+{"time":"2026-07-02T05:59:59.205112171+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-07-02T05:59:59.484199078+02:00","level":"INFO","msg":"stream: created new stream","id":"olddeiaq"}
+{"time":"2026-07-02T05:59:59.484266078+02:00","level":"INFO","msg":"handler: started","stream_id":"olddeiaq"}
+{"time":"2026-07-02T05:59:59.487117948+02:00","level":"INFO","msg":"stream: started","id":"olddeiaq"}
+{"time":"2026-07-02T05:59:59.487177468+02:00","level":"INFO","msg":"writer: started","stream_id":"olddeiaq"}
+{"time":"2026-07-02T05:59:59.487197038+02:00","level":"INFO","msg":"sender: started","stream_id":"olddeiaq"}
+{"time":"2026-07-02T06:00:01.14836548+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-07-02T06:00:01.588647366+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-07-02T06:00:01.590395306+02:00","level":"INFO","msg":"stream: closing","id":"olddeiaq"}
+{"time":"2026-07-02T06:00:01.590400996+02:00","level":"INFO","msg":"handler: closed","stream_id":"olddeiaq"}
+{"time":"2026-07-02T06:00:01.590833866+02:00","level":"INFO","msg":"sender: closed","stream_id":"olddeiaq"}
+{"time":"2026-07-02T06:00:01.590838046+02:00","level":"INFO","msg":"stream: closed","id":"olddeiaq"}

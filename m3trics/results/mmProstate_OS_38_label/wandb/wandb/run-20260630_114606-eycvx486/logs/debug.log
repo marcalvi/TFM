@@ -1,0 +1,18 @@
+2026-06-30 11:46:06,736 INFO    MainThread:90 [wandb_init.py:setup_run_log_directory():717] Logging user logs to /home/osiris-user/Desktop/TFM/m3trics/results/mmProstate_OS_38_label/wandb/wandb/run-20260630_114606-eycvx486/logs/debug.log
+2026-06-30 11:46:06,736 INFO    MainThread:90 [wandb_init.py:setup_run_log_directory():718] Logging internal logs to /home/osiris-user/Desktop/TFM/m3trics/results/mmProstate_OS_38_label/wandb/wandb/run-20260630_114606-eycvx486/logs/debug-internal.log
+2026-06-30 11:46:06,736 INFO    MainThread:90 [wandb_init.py:init():844] calling init triggers
+2026-06-30 11:46:06,736 INFO    MainThread:90 [wandb_init.py:init():849] wandb.init called with sweep_config: {}
+config: {'endpoint': 'OS_38_label', 'model': 'pAM', 'model_base': 'pAM', 'model_canonical': 'pam', 'knowledge_distillation': False, 'dataset': 'mmProstate', 'modalities': ['blood', 'radio', 'radio_report'], 'hp_grid_size': 16, 'epochs': 80, 'task_type': 'binary_classification', 'retrain_outer': False, 'save_inner': True, 'use_ensemble': False, 'missingness_study': True, 'best_epoch_warmup': 5, 'inner_splits': 5, 'outer_splits': 5, 'hp_selection_epsilon': 0.02, 'train_missing_prop': 0.0, 'degrading_modality': 'global', 'missing_pattern_seed': 2026, 'imputation_method': 'zero', 'modality_pooling': {}, 'test_eval_combinations': 3, 'test_missing_props_grid': '0.0,0.33,0.66', 'eval_degrading_modalities_grid': 'global,global,global', 'seed': 22, 'outer_fold': 1, 'inner_fold': 2, 'model_type': 'inner', 'phase': 'selected_inner_model', 'selected_hp_name': 'lr5e-05_bs16_drop0p3_temp2p0__wd1e-04trmiss0_degmodglobal', '_wandb': {}}
+2026-06-30 11:46:06,736 INFO    MainThread:90 [wandb_init.py:init():892] starting backend
+2026-06-30 11:46:06,736 INFO    MainThread:90 [wandb_init.py:init():895] sending inform_init request
+2026-06-30 11:46:06,738 INFO    MainThread:90 [wandb_init.py:init():903] backend started and connected
+2026-06-30 11:46:06,739 INFO    MainThread:90 [wandb_init.py:init():973] updated telemetry
+2026-06-30 11:46:06,740 INFO    MainThread:90 [wandb_init.py:init():997] communicating run to backend with 180.0 second timeout
+2026-06-30 11:46:07,865 INFO    MainThread:90 [wandb_init.py:init():1042] starting run threads in backend
+2026-06-30 11:46:07,963 INFO    MainThread:90 [wandb_run.py:_console_start():2524] atexit reg
+2026-06-30 11:46:07,963 INFO    MainThread:90 [wandb_run.py:_redirect():2373] redirect: off
+2026-06-30 11:46:07,966 INFO    MainThread:90 [wandb_init.py:init():1082] run started, returning control to user process
+2026-06-30 11:46:07,980 INFO    MainThread:90 [wandb_run.py:_finish():2291] finishing run marc_albesa/pAM_mmProstate/eycvx486
+2026-06-30 11:46:07,980 INFO    MainThread:90 [wandb_run.py:_atexit_cleanup():2490] got exitcode: 0
+2026-06-30 11:46:07,981 INFO    MainThread:90 [wandb_run.py:_restore():2472] restore
+2026-06-30 11:46:07,981 INFO    MainThread:90 [wandb_run.py:_restore():2478] restore done

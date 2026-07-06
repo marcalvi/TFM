@@ -1,0 +1,16 @@
+{"time":"2026-06-30T15:54:32.949000675+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T15:54:33.276386577+02:00","level":"INFO","msg":"stream: created new stream","id":"mv0lsub2"}
+{"time":"2026-06-30T15:54:33.276453607+02:00","level":"INFO","msg":"handler: started","stream_id":"mv0lsub2"}
+{"time":"2026-06-30T15:54:33.28005154+02:00","level":"INFO","msg":"stream: started","id":"mv0lsub2"}
+{"time":"2026-06-30T15:54:33.28008076+02:00","level":"INFO","msg":"writer: started","stream_id":"mv0lsub2"}
+{"time":"2026-06-30T15:54:33.28010614+02:00","level":"INFO","msg":"sender: started","stream_id":"mv0lsub2"}
+{"time":"2026-06-30T15:55:06.283003984+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T15:58:02.475164635+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/KNN_MLP_mmImmuno/mv0lsub2/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T15:58:59.841860525+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/KNN_MLP_mmImmuno/mv0lsub2/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T15:59:59.083536605+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/KNN_MLP_mmImmuno/mv0lsub2/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T16:01:04.247910422+02:00","level":"INFO","msg":"api: retrying HTTP error","status":429,"url":"https://api.wandb.ai/files/marc_albesa/KNN_MLP_mmImmuno/mv0lsub2/file_stream","body":"{\"error\":\"rate limit exceeded: per_run limit on filestream requests\"}"}
+{"time":"2026-06-30T16:01:36.244382884+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T16:01:36.245947196+02:00","level":"INFO","msg":"stream: closing","id":"mv0lsub2"}
+{"time":"2026-06-30T16:01:36.245954026+02:00","level":"INFO","msg":"handler: closed","stream_id":"mv0lsub2"}
+{"time":"2026-06-30T16:01:36.246645846+02:00","level":"INFO","msg":"sender: closed","stream_id":"mv0lsub2"}
+{"time":"2026-06-30T16:01:36.246655986+02:00","level":"INFO","msg":"stream: closed","id":"mv0lsub2"}

@@ -1,0 +1,12 @@
+{"time":"2026-07-01T21:48:55.322451339+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-07-01T21:48:55.59608178+02:00","level":"INFO","msg":"stream: created new stream","id":"memuxbts"}
+{"time":"2026-07-01T21:48:55.59612572+02:00","level":"INFO","msg":"handler: started","stream_id":"memuxbts"}
+{"time":"2026-07-01T21:48:55.600554482+02:00","level":"INFO","msg":"stream: started","id":"memuxbts"}
+{"time":"2026-07-01T21:48:55.600578942+02:00","level":"INFO","msg":"writer: started","stream_id":"memuxbts"}
+{"time":"2026-07-01T21:48:55.600597402+02:00","level":"INFO","msg":"sender: started","stream_id":"memuxbts"}
+{"time":"2026-07-01T21:48:56.900954829+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-07-01T21:48:57.30947659+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-07-01T21:48:57.311233981+02:00","level":"INFO","msg":"stream: closing","id":"memuxbts"}
+{"time":"2026-07-01T21:48:57.311240601+02:00","level":"INFO","msg":"handler: closed","stream_id":"memuxbts"}
+{"time":"2026-07-01T21:48:57.311621981+02:00","level":"INFO","msg":"sender: closed","stream_id":"memuxbts"}
+{"time":"2026-07-01T21:48:57.311627151+02:00","level":"INFO","msg":"stream: closed","id":"memuxbts"}

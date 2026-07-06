@@ -1,0 +1,12 @@
+{"time":"2026-06-30T10:13:14.950311007+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T10:13:15.227693772+02:00","level":"INFO","msg":"stream: created new stream","id":"coatcp91"}
+{"time":"2026-06-30T10:13:15.227740792+02:00","level":"INFO","msg":"handler: started","stream_id":"coatcp91"}
+{"time":"2026-06-30T10:13:15.231198193+02:00","level":"INFO","msg":"stream: started","id":"coatcp91"}
+{"time":"2026-06-30T10:13:15.231224033+02:00","level":"INFO","msg":"writer: started","stream_id":"coatcp91"}
+{"time":"2026-06-30T10:13:15.231242973+02:00","level":"INFO","msg":"sender: started","stream_id":"coatcp91"}
+{"time":"2026-06-30T10:13:17.20307781+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T10:13:17.448004775+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T10:13:17.449541196+02:00","level":"INFO","msg":"stream: closing","id":"coatcp91"}
+{"time":"2026-06-30T10:13:17.449547946+02:00","level":"INFO","msg":"handler: closed","stream_id":"coatcp91"}
+{"time":"2026-06-30T10:13:17.449986356+02:00","level":"INFO","msg":"sender: closed","stream_id":"coatcp91"}
+{"time":"2026-06-30T10:13:17.449990336+02:00","level":"INFO","msg":"stream: closed","id":"coatcp91"}

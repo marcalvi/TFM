@@ -1,0 +1,12 @@
+{"time":"2026-06-30T04:51:31.659068368+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T04:51:31.966112511+02:00","level":"INFO","msg":"stream: created new stream","id":"crelmphm"}
+{"time":"2026-06-30T04:51:31.966209201+02:00","level":"INFO","msg":"handler: started","stream_id":"crelmphm"}
+{"time":"2026-06-30T04:51:31.970142831+02:00","level":"INFO","msg":"stream: started","id":"crelmphm"}
+{"time":"2026-06-30T04:51:31.970204992+02:00","level":"INFO","msg":"writer: started","stream_id":"crelmphm"}
+{"time":"2026-06-30T04:51:31.970222852+02:00","level":"INFO","msg":"sender: started","stream_id":"crelmphm"}
+{"time":"2026-06-30T04:51:33.112938688+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T04:51:33.35230553+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T04:51:33.356947592+02:00","level":"INFO","msg":"stream: closing","id":"crelmphm"}
+{"time":"2026-06-30T04:51:33.356970292+02:00","level":"INFO","msg":"handler: closed","stream_id":"crelmphm"}
+{"time":"2026-06-30T04:51:33.357368413+02:00","level":"INFO","msg":"sender: closed","stream_id":"crelmphm"}
+{"time":"2026-06-30T04:51:33.357381883+02:00","level":"INFO","msg":"stream: closed","id":"crelmphm"}

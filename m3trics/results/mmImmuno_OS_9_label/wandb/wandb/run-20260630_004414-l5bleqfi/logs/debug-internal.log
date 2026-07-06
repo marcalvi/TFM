@@ -1,0 +1,13 @@
+{"time":"2026-06-30T00:44:14.091717547+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T00:44:14.371731417+02:00","level":"INFO","msg":"stream: created new stream","id":"l5bleqfi"}
+{"time":"2026-06-30T00:44:14.371791597+02:00","level":"INFO","msg":"handler: started","stream_id":"l5bleqfi"}
+{"time":"2026-06-30T00:44:14.374736997+02:00","level":"INFO","msg":"stream: started","id":"l5bleqfi"}
+{"time":"2026-06-30T00:44:14.374761467+02:00","level":"INFO","msg":"writer: started","stream_id":"l5bleqfi"}
+{"time":"2026-06-30T00:44:14.374778247+02:00","level":"INFO","msg":"sender: started","stream_id":"l5bleqfi"}
+{"time":"2026-06-30T00:44:20.274233423+02:00","level":"INFO","msg":"api: retrying error","error":"unexpected HTTP status 503 Service Unavailable"}
+{"time":"2026-06-30T00:44:22.826579873+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T00:44:23.050192507+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T00:44:23.051917878+02:00","level":"INFO","msg":"stream: closing","id":"l5bleqfi"}
+{"time":"2026-06-30T00:44:23.051924888+02:00","level":"INFO","msg":"handler: closed","stream_id":"l5bleqfi"}
+{"time":"2026-06-30T00:44:23.052199318+02:00","level":"INFO","msg":"sender: closed","stream_id":"l5bleqfi"}
+{"time":"2026-06-30T00:44:23.052203808+02:00","level":"INFO","msg":"stream: closed","id":"l5bleqfi"}

@@ -1,0 +1,12 @@
+{"time":"2026-06-30T00:01:48.550396222+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T00:01:48.910187915+02:00","level":"INFO","msg":"stream: created new stream","id":"lebzasad"}
+{"time":"2026-06-30T00:01:48.910263075+02:00","level":"INFO","msg":"handler: started","stream_id":"lebzasad"}
+{"time":"2026-06-30T00:01:48.914834623+02:00","level":"INFO","msg":"stream: started","id":"lebzasad"}
+{"time":"2026-06-30T00:01:48.914883943+02:00","level":"INFO","msg":"writer: started","stream_id":"lebzasad"}
+{"time":"2026-06-30T00:01:48.914948533+02:00","level":"INFO","msg":"sender: started","stream_id":"lebzasad"}
+{"time":"2026-06-30T00:01:50.362085869+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T00:01:50.567757619+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T00:01:50.571966696+02:00","level":"INFO","msg":"stream: closing","id":"lebzasad"}
+{"time":"2026-06-30T00:01:50.571986766+02:00","level":"INFO","msg":"handler: closed","stream_id":"lebzasad"}
+{"time":"2026-06-30T00:01:50.572739177+02:00","level":"INFO","msg":"sender: closed","stream_id":"lebzasad"}
+{"time":"2026-06-30T00:01:50.572777447+02:00","level":"INFO","msg":"stream: closed","id":"lebzasad"}

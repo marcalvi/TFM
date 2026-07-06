@@ -9,8 +9,9 @@ args:
     nvidia-smi
     /home/osiris-user/Desktop/TFM/m3trics/run_M3TRICS_mmImmuno.sh
 env:
+  CUDA_VISIBLE_DEVICES: "0"
   PYTHONUNBUFFERED: "1"
-worker_type: '5090'
+worker_type: '5900'
 use_gpu: true
 privileged: false
 max_cpus: 31

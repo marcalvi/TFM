@@ -1,0 +1,12 @@
+{"time":"2026-07-01T01:35:32.828391044+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-07-01T01:35:33.177344234+02:00","level":"INFO","msg":"stream: created new stream","id":"dalp0jdr"}
+{"time":"2026-07-01T01:35:33.177437154+02:00","level":"INFO","msg":"handler: started","stream_id":"dalp0jdr"}
+{"time":"2026-07-01T01:35:33.180562073+02:00","level":"INFO","msg":"stream: started","id":"dalp0jdr"}
+{"time":"2026-07-01T01:35:33.180615723+02:00","level":"INFO","msg":"writer: started","stream_id":"dalp0jdr"}
+{"time":"2026-07-01T01:35:33.180630973+02:00","level":"INFO","msg":"sender: started","stream_id":"dalp0jdr"}
+{"time":"2026-07-01T01:35:35.288856123+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-07-01T01:35:35.504727018+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-07-01T01:35:35.509171561+02:00","level":"INFO","msg":"stream: closing","id":"dalp0jdr"}
+{"time":"2026-07-01T01:35:35.509193691+02:00","level":"INFO","msg":"handler: closed","stream_id":"dalp0jdr"}
+{"time":"2026-07-01T01:35:35.510013723+02:00","level":"INFO","msg":"sender: closed","stream_id":"dalp0jdr"}
+{"time":"2026-07-01T01:35:35.510053913+02:00","level":"INFO","msg":"stream: closed","id":"dalp0jdr"}

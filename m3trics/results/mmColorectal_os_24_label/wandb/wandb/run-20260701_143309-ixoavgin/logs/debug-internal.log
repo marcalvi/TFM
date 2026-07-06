@@ -1,0 +1,12 @@
+{"time":"2026-07-01T14:33:09.235624219+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-07-01T14:33:09.578695601+02:00","level":"INFO","msg":"stream: created new stream","id":"ixoavgin"}
+{"time":"2026-07-01T14:33:09.578810001+02:00","level":"INFO","msg":"handler: started","stream_id":"ixoavgin"}
+{"time":"2026-07-01T14:33:09.581643269+02:00","level":"INFO","msg":"stream: started","id":"ixoavgin"}
+{"time":"2026-07-01T14:33:09.581663329+02:00","level":"INFO","msg":"writer: started","stream_id":"ixoavgin"}
+{"time":"2026-07-01T14:33:09.58168927+02:00","level":"INFO","msg":"sender: started","stream_id":"ixoavgin"}
+{"time":"2026-07-01T14:33:11.612229788+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-07-01T14:33:12.114701012+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-07-01T14:33:12.118916244+02:00","level":"INFO","msg":"stream: closing","id":"ixoavgin"}
+{"time":"2026-07-01T14:33:12.118936094+02:00","level":"INFO","msg":"handler: closed","stream_id":"ixoavgin"}
+{"time":"2026-07-01T14:33:12.119544816+02:00","level":"INFO","msg":"sender: closed","stream_id":"ixoavgin"}
+{"time":"2026-07-01T14:33:12.119556686+02:00","level":"INFO","msg":"stream: closed","id":"ixoavgin"}

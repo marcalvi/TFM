@@ -1,0 +1,12 @@
+{"time":"2026-07-01T16:06:32.248142434+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-07-01T16:06:32.527804386+02:00","level":"INFO","msg":"stream: created new stream","id":"vetacar3"}
+{"time":"2026-07-01T16:06:32.527861576+02:00","level":"INFO","msg":"handler: started","stream_id":"vetacar3"}
+{"time":"2026-07-01T16:06:32.532024177+02:00","level":"INFO","msg":"stream: started","id":"vetacar3"}
+{"time":"2026-07-01T16:06:32.532050007+02:00","level":"INFO","msg":"writer: started","stream_id":"vetacar3"}
+{"time":"2026-07-01T16:06:32.532067557+02:00","level":"INFO","msg":"sender: started","stream_id":"vetacar3"}
+{"time":"2026-07-01T16:06:36.062518635+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-07-01T16:06:36.571419006+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-07-01T16:06:36.573137056+02:00","level":"INFO","msg":"stream: closing","id":"vetacar3"}
+{"time":"2026-07-01T16:06:36.573144766+02:00","level":"INFO","msg":"handler: closed","stream_id":"vetacar3"}
+{"time":"2026-07-01T16:06:36.573521806+02:00","level":"INFO","msg":"sender: closed","stream_id":"vetacar3"}
+{"time":"2026-07-01T16:06:36.573526906+02:00","level":"INFO","msg":"stream: closed","id":"vetacar3"}

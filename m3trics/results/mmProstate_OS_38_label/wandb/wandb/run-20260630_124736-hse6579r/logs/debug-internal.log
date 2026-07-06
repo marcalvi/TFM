@@ -1,0 +1,16 @@
+{"time":"2026-06-30T12:47:36.363083179+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T12:47:36.652602796+02:00","level":"INFO","msg":"stream: created new stream","id":"hse6579r"}
+{"time":"2026-06-30T12:47:36.652685487+02:00","level":"INFO","msg":"handler: started","stream_id":"hse6579r"}
+{"time":"2026-06-30T12:47:36.655612215+02:00","level":"INFO","msg":"stream: started","id":"hse6579r"}
+{"time":"2026-06-30T12:47:36.655624295+02:00","level":"INFO","msg":"writer: started","stream_id":"hse6579r"}
+{"time":"2026-06-30T12:47:36.655648605+02:00","level":"INFO","msg":"sender: started","stream_id":"hse6579r"}
+{"time":"2026-06-30T12:48:08.73668294+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2026-06-30T12:48:13.601762948+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2026-06-30T12:48:18.466442377+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T12:48:33.886765015+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/pAM_mmProstate/hse6579r/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T12:49:31.208869058+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/pAM_mmProstate/hse6579r/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T12:50:33.982457979+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T12:50:33.986639531+02:00","level":"INFO","msg":"stream: closing","id":"hse6579r"}
+{"time":"2026-06-30T12:50:33.986660771+02:00","level":"INFO","msg":"handler: closed","stream_id":"hse6579r"}
+{"time":"2026-06-30T12:50:33.987259033+02:00","level":"INFO","msg":"sender: closed","stream_id":"hse6579r"}
+{"time":"2026-06-30T12:50:33.987286063+02:00","level":"INFO","msg":"stream: closed","id":"hse6579r"}

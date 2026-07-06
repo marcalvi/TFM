@@ -1,0 +1,12 @@
+{"time":"2026-06-30T07:56:05.81753101+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T07:56:06.097015477+02:00","level":"INFO","msg":"stream: created new stream","id":"azudhase"}
+{"time":"2026-06-30T07:56:06.097140518+02:00","level":"INFO","msg":"handler: started","stream_id":"azudhase"}
+{"time":"2026-06-30T07:56:06.101960302+02:00","level":"INFO","msg":"stream: started","id":"azudhase"}
+{"time":"2026-06-30T07:56:06.102022872+02:00","level":"INFO","msg":"writer: started","stream_id":"azudhase"}
+{"time":"2026-06-30T07:56:06.102066942+02:00","level":"INFO","msg":"sender: started","stream_id":"azudhase"}
+{"time":"2026-06-30T07:56:07.665320667+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T07:56:08.203625092+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T07:56:08.208066875+02:00","level":"INFO","msg":"stream: closing","id":"azudhase"}
+{"time":"2026-06-30T07:56:08.208103035+02:00","level":"INFO","msg":"handler: closed","stream_id":"azudhase"}
+{"time":"2026-06-30T07:56:08.208618467+02:00","level":"INFO","msg":"sender: closed","stream_id":"azudhase"}
+{"time":"2026-06-30T07:56:08.208640507+02:00","level":"INFO","msg":"stream: closed","id":"azudhase"}

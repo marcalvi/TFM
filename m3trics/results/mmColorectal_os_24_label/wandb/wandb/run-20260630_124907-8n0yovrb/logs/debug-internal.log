@@ -1,0 +1,17 @@
+{"time":"2026-06-30T12:49:07.329594883+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-06-30T12:49:07.750294906+02:00","level":"INFO","msg":"stream: created new stream","id":"8n0yovrb"}
+{"time":"2026-06-30T12:49:07.750391847+02:00","level":"INFO","msg":"handler: started","stream_id":"8n0yovrb"}
+{"time":"2026-06-30T12:49:07.754205037+02:00","level":"INFO","msg":"stream: started","id":"8n0yovrb"}
+{"time":"2026-06-30T12:49:07.754237207+02:00","level":"INFO","msg":"writer: started","stream_id":"8n0yovrb"}
+{"time":"2026-06-30T12:49:07.754242957+02:00","level":"INFO","msg":"sender: started","stream_id":"8n0yovrb"}
+{"time":"2026-06-30T12:49:39.942889437+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2026-06-30T12:49:44.869577449+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2026-06-30T12:50:05.10291445+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/KNN_MLP_mmColorectal/8n0yovrb/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T12:50:11.978528696+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-06-30T12:51:24.438820443+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/KNN_MLP_mmColorectal/8n0yovrb/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T12:52:21.59669121+02:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/marc_albesa/KNN_MLP_mmColorectal/8n0yovrb/file_stream","body":"{\"error\":\"context deadline exceeded\"}"}
+{"time":"2026-06-30T12:53:08.372289535+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-06-30T12:53:08.376346176+02:00","level":"INFO","msg":"stream: closing","id":"8n0yovrb"}
+{"time":"2026-06-30T12:53:08.376365526+02:00","level":"INFO","msg":"handler: closed","stream_id":"8n0yovrb"}
+{"time":"2026-06-30T12:53:08.377307279+02:00","level":"INFO","msg":"sender: closed","stream_id":"8n0yovrb"}
+{"time":"2026-06-30T12:53:08.377333649+02:00","level":"INFO","msg":"stream: closed","id":"8n0yovrb"}
