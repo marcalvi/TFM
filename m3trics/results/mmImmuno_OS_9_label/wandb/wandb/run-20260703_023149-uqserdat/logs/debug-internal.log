@@ -1,0 +1,12 @@
+{"time":"2026-07-03T02:31:49.576837169+02:00","level":"INFO","msg":"stream: starting","core version":"0.25.0"}
+{"time":"2026-07-03T02:31:49.884806604+02:00","level":"INFO","msg":"stream: created new stream","id":"uqserdat"}
+{"time":"2026-07-03T02:31:49.884862474+02:00","level":"INFO","msg":"handler: started","stream_id":"uqserdat"}
+{"time":"2026-07-03T02:31:49.888800767+02:00","level":"INFO","msg":"stream: started","id":"uqserdat"}
+{"time":"2026-07-03T02:31:49.888883577+02:00","level":"INFO","msg":"writer: started","stream_id":"uqserdat"}
+{"time":"2026-07-03T02:31:49.888892757+02:00","level":"INFO","msg":"sender: started","stream_id":"uqserdat"}
+{"time":"2026-07-03T02:31:51.161859379+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-07-03T02:31:51.428957628+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2026-07-03T02:31:51.43075073+02:00","level":"INFO","msg":"stream: closing","id":"uqserdat"}
+{"time":"2026-07-03T02:31:51.43075774+02:00","level":"INFO","msg":"handler: closed","stream_id":"uqserdat"}
+{"time":"2026-07-03T02:31:51.43111819+02:00","level":"INFO","msg":"sender: closed","stream_id":"uqserdat"}
+{"time":"2026-07-03T02:31:51.43112188+02:00","level":"INFO","msg":"stream: closed","id":"uqserdat"}
